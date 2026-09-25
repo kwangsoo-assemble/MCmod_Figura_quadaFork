@@ -41,6 +41,12 @@ public class FiguraMod {
     public static final String MOD_NAME = "Figura";
     public static final FiguraModMetadata METADATA = FiguraModMetadata.getMetadataForMod(MOD_ID);
     public static final Version VERSION = new Version(PlatformUtils.getFiguraModVersionString());
+    // Fork pre-release tag, added so this build is obviously different from upstream 0.1.6 (SemVer item 9).
+    // VERSION (with the tag) is what gets displayed (wardrobe, F3, client:getFiguraVersion); COMPARE_VERSION (tag dropped)
+    // is what gets compared with upstream, backend and avatar versions - otherwise 0.1.6-x < 0.1.6 would make the official
+    // 0.1.6 look like a newer version and trigger update notices and avatar version warnings
+    public static final String FORK_PRERELEASE = "but-ai-edited";
+    public static final Version COMPARE_VERSION = stripForkPrerelease(VERSION);
     public static final Calendar CALENDAR = Calendar.getInstance();
     public static final Path GAME_DIR = PlatformUtils.getGameDir().normalize();
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
@@ -132,6 +138,19 @@ public class FiguraMod {
 
     public static boolean isOffline(UUID other) {
         return !Minecraft.getInstance().getConnection().getOnlinePlayerIds().contains(other);
+    }
+
+    // Drops the FORK_PRERELEASE identifier and everything after it (0.1.6-but-ai-edited.1+1.21.8 -> 0.1.6+1.21.8)
+    private static Version stripForkPrerelease(Version v) {
+        if (v.invalid || v.pre.isEmpty())
+            return v;
+        String[] ids = v.pre.split("\\.");
+        int cut = Arrays.asList(ids).indexOf(FORK_PRERELEASE);
+        if (cut < 0)
+            return v;
+        String kept = String.join(".", Arrays.copyOf(ids, cut));
+        return new Version(v.major + "." + v.minor + "." + v.patch
+                + (kept.isEmpty() ? "" : "-" + kept) + (v.build.isEmpty() ? "" : "+" + v.build));
     }
 
     public static boolean isLocal(UUID other) {

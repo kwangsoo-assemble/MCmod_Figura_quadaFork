@@ -43,7 +43,7 @@ please be sure to review everything carefully yourself.
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | 0.1.6 |
+| Mod version | `0.1.6-but-ai-edited.1` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [figura_fsbplugin_but_ai_edited](https://github.com/kwangsoo-assemble/figura_fsbplugin_but_ai_edited) — **not wire-compatible with the official FSB** |
 
@@ -182,6 +182,19 @@ Code: `commands/ReloadCommand.java`
 
 Code: `gui/widgets/StatusWidget.java`
 
+### 11. Version number
+
+To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-release](https://semver.org/#spec-item-9) tag —
+`0.1.6-but-ai-edited.1` (jar: `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
+
+- The wardrobe, F3 and `client:getFiguraVersion()` show the tagged version.
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the tag. Under SemVer `0.1.6-…` is lower than
+  `0.1.6`, so without this the official 0.1.6 would look like a newer version and trigger update notices and avatar version warnings.
+- A mod that requires `figura >=0.1.6` will not accept this version (Fabric Loader compares by SemVer too) — use `>=0.1.6-` instead.
+
+Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
+`gui/screens/WardrobeScreen.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -193,9 +206,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.1) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects

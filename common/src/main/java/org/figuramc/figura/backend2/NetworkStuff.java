@@ -297,7 +297,7 @@ public class NetworkStuff {
             latestVersion = new Version(json.get(config <= 1 ? "release" : "prerelease").getAsString());
             if (config == 0)
                 return;
-            if (latestVersion.compareTo(FiguraMod.VERSION) > 0)
+            if (latestVersion.compareTo(FiguraMod.COMPARE_VERSION) > 0)
                 FiguraToast.sendToast(FiguraText.of("toast.new_version"), latestVersion);
         });
     }
