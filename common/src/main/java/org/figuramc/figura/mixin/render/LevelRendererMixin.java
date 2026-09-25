@@ -124,6 +124,8 @@ public abstract class LevelRendererMixin {
         if (avatar == null || avatar.luaRuntime == null || (color = avatar.luaRuntime.renderer.blockOutlineColor) == null)
             return colorInt;
 
-        return ARGB.colorFromFloat((float) color.x, (float) color.y, (float) color.z, (float) color.w);
+        // colorFromFloat 는 (alpha, red, green, blue) 순서다 — blockOutlineColor 는 (r, g, b, a) 라 w 가 먼저 온다.
+        // 원본 1.21.8 브랜치도 이 순서다. 0.1.6-dev(1.21.4) 판을 이식하면서 (x, y, z, w) 가 되살아났던 것을 2026-09-25 되돌림.
+        return ARGB.colorFromFloat((float) color.w, (float) color.x, (float) color.y, (float) color.z);
     }
 }
