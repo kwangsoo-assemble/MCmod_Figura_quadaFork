@@ -41,6 +41,11 @@ public class FiguraMod {
     public static final String MOD_NAME = "Figura";
     public static final FiguraModMetadata METADATA = FiguraModMetadata.getMetadataForMod(MOD_ID);
     public static final Version VERSION = new Version(PlatformUtils.getFiguraModVersionString());
+    // 포크 프리릴리스 꼬리 — 업스트림 0.1.6 과 구분하려고 버전에 붙였다(SemVer §9, 2026-09-26).
+    // 표시(옷장 · F3 · client:getFiguraVersion)에는 VERSION(꼬리 포함)을 쓰고, 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는
+    // 꼬리를 뗀 COMPARE_VERSION 을 쓴다 — 안 그러면 0.1.6-x < 0.1.6 이라 공식 0.1.6 을 «새 버전» 으로 보고 업데이트 알림 · 경고를 띄운다
+    public static final String FORK_PRERELEASE = "but-ai-edited";
+    public static final Version COMPARE_VERSION = stripForkPrerelease(VERSION);
     public static final Calendar CALENDAR = Calendar.getInstance();
     public static final Path GAME_DIR = PlatformUtils.getGameDir().normalize();
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
@@ -132,6 +137,19 @@ public class FiguraMod {
 
     public static boolean isOffline(UUID other) {
         return !Minecraft.getInstance().getConnection().getOnlinePlayerIds().contains(other);
+    }
+
+    // pre 에서 FORK_PRERELEASE 식별자와 그 뒤를 뗀다 (0.1.6-but-ai-edited.1+1.21.8 → 0.1.6+1.21.8). 꼬리가 없으면 그대로
+    private static Version stripForkPrerelease(Version v) {
+        if (v.invalid || v.pre.isEmpty())
+            return v;
+        String[] ids = v.pre.split("\\.");
+        int cut = Arrays.asList(ids).indexOf(FORK_PRERELEASE);
+        if (cut < 0)
+            return v;
+        String kept = String.join(".", Arrays.copyOf(ids, cut));
+        return new Version(v.major + "." + v.minor + "." + v.patch
+                + (kept.isEmpty() ? "" : "-" + kept) + (v.build.isEmpty() ? "" : "+" + v.build));
     }
 
     public static boolean isLocal(UUID other) {

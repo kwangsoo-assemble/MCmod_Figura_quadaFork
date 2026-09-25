@@ -1103,7 +1103,7 @@ public class Avatar {
     private int getVersionStatus() {
         if (version == null || (NetworkStuff.latestVersion != null && version.compareTo(NetworkStuff.latestVersion) > 0))
             return 0;
-        return version.compareTo(FiguraMod.VERSION);
+        return version.compareTo(FiguraMod.COMPARE_VERSION);
     }
 
     // -- loading -- // 

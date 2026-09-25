@@ -116,7 +116,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
 
         // version
         MutableComponent versionText = FiguraText.of().append(" " + FiguraMod.VERSION.noBuildString()).withStyle(ChatFormatting.ITALIC);
-        int versionStatus = NetworkStuff.latestVersion != null ? NetworkStuff.latestVersion.compareTo(FiguraMod.VERSION) : 0;
+        int versionStatus = NetworkStuff.latestVersion != null ? NetworkStuff.latestVersion.compareTo(FiguraMod.COMPARE_VERSION) : 0;
         boolean oldVersion = versionStatus > 0;
         if (oldVersion) {
             versionText
