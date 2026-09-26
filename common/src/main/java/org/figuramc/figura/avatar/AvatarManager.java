@@ -91,16 +91,21 @@ public class AvatarManager {
 
         for (int entityId : LOADED_CEM.keySet()) {
             Entity entity = Minecraft.getInstance().level.getEntity(entityId);
-            if (entity != null && entity.isRemoved()) {
+            // 1.21.8 클라는 엔티티를 지우는 순간 조회 목록에서도 뺀다(ClientLevel.removeEntity → EntityLookup.remove) —
+            // 죽거나 사라진 몹은 여기서 isRemoved() 가 아니라 null 로 보인다. 둘 다 «사라짐» 으로 보고 clearCEMAvatars 처럼 clean() 까지 부른다.
+            // 전에는 null 이면 캐시만 지워서 아바타가 남아 틱 · 렌더 이벤트를 계속 돌았다(누수 — 라운드마다 스폰하면 쌓인다, 2026-09-27).
+            // 추적 범위 밖으로 나간 몹도 null 이라 지워지고, 돌아오면 새로 만든다(로드 비용이 다시 든다 — 남아서 도는 것보다 낫다)
+            if (entity == null || entity.isRemoved()) {
                 toBeRemoved.add(entityId);
-                ENTITY_CACHE.remove(entityId);
-            } else if (entity == null) {
                 ENTITY_CACHE.remove(entityId);
             }
         }
 
-        for (int entity : toBeRemoved)
-            LOADED_CEM.remove(entity);
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
 
         // tick entities
         for (Avatar avatar : LOADED_CEM.values()) {
