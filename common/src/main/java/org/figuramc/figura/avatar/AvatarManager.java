@@ -91,16 +91,22 @@ public class AvatarManager {
 
         for (int entityId : LOADED_CEM.keySet()) {
             Entity entity = Minecraft.getInstance().level.getEntity(entityId);
-            if (entity != null && entity.isRemoved()) {
+            // The 1.21.8 client drops an entity from the lookup the moment it is removed (ClientLevel.removeEntity -> EntityLookup.remove),
+            // so a dead or despawned mob shows up here as null rather than isRemoved(). Treat both as gone and clean() the avatar like
+            // clearCEMAvatars does. Previously a null entity only cleared the cache, so its avatar stayed loaded and kept running tick and
+            // render events (a leak that grows every time mobs are spawned and removed). A mob that leaves tracking range is also null here;
+            // it gets a fresh avatar when it comes back, which costs a reload but beats running forever
+            if (entity == null || entity.isRemoved()) {
                 toBeRemoved.add(entityId);
-                ENTITY_CACHE.remove(entityId);
-            } else if (entity == null) {
                 ENTITY_CACHE.remove(entityId);
             }
         }
 
-        for (int entity : toBeRemoved)
-            LOADED_CEM.remove(entity);
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
 
         // tick entities
         for (Avatar avatar : LOADED_CEM.values()) {
