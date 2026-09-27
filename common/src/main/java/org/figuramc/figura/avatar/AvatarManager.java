@@ -289,6 +289,18 @@ public class AvatarManager {
         }
     }
 
+    // 몹 종류별로 지금 돌고 있는 CEM 아바타 수 (/figura cem status). 몹이 사라졌는데 아직 정리 전이면 "?" 로 센다
+    public static Map<String, Integer> countCEMAvatars() {
+        Map<String, Integer> counts = new TreeMap<>();
+        ClientLevel level = Minecraft.getInstance().level;
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            String type = entity == null ? "?" : BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+            counts.merge(type, 1, Integer::sum);
+        }
+        return counts;
+    }
+
     // clears ALL loaded avatars, including local
     public static void clearAllAvatars() {
         for (UUID id : LOADED_USERS.keySet())

@@ -33,6 +33,7 @@ import java.util.*;
  *
  * <pre>
  *   /figura cem build &lt;폴더&gt;     폴더는 로컬 아바타 폴더 기준이다(/figura load 와 같다)
+ *   /figura cem status             종류별로 지금 돌고 있는 몹 아바타 수
  * </pre>
  *
  * <p>{@code <폴더>} 에 {@code cem.json} 이 있으면 그 폴더 하나를, 없으면 바로 아래 하위 폴더 중 {@code cem.json} 이 있는 것을
@@ -62,8 +63,32 @@ class CemCommand {
 
         RequiredArgumentBuilder<FiguraClientCommandSource, String> path = RequiredArgumentBuilder.argument("path", StringArgumentType.greedyString());
         path.executes(CemCommand::build);
+        cem.then(build.then(path));
 
-        return cem.then(build.then(path));
+        // status — 몹 아바타는 처음 화면에 그려질 때 로드되므로, 몇 마리에 실제로 붙었는지는 이것으로만 보인다(F3 에는 없다)
+        cem.then(LiteralArgumentBuilder.<FiguraClientCommandSource>literal("status").executes(ctx -> status(ctx.getSource())));
+
+        return cem;
+    }
+
+    private static int status(FiguraClientCommandSource source) {
+        Map<String, Integer> running = AvatarManager.countCEMAvatars();
+
+        // 아바타가 있는 종류 전부(0 마리 포함) + 아바타 없이 돌고 있는 것("?" 등)
+        Map<String, Integer> rows = new TreeMap<>();
+        for (ResourceLocation type : LocalAvatarLoader.CEM_AVATARS.keySet())
+            rows.put(type.toString(), 0);
+        rows.putAll(running);
+
+        int total = 0;
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<String, Integer> row : rows.entrySet()) {
+            total += row.getValue();
+            parts.add(row.getKey() + " ×" + row.getValue());
+        }
+
+        source.figura$sendFeedback(FiguraText.of("command.cem.status", total, LocalAvatarLoader.CEM_AVATARS.size(), parts.isEmpty() ? "-" : String.join(", ", parts)));
+        return total;
     }
 
     private static int build(CommandContext<FiguraClientCommandSource> context) {

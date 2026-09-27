@@ -177,6 +177,9 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       `{"entity": "<종류>" | [...]}` 을 읽어 컴파일 → `figura/cem_out/<ns>/<type>.nbt` → **그 파일을 다시 읽어** `CEM_AVATARS` 에 넣고
       그 종류의 `LOADED_CEM` 만 내린다(`AvatarManager.clearCEMAvatars(types)` 새 오버로드). F3+T 하면 리소스팩 판으로 돌아간다.
       리소스팩에는 **안 쓴다** — 배치는 하네스 배포 도구 몫(외부 변경 가드).
+    - `/figura cem status`: 종류별로 지금 돌고 있는 CEM 아바타 수(`AvatarManager.countCEMAvatars`).
+      ★ 몹 아바타는 **처음 그려질 때** 로드되고 **F3 에는 안 나온다**(`DebugScreenOverlayMixin` 은 로컬 아바타 줄뿐) ·
+      `/figura debug` 도 로컬 아바타만 적는다 — 몇 마리에 실제로 붙었는지 · 누수 수정이 도는지는 이것으로만 본다.
     - `LocalAvatarLoader.loadAvatar` 안의 컴파일을 `compileAvatarFolder(folder, owner, trackState)` 로 **떼어 냈다**(동작 같음 —
       `trackState=false` 면 옷장의 로드 단계 표시를 안 건드린다). 컴파일은 `async` 큐에서 돈다(**public 으로 바꿈**) —
       `LuaScriptParser` 가 정적 `error` 플래그를 가져 컴파일이 겹치면 안 된다.

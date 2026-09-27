@@ -646,6 +646,7 @@
     "figura.command.cem.no_jobs": "No cem.json in \"%s\" or its direct subfolders",
     "figura.command.cem.duplicate": "%s is claimed by both \"%s\" and \"%s\"",
     "figura.command.cem.error": "Cannot build \"%s\": %s",
+    "figura.command.cem.status": "Mob (CEM) avatars running: %s · entity types with an avatar: %s · %s",
     "figura.command.docs_export.success": "Exported Figura docs into the Figura directory",
     "figura.command.docs_export.error": "Failed to export Figura docs!",
     "figura.command.docs_type_hover": "Click to show %s docs",
