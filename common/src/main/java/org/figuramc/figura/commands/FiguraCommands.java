@@ -41,6 +41,9 @@ public class FiguraCommands {
         // netlock: lock network avatar loading
         root.then(NetlockCommand.getCommand());
 
+        // cem build: compile local avatar folders into mob (CEM) avatars in one go
+        root.then(CemCommand.getCommand());
+
         // debug
         root.then(DebugCommand.getCommand());
 

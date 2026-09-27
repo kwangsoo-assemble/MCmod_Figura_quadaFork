@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -266,6 +267,27 @@ public class AvatarManager {
         for (Avatar avatar : LOADED_CEM.values())
             avatar.clean();
         LOADED_CEM.clear();
+    }
+
+    // Drops the loaded mob avatars of these entity types only; the next render recreates them from CEM_AVATARS (used by /figura cem build).
+    // Ones whose type cannot be told (mob gone, no world) are dropped too: they are cleaned up on the next tick or recreated anyway
+    public static void clearCEMAvatars(Collection<ResourceLocation> types) {
+        if (LOADED_CEM.isEmpty() || types.isEmpty())
+            return;
+
+        ClientLevel level = Minecraft.getInstance().level;
+        IntSet toBeRemoved = new IntOpenHashSet();
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            if (entity == null || types.contains(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())))
+                toBeRemoved.add(entityId);
+        }
+
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
     }
 
     // clears ALL loaded avatars, including local

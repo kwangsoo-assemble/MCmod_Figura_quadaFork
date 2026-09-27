@@ -195,6 +195,23 @@ To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-re
 Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
 `gui/screens/WardrobeScreen.java`
 
+### 12. Mob (CEM) avatars — leak fix, new command `/figura cem build`
+
+Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every mob of that type** as an avatar (CEM).
+
+- **Leak fix** — avatars of mobs that died or went away were never released and kept running tick and render events. The 1.21.8 client
+  returns `null` for a removed entity, but the cleanup only checked `isRemoved()`. `null` now counts as gone too, and `clean()` is called
+  (a mob that leaves tracking range is dropped as well, and recreated when it comes back).
+- **`/figura cem build <folder>`** — compiles local avatar folders into CEM avatars. Meant for making several avatars, one per mob type, in one go.
+  - `<folder>` is relative to the local avatar folder, like `/figura load`. If it has a `cem.json`, that folder is built;
+    otherwise every direct subfolder that has one.
+  - `cem.json` is `{"entity": "minecraft:husk"}` — one mob type or a list. If two folders name the same type, nothing is built.
+  - Output goes to `figura/cem_out/<ns>/<type>.nbt` — copy it as-is under a resource pack's `assets/figura/cem/` (it never writes to a resource pack itself).
+  - The written file is read back and **applied right away** — mob avatars of that type are recreated on the next render. A resource reload (F3+T) goes back to the resource pack version.
+
+Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `commands/CemCommand.java` (new) ·
+`avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
