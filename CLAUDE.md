@@ -165,6 +165,23 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       ⚠ 아바타는 **플레이어에게만** 붙는다 — `@e` 가 고른 몹은 건너뛰고 개수를 알린다. `@a` 는 바닐라처럼 **본인 포함**
       (`@a[name=!내이름]` 으로 뺀다). 셀렉터 부피 `dx` 는 바닐라와 같이 `[x, x+dx+1)` 이다.
 
+11. **블록 외곽선 색 인자 순서 복구** (2026-09-25, `2dd5b0a`, ✅ 인게임 확인): `LevelRendererMixin.renderHitOutline` 이
+    `ARGB.colorFromFloat` 에 (r, g, b, a) 로 넘겼다 — 1.21.8 시그니처는 **(alpha, red, green, blue)** 다.
+12. **버전 프리릴리스 꼬리** (2026-09-26, `79d35ee`, ✅ 인게임 확인): `0.1.6-but-ai-edited.1` (업스트림 요청 — semver 프리릴리스로 구분).
+    **비교는 꼬리를 뗀 판**으로 한다(`FiguraMod.COMPARE_VERSION` — `Avatar.getVersionStatus` · `NetworkStuff.checkVersion` · 옷장) —
+    SemVer 로 `0.1.6-x < 0.1.6` 이라 그대로 두면 공식 0.1.6 을 새 버전으로 본다. ⚠ 의존 조건은 `>=0.1.6-` 로 적는다(Chat-Heads 가 그렇게 바뀌었다).
+13. **몹(CEM) 아바타 — 누수 수정 + `/figura cem build`** (2026-09-27, 하네스 `projects/entity_avatar_template` P1 · P2′):
+    - 누수(`c6c3c84`): 1.21.8 클라는 지운 엔티티를 조회 목록에서 바로 빼서 `getEntity` 가 **null** 을 준다 — 정리 조건이
+      `isRemoved()` 뿐이라 죽은 몹의 아바타가 `LOADED_CEM` 에 남아 계속 돌았다. null 도 사라짐으로 보고 `clean()` 까지 부른다.
+    - `/figura cem build <폴더>` (`commands/CemCommand`): `<폴더>`(또는 바로 아래 하위 폴더마다)의 `cem.json`
+      `{"entity": "<종류>" | [...]}` 을 읽어 컴파일 → `figura/cem_out/<ns>/<type>.nbt` → **그 파일을 다시 읽어** `CEM_AVATARS` 에 넣고
+      그 종류의 `LOADED_CEM` 만 내린다(`AvatarManager.clearCEMAvatars(types)` 새 오버로드). F3+T 하면 리소스팩 판으로 돌아간다.
+      리소스팩에는 **안 쓴다** — 배치는 하네스 배포 도구 몫(외부 변경 가드).
+    - `LocalAvatarLoader.loadAvatar` 안의 컴파일을 `compileAvatarFolder(folder, owner, trackState)` 로 **떼어 냈다**(동작 같음 —
+      `trackState=false` 면 옷장의 로드 단계 표시를 안 건드린다). 컴파일은 `async` 큐에서 돈다(**public 으로 바꿈**) —
+      `LuaScriptParser` 가 정적 `error` 플래그를 가져 컴파일이 겹치면 안 된다.
+    - ⚠ 인게임 확인은 B0(몹 아바타 부하 측정) 때 — 그때까지 몹 아바타가 없다.
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴

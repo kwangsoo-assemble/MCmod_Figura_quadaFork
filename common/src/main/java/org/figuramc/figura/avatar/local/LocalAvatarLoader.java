@@ -81,7 +81,8 @@ public class LocalAvatarLoader {
         }
     }
 
-    protected static void async(Runnable toRun) {
+    // 공개(원래 protected): /figura cem build 가 이 큐에서 컴파일한다 — 스크립트 파서가 정적 상태를 가져 컴파일이 겹치면 안 된다
+    public static void async(Runnable toRun) {
         if (tasks == null || tasks.isDone()) {
             tasks = CompletableFuture.runAsync(toRun);
         } else {
@@ -117,59 +118,7 @@ public class LocalAvatarLoader {
         async(() -> {
             try {
                 FiguraMod.debug("--- avatar compiling: " + target.id + " ---");
-                // load as folder
-                CompoundTag nbt = new CompoundTag();
-
-                // scripts
-                loadState = LoadState.SCRIPTS;
-                loadScripts(finalPath, nbt);
-
-                // custom sounds
-                loadState = LoadState.SOUNDS;
-                loadSounds(finalPath, nbt);
-
-                // metadata part 1
-                loadState = LoadState.METADATA1;
-                Path avatarJsonc = finalPath.resolve("avatar.jsonc");
-                Path avatarJson = finalPath.resolve("avatar.json");
-                String _meta;
-                if (Files.exists(avatarJsonc)) {
-                    _meta = IOUtils.readFile(avatarJsonc);
-                } else {
-                    _meta = IOUtils.readFile(avatarJson);
-                }
-                AvatarMetadataParser.Metadata metadata = AvatarMetadataParser.read(_meta);
-
-                CompoundTag metaNBT = AvatarMetadataParser.parse(metadata,_meta, IOUtils.getFileNameOrEmpty(finalPath));
-                nbt.put("metadata", metaNBT);
-                metaNBT.putString("uuid",target.id.toString());
-
-                // models
-                CompoundTag textures = new CompoundTag();
-                ListTag animations = new ListTag();
-                BlockbenchParser2 modelParser = new BlockbenchParser2();
-
-                loadState = LoadState.MODELS;
-                CompoundTag models = loadModels(finalPath, finalPath, modelParser, textures, animations, "", metadata.loadOptions);
-                models.putString("name", "models");
-
-                // apply customizations from metadata
-                loadState = LoadState.METADATA2;
-				AvatarMetadataParser.injectToModels(metadata, models);
-				AvatarMetadataParser.injectToTextures(metadata, textures);
-
-                // return :3
-                if (!models.isEmpty())
-                    nbt.put("models", models);
-                if (!textures.isEmpty())
-                    nbt.put("textures", textures);
-                if (!animations.isEmpty())
-                    nbt.put("animations", animations);
-                CompoundTag metadataTag = nbt.getCompoundOrEmpty("metadata");
-                if (metadataTag.contains("resources_paths")) {
-                    loadResources(nbt, metadataTag.getListOrEmpty("resources_paths"), finalPath);
-                    metadataTag.remove("resource_paths");
-                }
+                CompoundTag nbt = compileAvatarFolder(finalPath, target.id, true);
 
                 // load
                 target.loadAvatar(nbt);
@@ -180,6 +129,72 @@ public class LocalAvatarLoader {
             }
         });
     }
+
+    /**
+     * 아바타 폴더를 {@code Avatar.load} 가 읽는 NBT 로 컴파일한다 — {@link #loadAvatar} 가 안에서 만들던 것과 같다(거기서 떼어 냈다).
+     * {@code /figura cem build} 도 이걸로 몹(CEM) 아바타를 만든다.
+     *
+     * @param owner      metadata 의 "uuid" 에 적힌다(읽는 곳은 없다). CEM 은 {@code Util.NIL_UUID}
+     * @param trackState 단계를 {@link #getLoadState()} 에 알릴지 — 옷장 화면이 로컬 아바타 로드 단계로 보여 주므로 로컬 로드만 true
+     */
+    public static CompoundTag compileAvatarFolder(Path folder, UUID owner, boolean trackState) throws Exception {
+        // load as folder
+        CompoundTag nbt = new CompoundTag();
+
+        // scripts
+        if (trackState) loadState = LoadState.SCRIPTS;
+        loadScripts(folder, nbt);
+
+        // custom sounds
+        if (trackState) loadState = LoadState.SOUNDS;
+        loadSounds(folder, nbt);
+
+        // metadata part 1
+        if (trackState) loadState = LoadState.METADATA1;
+        Path avatarJsonc = folder.resolve("avatar.jsonc");
+        Path avatarJson = folder.resolve("avatar.json");
+        String _meta;
+        if (Files.exists(avatarJsonc)) {
+            _meta = IOUtils.readFile(avatarJsonc);
+        } else {
+            _meta = IOUtils.readFile(avatarJson);
+        }
+        AvatarMetadataParser.Metadata metadata = AvatarMetadataParser.read(_meta);
+
+        CompoundTag metaNBT = AvatarMetadataParser.parse(metadata,_meta, IOUtils.getFileNameOrEmpty(folder));
+        nbt.put("metadata", metaNBT);
+        metaNBT.putString("uuid",owner.toString());
+
+        // models
+        CompoundTag textures = new CompoundTag();
+        ListTag animations = new ListTag();
+        BlockbenchParser2 modelParser = new BlockbenchParser2();
+
+        if (trackState) loadState = LoadState.MODELS;
+        CompoundTag models = loadModels(folder, folder, modelParser, textures, animations, "", metadata.loadOptions);
+        models.putString("name", "models");
+
+        // apply customizations from metadata
+        if (trackState) loadState = LoadState.METADATA2;
+        AvatarMetadataParser.injectToModels(metadata, models);
+        AvatarMetadataParser.injectToTextures(metadata, textures);
+
+        // return :3
+        if (!models.isEmpty())
+            nbt.put("models", models);
+        if (!textures.isEmpty())
+            nbt.put("textures", textures);
+        if (!animations.isEmpty())
+            nbt.put("animations", animations);
+        CompoundTag metadataTag = nbt.getCompoundOrEmpty("metadata");
+        if (metadataTag.contains("resources_paths")) {
+            loadResources(nbt, metadataTag.getListOrEmpty("resources_paths"), folder);
+            metadataTag.remove("resource_paths");
+        }
+
+        return nbt;
+    }
+
     private static void loadResources(CompoundTag nbt, ListTag pathsTag, Path parentPath) {
         ArrayList<PathMatcher> pathMatchers = new ArrayList<>();
         FileSystem fs = FileSystems.getDefault();

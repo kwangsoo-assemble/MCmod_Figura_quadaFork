@@ -41,6 +41,9 @@ public class FiguraCommands {
         // netlock — 네트워크 아바타 로딩 잠금
         root.then(NetlockCommand.getCommand());
 
+        // cem build — 로컬 아바타 폴더들을 몹(CEM) 아바타로 한 번에 컴파일 (2026-09-27, 엔티티 아바타 템플릿 변형용)
+        root.then(CemCommand.getCommand());
+
         // debug
         root.then(DebugCommand.getCommand());
 

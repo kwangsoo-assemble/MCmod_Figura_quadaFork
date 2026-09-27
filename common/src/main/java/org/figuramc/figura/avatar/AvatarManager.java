@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -265,6 +266,27 @@ public class AvatarManager {
         for (Avatar avatar : LOADED_CEM.values())
             avatar.clean();
         LOADED_CEM.clear();
+    }
+
+    // 이 몹 종류들의 로드된 아바타만 내린다 — 다음 렌더에 CEM_AVATARS 에서 새로 만든다(/figura cem build 가 부른다).
+    // 종류를 알 수 없는 것(사라진 몹 · 월드 없음)도 같이 내린다 — 어차피 다음 틱에 정리되거나 다시 만들어진다
+    public static void clearCEMAvatars(Collection<ResourceLocation> types) {
+        if (LOADED_CEM.isEmpty() || types.isEmpty())
+            return;
+
+        ClientLevel level = Minecraft.getInstance().level;
+        IntSet toBeRemoved = new IntOpenHashSet();
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            if (entity == null || types.contains(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())))
+                toBeRemoved.add(entityId);
+        }
+
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
     }
 
     // clears ALL loaded avatars, including local
