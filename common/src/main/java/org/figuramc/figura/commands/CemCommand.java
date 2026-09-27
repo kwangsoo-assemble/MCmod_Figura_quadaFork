@@ -33,6 +33,7 @@ import java.util.*;
  *
  * <pre>
  *   /figura cem build &lt;folder&gt;     the folder is relative to the local avatar folder (same as /figura load)
+ *   /figura cem status             how many mob avatars are running right now, per type
  * </pre>
  *
  * <p>If {@code <folder>} has a {@code cem.json}, that folder is built; otherwise every direct subfolder that has one.
@@ -61,8 +62,32 @@ class CemCommand {
 
         RequiredArgumentBuilder<FiguraClientCommandSource, String> path = RequiredArgumentBuilder.argument("path", StringArgumentType.greedyString());
         path.executes(CemCommand::build);
+        cem.then(build.then(path));
 
-        return cem.then(build.then(path));
+        // status: mob avatars load when first rendered, so this is the only place that shows how many mobs actually have one (F3 does not)
+        cem.then(LiteralArgumentBuilder.<FiguraClientCommandSource>literal("status").executes(ctx -> status(ctx.getSource())));
+
+        return cem;
+    }
+
+    private static int status(FiguraClientCommandSource source) {
+        Map<String, Integer> running = AvatarManager.countCEMAvatars();
+
+        // every type that has an avatar (including zero running), plus anything running without one (such as "?")
+        Map<String, Integer> rows = new TreeMap<>();
+        for (ResourceLocation type : LocalAvatarLoader.CEM_AVATARS.keySet())
+            rows.put(type.toString(), 0);
+        rows.putAll(running);
+
+        int total = 0;
+        List<String> parts = new ArrayList<>();
+        for (Map.Entry<String, Integer> row : rows.entrySet()) {
+            total += row.getValue();
+            parts.add(row.getKey() + " ×" + row.getValue());
+        }
+
+        source.figura$sendFeedback(FiguraText.of("command.cem.status", total, LocalAvatarLoader.CEM_AVATARS.size(), parts.isEmpty() ? "-" : String.join(", ", parts)));
+        return total;
     }
 
     private static int build(CommandContext<FiguraClientCommandSource> context) {

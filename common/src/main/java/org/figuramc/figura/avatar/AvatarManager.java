@@ -290,6 +290,18 @@ public class AvatarManager {
         }
     }
 
+    // Number of CEM avatars running right now, per entity type (/figura cem status). A mob that is gone but not cleaned up yet counts as "?"
+    public static Map<String, Integer> countCEMAvatars() {
+        Map<String, Integer> counts = new TreeMap<>();
+        ClientLevel level = Minecraft.getInstance().level;
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            String type = entity == null ? "?" : BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+            counts.merge(type, 1, Integer::sum);
+        }
+        return counts;
+    }
+
     // clears ALL loaded avatars, including local
     public static void clearAllAvatars() {
         for (UUID id : LOADED_USERS.keySet())

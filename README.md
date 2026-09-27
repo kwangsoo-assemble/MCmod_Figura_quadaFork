@@ -195,7 +195,7 @@ To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-re
 Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
 `gui/screens/WardrobeScreen.java`
 
-### 12. Mob (CEM) avatars — leak fix, new command `/figura cem build`
+### 12. Mob (CEM) avatars — leak fix, new commands `/figura cem build` and `status`
 
 Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every mob of that type** as an avatar (CEM).
 
@@ -208,6 +208,7 @@ Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every 
   - `cem.json` is `{"entity": "minecraft:husk"}` — one mob type or a list. If two folders name the same type, nothing is built.
   - Output goes to `figura/cem_out/<ns>/<type>.nbt` — copy it as-is under a resource pack's `assets/figura/cem/` (it never writes to a resource pack itself).
   - The written file is read back and **applied right away** — mob avatars of that type are recreated on the next render. A resource reload (F3+T) goes back to the resource pack version.
+- **`/figura cem status`** — how many mob avatars are running right now, per type. Mob avatars load when first rendered and do not show up in F3, so this is how to see how many mobs actually have one.
 
 Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `commands/CemCommand.java` (new) ·
 `avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior)
