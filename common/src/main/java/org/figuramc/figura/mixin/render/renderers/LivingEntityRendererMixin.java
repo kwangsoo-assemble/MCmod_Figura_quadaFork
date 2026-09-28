@@ -1,6 +1,9 @@
 package org.figuramc.figura.mixin.render.renderers;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -36,7 +39,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -66,26 +68,53 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     private Avatar currentAvatar;
     @Unique
     private Matrix4f lastPose;
+    // Whether a mob (CEM) avatar hid vanilla_model.ALL — valid for the current render call only.
+    //   Part hiding (VanillaModelProvider) only knows humanoid model parts, so non-humanoid mobs (villagers etc.) kept their whole body,
+    //   and the drowned / stray / bogged outer clothing stayed visible because those are layers with their own models
+    //   (DrownedOuterLayer, SkeletonClothingLayer).
+    //   => When true, the vanilla body (renderToBuffer) and every layer (shouldRenderLayers) are skipped — see the two WrapOperations below.
+    //   Unchanged: shadow, name tag and leash (EntityRenderer.render), avatar parts (including the hurt tint). Player avatars are not affected.
+    @Unique
+    private boolean figura$hideVanilla;
 
     @Inject(at = @At("HEAD"), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
     private void onRender(S livingEntityRenderState, PoseStack poseStack, MultiBufferSource vertexConsumers, int i, CallbackInfo ci) {
+        figura$hideVanilla = false;
         currentAvatar = AvatarManager.getAvatar(livingEntityRenderState);
         if (currentAvatar == null)
             return;
 
+        figura$hideVanilla = !(livingEntityRenderState instanceof PlayerRenderState)
+                && currentAvatar.luaRuntime != null
+                && Boolean.FALSE.equals(currentAvatar.luaRuntime.vanilla_model.ALL.getVisible());
         lastPose = poseStack.last().pose();
     }
 
-    @ModifyArg(
+    // Vanilla body — skipped when hidden. The former @ModifyArg (customOverlay, overlay override) was merged in here
+    //   so the same call is not captured by both @ModifyArg and @WrapOperation (same behavior).
+    @WrapOperation(
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"
             ),
-            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            index = 3
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
     )
-    private int customOverlay(int thing) {
-        return LivingEntityRendererAccessor.overrideOverlay.orElse(thing);
+    private void figura$renderVanillaBody(EntityModel<?> model, PoseStack poseStack, VertexConsumer consumer, int light, int overlay, int color, Operation<Void> original) {
+        if (figura$hideVanilla)
+            return;
+        original.call(model, poseStack, consumer, light, LivingEntityRendererAccessor.overrideOverlay.orElse(overlay), color);
+    }
+
+    // Vanilla layers (armor, held items, outer clothing, head blocks, profession outfits ...) — all skipped when hidden
+    @WrapOperation(
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;shouldRenderLayers(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;)Z"
+            ),
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    )
+    private boolean figura$renderVanillaLayers(LivingEntityRenderer<?, ?, ?> renderer, LivingEntityRenderState state, Operation<Boolean> original) {
+        return !figura$hideVanilla && original.call(renderer, state);
     }
 
     @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;)V", shift = At.Shift.AFTER), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", cancellable = true)
@@ -148,6 +177,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
 
     @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
     private void endRender(S livingEntityRenderState, PoseStack matrices, MultiBufferSource vertexConsumers, int i, CallbackInfo ci) {
+        figura$hideVanilla = false;
         if (currentAvatar == null)
             return;
 

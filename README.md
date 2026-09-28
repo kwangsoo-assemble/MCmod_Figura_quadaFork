@@ -199,7 +199,7 @@ To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-re
 Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
 `gui/screens/WardrobeScreen.java`
 
-### 12. Mob (CEM) avatars — leak fix, new commands `/figura cem build` and `status`
+### 12. Mob (CEM) avatars — leak fix, new commands `/figura cem build` and `status`, full vanilla hiding, name tag hiding
 
 Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every mob of that type** as an avatar (CEM).
 
@@ -213,9 +213,16 @@ Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every 
   - Output goes to `figura/cem_out/<ns>/<type>.nbt` — copy it as-is under a resource pack's `assets/figura/cem/` (it never writes to a resource pack itself).
   - The written file is read back and **applied right away** — mob avatars of that type are recreated on the next render. A resource reload (F3+T) goes back to the resource pack version.
 - **`/figura cem status`** — how many mob avatars are running right now, per type. Mob avatars load when first rendered and do not show up in F3, so this is how to see how many mobs actually have one.
+- **Full vanilla hiding** — when a mob avatar calls `vanilla_model.ALL:setVisible(false)`, the vanilla body and **every layer** (armor, held items,
+  outer clothing, head blocks, profession outfits) are not drawn. Upstream only hid the parts of humanoid models, so non-humanoid mobs such as
+  villagers kept their whole body, and the drowned, stray and bogged outer clothing (layers with their own models) stayed visible too.
+  Shadow, name tag and avatar parts (including the red tint when hurt) are unchanged. Player avatars are not affected.
+- **Mob name tag hiding** — `nameplate.ENTITY:setVisible(false)` now works for mob avatars (upstream only checked it for players). Useful when a
+  mob's custom name selects its variant and that name should not show.
 
 Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `commands/CemCommand.java` (new) ·
-`avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior)
+`avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior) ·
+`mixin/render/renderers/LivingEntityRendererMixin.java` (vanilla body and layers) · `mixin/render/renderers/EntityRendererMixin.java` (name tag)
 
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.

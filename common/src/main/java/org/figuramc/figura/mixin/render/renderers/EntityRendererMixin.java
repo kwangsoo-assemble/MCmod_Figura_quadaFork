@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.FiguraMod;
@@ -62,12 +63,20 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     }
 
 
-    @Inject(at = @At(value = "HEAD"), method = "renderNameTag")
+    @Inject(at = @At(value = "HEAD"), method = "renderNameTag", cancellable = true)
     private void setupAvatar(S entityRenderState, Component text, PoseStack matrices, MultiBufferSource vertexConsumers, int light, CallbackInfo ci) {
         figura$avatar = AvatarManager.getAvatar(entityRenderState);
         figura$custom = figura$avatar == null || figura$avatar.luaRuntime == null ? null : figura$avatar.luaRuntime.nameplate.ENTITY;
         figura$hasCustomNameplate = figura$custom != null && figura$avatar.permissions.get(Permissions.NAMEPLATE_EDIT) == 1;
         figura$enabled =  Configs.ENTITY_NAMEPLATE.value > 0 && !AvatarManager.panic && figura$hasCustomNameplate;
+
+        // Mob (CEM) avatars: honor nameplate.ENTITY:setVisible(false). Only PlayerRendererMixin checked visible before,
+        //   so a mob's name tag could not be hidden (e.g. a mob whose custom name selects its variant should not show that name).
+        //   Same conditions as the player side (entity_nameplate config > 0, not in panic, nameplate edit permission). Players are left to that side.
+        if (figura$enabled && !(entityRenderState instanceof PlayerRenderState) && !figura$custom.visible) {
+            ci.cancel();
+            return;
+        }
 
 
         figura$textList = TextUtils.splitText(text, "\n");
