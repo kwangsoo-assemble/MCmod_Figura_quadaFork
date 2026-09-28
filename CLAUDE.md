@@ -192,6 +192,16 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - `S2CInitializeAvatarStreamPacketHandler`(새)가 받기만 하고 디버그 로그를 남긴다. 클라 전용 — `server-common` · 와이어 · 공개 API 변화 없음(애드온 재빌드 불필요).
     - ⚠ 실린 ehash 로 스트림 끝 소유권 검사(`FSB.AvatarInputStream` — 원본부터 비교값을 자기 키로 채워 늘 참)를 되살리지 말 것.
       자기 아바타 소유권은 `applyUserData` 가 이미 본다 · 서버 소유 기록이 장착 기록과 어긋나면 자기 아바타가 거부되는 경로만 생긴다.
+15. **몹(CEM) 아바타 — 바닐라 통째 숨김 · 이름표 숨김** (2026-09-28, 하네스 `projects/entity_avatar_template` P4 · P5):
+    - P4 (`LivingEntityRendererMixin`): 몹 아바타가 `vanilla_model.ALL` 을 숨기면(`getVisible() == false`) 바닐라 **몸**(`renderToBuffer`)과
+      **모든 레이어**(`shouldRenderLayers`)를 호출 자리에서 건너뛴다. 전에는 파츠 숨기기(`VanillaModelProvider`)라 사람형 모델만 숨었고
+      드라운드 · 스트레이 · 보그드의 겉옷(`DrownedOuterLayer` · `SkeletonClothingLayer` — 자기 모델을 가진 레이어)과 주민 같은 비사람형 몹은 남았다
+      (🙋 2026-09-28 인게임: «스트레이 · 보그드 · 드라운드는 겉레이어가 안 숨는다»). 그림자 · 이름표 · 끈 · 아바타 파츠(피격 붉은빛)는 그대로.
+      플레이어 아바타는 안 바꾼다(`PlayerRenderState` 제외). ⓘ 원래 있던 `@ModifyArg customOverlay` 는 같은 호출을 두 번 잡지 않으려고 `@WrapOperation` 안으로 합쳤다(동작 같음).
+    - P5 (`EntityRendererMixin.setupAvatar`): 몹 아바타의 `nameplate.ENTITY:setVisible(false)` 가 이제 먹는다 — 전에는 `PlayerRendererMixin` 만
+      `visible` 을 봐서 몹 이름표는 못 숨겼다. 조건은 플레이어 쪽과 같다(설정 `entity_nameplate` > 0 · panic 아님 · 이름표 편집 권한).
+    - 확인: `:fabric:build` 성공(JDK 21) · refmap 에 두 대상의 1.21.8 중간 이름(`method_62100` · `method_62483` · `method_3926`) · 믹스인 처리기 새 경고 0.
+      ⚠ 인게임 확인 전(배포는 🙋 승인 뒤).
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
