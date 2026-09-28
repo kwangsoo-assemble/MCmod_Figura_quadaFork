@@ -184,6 +184,14 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       `trackState=false` 면 옷장의 로드 단계 표시를 안 건드린다). 컴파일은 `async` 큐에서 돈다(**public 으로 바꿈**) —
       `LuaScriptParser` 가 정적 `error` 플래그를 가져 컴파일이 겹치면 안 된다.
     - ⚠ 인게임 확인은 B0(몹 아바타 부하 측정) 때 — 그때까지 몹 아바타가 없다.
+14. **FSB 스트림 시작 패킷 수신기** (2026-09-28, 하네스 `projects/mc_repositories`): 서버가 아바타 스트림마다 먼저 보내는
+    `figura:s2c/stream/init`(`S2CInitializeAvatarStreamPacket`)은 **원본 1.20.6 부터 클라 수신기가 없었다** — 형식만 등록돼 있어
+    바닐라 `ClientPacketListener.handleUnknownCustomPayload` 가 아바타를 받을 때마다 `Unknown custom packet payload` WARN 을 찍었다.
+    전달은 멀쩡했다 — 받을 자리는 `FSB.getAvatar` 가 요청 **전에** streamId 로 만들고, 데이터 조각이 그 id 로 붙는다
+    (2026-09-28 실측: 경고 10번 모두 같은 초에 `fsb_<해시>.nbt` 저장 · 서버 원본과 내용 같음).
+    - `S2CInitializeAvatarStreamPacketHandler`(새)가 받기만 하고 디버그 로그를 남긴다. 클라 전용 — `server-common` · 와이어 · 공개 API 변화 없음(애드온 재빌드 불필요).
+    - ⚠ 실린 ehash 로 스트림 끝 소유권 검사(`FSB.AvatarInputStream` — 원본부터 비교값을 자기 키로 채워 늘 참)를 되살리지 말 것.
+      자기 아바타 소유권은 `applyUserData` 가 이미 본다 · 서버 소유 기록이 장착 기록과 어긋나면 자기 아바타가 거부되는 경로만 생긴다.
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
