@@ -117,9 +117,13 @@ Code: `compat/FlashbackCompat.java` (new) · `backend2/FSB.java` · `server/pack
   up on the official cloud and the answer cached under the FSB hash name, which **brought old avatars back**.
 - The cache is split by origin (official cache file names are unchanged, so existing caches are kept).
 - Two missing `return`s in `FSB.acceptDataChunk` are fixed.
+- Added a receiver for the `s2c/stream/init` packet the server sends ahead of every avatar stream. Upstream had no receiver
+  for it, so every avatar download logged an `Unknown custom packet payload` warning (delivery was never affected — the new
+  receiver only accepts the packet).
 
 Code: `avatar/AvatarSource.java` (new) · `avatar/UserData.java` · `avatar/local/CacheAvatarLoader.java` ·
-`backend2/NetworkStuff.java` · `backend2/FSB.java`
+`backend2/NetworkStuff.java` · `backend2/FSB.java` · `server/packets/handlers/s2c/S2CInitializeAvatarStreamPacketHandler.java` (new) ·
+`server/packets/handlers/s2c/Handlers.java`
 
 ### 6. Per-part vanilla glow (outline)
 

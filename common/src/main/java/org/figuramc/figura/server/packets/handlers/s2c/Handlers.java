@@ -15,6 +15,7 @@ public class Handlers {
         put(S2CUserdataPacket.PACKET_ID, new S2CUserdataHandler());
         put(S2CConnectedPacket.PACKET_ID, new S2CConnectedHandler());
         put(S2CUserdataNotFoundPacket.PACKET_ID, new S2CUserdataNotFoundHandler());
+        put(S2CInitializeAvatarStreamPacket.PACKET_ID, new S2CInitializeAvatarStreamPacketHandler());
         put(AvatarDataPacket.PACKET_ID, new S2CAvatarDataPacketHandler());
         put(S2CAvatarReadyPacket.PACKET_ID, new S2CAvatarReadyPacketHandler());
         put(S2CAvatarDeletedPacket.PACKET_ID, new S2CAvatarDeletedPacketHandler());
