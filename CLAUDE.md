@@ -203,7 +203,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 확인: `:fabric:build` 성공(JDK 21) · refmap 에 두 대상의 1.21.8 중간 이름(`method_62100` · `method_62483` · `method_3926`) · 믹스인 처리기 새 경고 0.
       ⚠ 인게임 확인 전(배포는 🙋 승인 뒤).
 16. **글 태스크 · 이름표 바깥선이 안 보이던 것 · 바깥선을 켜면 `setOpacity` 가 안 먹던 것** (2026-10-07, 하네스 `projects/부라더_부캉이` BR115 ·
-    `projects/mc_repositories` M13 — 브랜치 `fix/text-outline-alpha`, 배포는 부라더 촬영 뒤):
+    `projects/mc_repositories` M13 — `de1f11f` · 2026-10-07 07:30 두 프로필 배포 · 공개판 `9cc2ff8` · ⚠ 인게임 확인 전):
     - ★★ 원인 — 1.21.8 `Font.drawInBatch8xOutline` · `Font$PreparedTextBuilder` 는 받은 색의 알파를 **그대로** 쓴다(`getTextColor` = `ARGB.color(ARGB.alpha(color), 스타일색)`).
       옛 판의 `adjustColor`(알파 0 → 불투명)가 없어졌다. `setOutlineColor` 는 `ColorUtils.rgbToInt` 로 **알파 0** 색을 만들고 기본값 `0x202020` 도 알파 0 이라
       바깥선 글리프가 `rendertype_text.fsh` 의 `color.a < 0.1 → discard` 에 다 버려졌다. 게다가 `TextTask` 는 8벌 호출의 본문 색을 `-1` 로 고정했다.
@@ -215,6 +215,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - ⓘ `glow_outline_fix`(한글 바깥선 두께 — 같은 8벌 람다 `method_37297` 를 감싼다)가 이제 글 태스크 · 이름표에도 같이 먹는다
     - ⚠ 기본 바깥선 `0x202020` 은 R=0x20 — 사내 코어 텍스트 셰이더는 R ≤ 0x2F 를 효과 비트로 읽는다(하네스 `knowledge/shared/core_effects.md` §1) → 사내 아바타는 R ≥ 0x30 색을 준다
     - 공개 API 변경 없음 → 애드온 재빌드 불필요 · Lua 문서 `text_task.set_opacity` 에 곡선 한 줄
+    - 확인: `:fabric:build` 성공(JDK 21) · 믹스인 처리기 새 경고 0 · 재매핑 jar javap(8벌 호출 인자 · `ARGB` → `class_9848`) · 배포 md5 `a875efed…` = 빌드
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
