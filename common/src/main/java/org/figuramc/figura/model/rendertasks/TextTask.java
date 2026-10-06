@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.Badges;
@@ -47,6 +48,11 @@ public class TextTask extends RenderTask {
 
     private int cachedComplexity, cacheWidth, cacheHeight;
 
+    // Outline alpha = text alpha ^ this. The 8 outline copies are drawn under the text and cover most of each glyph,
+    // so translucent text turns muddy with the outline color. Draw order can't prevent it (Iris batches draws, HUD),
+    // so the outline only shows once the text is nearly opaque
+    private static final double OUTLINE_ALPHA_POW = 8;
+
     public TextTask(String name, Avatar owner, FiguraModelPart parent) {
         super(name, owner, parent);
     }
@@ -68,6 +74,13 @@ public class TextTask extends RenderTask {
         Font.DisplayMode displayMode = seeThrough ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.POLYGON_OFFSET;
         float vertexOffset = outline ? FiguraMod.VERTEX_OFFSET : 0f;
 
+        // 1.21.8 Font uses the alpha of the given color as is - the old adjustColor (alpha 0 -> opaque) is gone.
+        //   setOutlineColor stores 0xRRGGBB (alpha 0), which the shader discards -> give the outline an alpha.
+        //   A fixed -1 body color would also ignore setOpacity -> use op. When see-through, only the see-through call below draws the body
+        //   (the body of the 8x call gets alpha 0 - drawing it twice would make it denser)
+        int outArgb = ARGB.color(outlineAlpha(ARGB.alpha(op)), out);
+        int outlineBody = seeThrough ? ARGB.color(0, op) : op;
+
         // background
         if (bg != 0) {
             int offset = alignment.apply(cacheWidth);
@@ -86,13 +99,17 @@ public class TextTask extends RenderTask {
             int x = -alignment.apply(font, text);
 
             if (outline) {
-                font.drawInBatch8xOutline(text.getVisualOrderText(), x, j, -1, out, matrix, buffer, l);
+                font.drawInBatch8xOutline(text.getVisualOrderText(), x, j, outlineBody, outArgb, matrix, buffer, l);
                 if (seeThrough)
                     font.drawInBatch(text, x, j, op, shadow, matrix, buffer, displayMode, 0, l);
             } else {
                 font.drawInBatch(text, x, j, op, shadow, matrix, buffer, displayMode, 0, l);
             }
         }
+    }
+
+    private static int outlineAlpha(int textAlpha) {
+        return textAlpha >= 0xFF ? 0xFF : (int) Math.round(Math.pow(textAlpha / 255d, OUTLINE_ALPHA_POW) * 0xFF);
     }
 
     @Override

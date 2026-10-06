@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
@@ -171,7 +172,9 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 
         if (figura$enabled && figura$avatar != null && figura$hasCustomNameplate && figura$custom.outline) {
             // This renders the opaque text with an outline if the player has that enabled.
-            int outlineColor = figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020;
+            // 1.21.8 Font no longer turns alpha 0 into opaque - setOutlineColor stores 0xRRGGBB (alpha 0), so the outline would be invisible.
+            //   Take the alpha of the body color (vanilla -1)
+            int outlineColor = ARGB.color(ARGB.alpha(color), figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020);
             if (figura$isRenderingName()) {
                 for (int i = 0; i < figura$textList.size(); i++) {
                     Component text1 = figura$textList.get(i);

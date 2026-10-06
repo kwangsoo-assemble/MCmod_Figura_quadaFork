@@ -224,6 +224,19 @@ Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `
 `avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior) ·
 `mixin/render/renderers/LivingEntityRendererMixin.java` (vanilla body and layers) · `mixin/render/renderers/EntityRendererMixin.java` (name tag)
 
+### 13. Text task and name tag outlines
+
+- Fixed `setOutline(true)` outlines on text tasks (`TextTask`) and name tags **not showing**. In 1.21.8 `Font` uses the alpha of the
+  color it is given as is (older versions turned alpha 0 into opaque), and the outline color was passed on as the RGB from
+  `setOutlineColor` (alpha 0), so the shader discarded it.
+- Also fixed `setOpacity` being **ignored** on text tasks with an outline — the body color was fixed to opaque white.
+- On translucent text the outline **fades faster than the text** — outline alpha = text alpha ^ 8. The outline is drawn as 8 copies
+  of the text shifted by one step **under** the text, so as is, the inside of translucent glyphs would turn muddy with the outline color.
+  The outline therefore only shows when the text is nearly opaque (with the vanilla shader, there is no outline at an opacity of 0.75 or less).
+- See-through (`setSeeThrough(true)`) text draws its body only once, so it does not get denser from being drawn twice.
+
+Code: `model/rendertasks/TextTask.java` · `mixin/render/renderers/EntityRendererMixin.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
