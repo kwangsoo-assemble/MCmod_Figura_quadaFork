@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
@@ -171,7 +172,8 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 
         if (figura$enabled && figura$avatar != null && figura$hasCustomNameplate && figura$custom.outline) {
             // This renders the opaque text with an outline if the player has that enabled.
-            int outlineColor = figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020;
+            // ★ 1.21.8 Font 는 알파 0 을 불투명으로 고쳐 주지 않는다 — setOutlineColor 는 0xRRGGBB(알파 0)라 그대로면 바깥선이 안 보인다 → 본문 색(바닐라 -1)의 알파를 붙인다
+            int outlineColor = ARGB.color(ARGB.alpha(color), figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020);
             if (figura$isRenderingName()) {
                 for (int i = 0; i < figura$textList.size(); i++) {
                     Component text1 = figura$textList.get(i);

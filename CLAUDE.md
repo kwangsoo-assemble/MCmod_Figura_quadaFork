@@ -202,6 +202,19 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       `visible` 을 봐서 몹 이름표는 못 숨겼다. 조건은 플레이어 쪽과 같다(설정 `entity_nameplate` > 0 · panic 아님 · 이름표 편집 권한).
     - 확인: `:fabric:build` 성공(JDK 21) · refmap 에 두 대상의 1.21.8 중간 이름(`method_62100` · `method_62483` · `method_3926`) · 믹스인 처리기 새 경고 0.
       ⚠ 인게임 확인 전(배포는 🙋 승인 뒤).
+16. **글 태스크 · 이름표 바깥선이 안 보이던 것 · 바깥선을 켜면 `setOpacity` 가 안 먹던 것** (2026-10-07, 하네스 `projects/부라더_부캉이` BR115 ·
+    `projects/mc_repositories` M13 — 브랜치 `fix/text-outline-alpha`, 배포는 부라더 촬영 뒤):
+    - ★★ 원인 — 1.21.8 `Font.drawInBatch8xOutline` · `Font$PreparedTextBuilder` 는 받은 색의 알파를 **그대로** 쓴다(`getTextColor` = `ARGB.color(ARGB.alpha(color), 스타일색)`).
+      옛 판의 `adjustColor`(알파 0 → 불투명)가 없어졌다. `setOutlineColor` 는 `ColorUtils.rgbToInt` 로 **알파 0** 색을 만들고 기본값 `0x202020` 도 알파 0 이라
+      바깥선 글리프가 `rendertype_text.fsh` 의 `color.a < 0.1 → discard` 에 다 버려졌다. 게다가 `TextTask` 는 8벌 호출의 본문 색을 `-1` 로 고정했다.
+      (javap — loom 캐시 1.21.8 jar. GUI 는 같은 계약인데 `GuiGraphics.drawString` 이 알파 0 이면 곧바로 return 한다)
+    - `TextTask.render` — 바깥선 색 = (글 알파 ^ `OUTLINE_ALPHA_POW`(8)) + 바깥선 RGB · 본문 = `op` · 시스루면 8벌 호출의 본문은 알파 0(본문은 시스루 호출이 한 번만 그린다).
+      ★ 곡선 까닭 — 8벌이 본문 **밑에** 겹쳐(글자 속을 거의 다 덮는다) 반투명 글 속이 바깥선 색으로 탁해진다. 그리는 순서로 막는 길은 Iris 일괄 그리기 · HUD 에서 못 믿는다
+    - `EntityRendererMixin.drawWithOutline` — 이름표 바깥선 색에 본문 색(바닐라 `-1`)의 알파를 붙인다
+    - GUI 는 이식 때 `UIHelper.adjustColor` 로 이미 보정돼 있다(모든 `drawString` · `renderOutlineText`) — 해당 없음
+    - ⓘ `glow_outline_fix`(한글 바깥선 두께 — 같은 8벌 람다 `method_37297` 를 감싼다)가 이제 글 태스크 · 이름표에도 같이 먹는다
+    - ⚠ 기본 바깥선 `0x202020` 은 R=0x20 — 사내 코어 텍스트 셰이더는 R ≤ 0x2F 를 효과 비트로 읽는다(하네스 `knowledge/shared/core_effects.md` §1) → 사내 아바타는 R ≥ 0x30 색을 준다
+    - 공개 API 변경 없음 → 애드온 재빌드 불필요 · Lua 문서 `text_task.set_opacity` 에 곡선 한 줄
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

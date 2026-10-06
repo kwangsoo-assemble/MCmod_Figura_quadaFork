@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.Badges;
@@ -47,6 +48,10 @@ public class TextTask extends RenderTask {
 
     private int cachedComplexity, cacheWidth, cacheHeight;
 
+    // 바깥선 알파 = 글 알파 ^ 이 값 — 8벌이 본문 밑에 겹쳐(글자 속을 거의 다 덮는다) 반투명 글 속이 바깥선 색으로 탁해진다.
+    // 그리는 순서로는 못 막는다(Iris 일괄 그리기 · HUD) → 거의 불투명일 때만 바깥선이 서게 한다
+    private static final double OUTLINE_ALPHA_POW = 8;
+
     public TextTask(String name, Avatar owner, FiguraModelPart parent) {
         super(name, owner, parent);
     }
@@ -68,6 +73,12 @@ public class TextTask extends RenderTask {
         Font.DisplayMode displayMode = seeThrough ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.POLYGON_OFFSET;
         float vertexOffset = outline ? FiguraMod.VERTEX_OFFSET : 0f;
 
+        // ★ 1.21.8 Font 는 받은 색의 알파를 그대로 쓴다 — 옛 판의 adjustColor(알파 0 → 불투명)가 없어졌다.
+        //   setOutlineColor 는 0xRRGGBB(알파 0)라 그대로 넘기면 바깥선이 셰이더에서 버려진다 → 알파를 붙인다.
+        //   본문도 -1 고정이면 setOpacity 가 무시된다 → op. 시스루면 본문은 아래 시스루 호출이 한 번만 그린다(8벌 호출의 본문은 알파 0 — 두 번 겹치면 더 진해진다)
+        int outArgb = ARGB.color(outlineAlpha(ARGB.alpha(op)), out);
+        int outlineBody = seeThrough ? ARGB.color(0, op) : op;
+
         // background
         if (bg != 0) {
             int offset = alignment.apply(cacheWidth);
@@ -86,13 +97,17 @@ public class TextTask extends RenderTask {
             int x = -alignment.apply(font, text);
 
             if (outline) {
-                font.drawInBatch8xOutline(text.getVisualOrderText(), x, j, -1, out, matrix, buffer, l);
+                font.drawInBatch8xOutline(text.getVisualOrderText(), x, j, outlineBody, outArgb, matrix, buffer, l);
                 if (seeThrough)
                     font.drawInBatch(text, x, j, op, shadow, matrix, buffer, displayMode, 0, l);
             } else {
                 font.drawInBatch(text, x, j, op, shadow, matrix, buffer, displayMode, 0, l);
             }
         }
+    }
+
+    private static int outlineAlpha(int textAlpha) {
+        return textAlpha >= 0xFF ? 0xFF : (int) Math.round(Math.pow(textAlpha / 255d, OUTLINE_ALPHA_POW) * 0xFF);
     }
 
     @Override

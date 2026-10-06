@@ -1461,7 +1461,7 @@
     "figura.docs.text_task.get_background_color": "Gets this text's background color",
     "figura.docs.text_task.set_background_color": "Sets the background color of this text\nIf the alpha value is not given, it will use the vanilla value (as in the accessibility settings)",
     "figura.docs.text_task.get_opacity": "Gets the opacity of this text",
-    "figura.docs.text_task.set_opacity": "Sets the opacity of this text",
+    "figura.docs.text_task.set_opacity": "Sets the opacity of this text\nWith an outline, the outline fades faster than the text (opacity ^ 8), so it only shows when the text is nearly opaque",
     "figura.docs.sprite_task": "A task for rendering a single Sprite",
     "figura.docs.sprite_task.get_texture": "Returns this task's current texture",
     "figura.docs.sprite_task.set_texture": "Sets this task's texture\nThe texture's width and height must be provided if the texture is a location\nFor custom textures, the dimensions are optional",
