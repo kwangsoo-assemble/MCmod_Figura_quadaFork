@@ -22,7 +22,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.LuaWhitelist;
 import org.figuramc.figura.lua.NbtToLua;
-import org.figuramc.figura.lua.ReadOnlyLuaTable;
+import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.world.ItemStackAPI;
 import org.figuramc.figura.lua.api.world.WorldAPI;
 import org.figuramc.figura.lua.docs.LuaMetamethodDoc;
@@ -547,9 +547,12 @@ public class EntityAPI<T extends Entity> {
     public LuaValue getVariable(String key) {
         checkEntity();
         Avatar a = AvatarManager.getAvatar(entity);
-        LuaTable table = a == null || a.luaRuntime == null ? new LuaTable() : a.luaRuntime.avatar_meta.storedStuff;
-        table = new ReadOnlyLuaTable(table);
-        return key == null ? table : table.get(key);
+        LuaTable table = a == null || a.luaRuntime == null ? null : a.luaRuntime.avatar_meta.storedStuff;
+        // Read-only view without copying (ReadOnlyLuaView) - the old code deep-copied everything stored even to read a single key.
+        // Note: this is a live view, not a snapshot - if that avatar changes its store later, a view you hold sees it
+        if (key == null)
+            return new ReadOnlyLuaView(table == null ? new LuaTable() : table);
+        return table == null ? LuaValue.NIL : ReadOnlyLuaView.of(table.rawget(key));
     }
 
     @LuaWhitelist

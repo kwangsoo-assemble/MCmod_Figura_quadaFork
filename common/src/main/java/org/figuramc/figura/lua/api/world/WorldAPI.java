@@ -24,7 +24,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.LuaNotNil;
 import org.figuramc.figura.lua.LuaWhitelist;
-import org.figuramc.figura.lua.ReadOnlyLuaTable;
+import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.entity.EntityAPI;
 import org.figuramc.figura.lua.api.entity.PlayerAPI;
 import org.figuramc.figura.lua.docs.LuaMethodDoc;
@@ -539,7 +539,9 @@ public class WorldAPI {
         HashMap<String, LuaTable> varList = new HashMap<>();
         for (Avatar avatar : AvatarManager.getLoadedAvatars()) {
             LuaTable tbl = avatar.luaRuntime == null ? new LuaTable() : avatar.luaRuntime.avatar_meta.storedStuff;
-            varList.put(avatar.owner.toString(), new ReadOnlyLuaTable(tbl));
+            // Read-only view without copying - the old code deep-copied every avatar's whole store on every call.
+            // Note: this is a live view, not a snapshot (see the ReadOnlyLuaView header)
+            varList.put(avatar.owner.toString(), new ReadOnlyLuaView(tbl));
         }
         return varList;
     }
