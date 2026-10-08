@@ -22,7 +22,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.LuaWhitelist;
 import org.figuramc.figura.lua.NbtToLua;
-import org.figuramc.figura.lua.ReadOnlyLuaTable;
+import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.world.ItemStackAPI;
 import org.figuramc.figura.lua.api.world.WorldAPI;
 import org.figuramc.figura.lua.docs.LuaMetamethodDoc;
@@ -547,9 +547,12 @@ public class EntityAPI<T extends Entity> {
     public LuaValue getVariable(String key) {
         checkEntity();
         Avatar a = AvatarManager.getAvatar(entity);
-        LuaTable table = a == null || a.luaRuntime == null ? new LuaTable() : a.luaRuntime.avatar_meta.storedStuff;
-        table = new ReadOnlyLuaTable(table);
-        return key == null ? table : table.get(key);
+        LuaTable table = a == null || a.luaRuntime == null ? null : a.luaRuntime.avatar_meta.storedStuff;
+        // 복사하지 않는 읽기 전용 뷰 (ReadOnlyLuaView) — 옛 구현은 키 하나를 읽어도 store 한 것 전부를 깊은 복사했다.
+        // ⚠ 스냅샷이 아니라 살아 있는 뷰다: 그 아바타가 나중에 store 를 바꾸면 들고 있던 뷰에도 보인다
+        if (key == null)
+            return new ReadOnlyLuaView(table == null ? new LuaTable() : table);
+        return table == null ? LuaValue.NIL : ReadOnlyLuaView.of(table.rawget(key));
     }
 
     @LuaWhitelist

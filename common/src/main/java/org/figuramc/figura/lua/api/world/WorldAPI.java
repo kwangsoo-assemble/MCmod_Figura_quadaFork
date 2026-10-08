@@ -24,7 +24,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.LuaNotNil;
 import org.figuramc.figura.lua.LuaWhitelist;
-import org.figuramc.figura.lua.ReadOnlyLuaTable;
+import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.entity.EntityAPI;
 import org.figuramc.figura.lua.api.entity.PlayerAPI;
 import org.figuramc.figura.lua.docs.LuaMethodDoc;
@@ -539,7 +539,9 @@ public class WorldAPI {
         HashMap<String, LuaTable> varList = new HashMap<>();
         for (Avatar avatar : AvatarManager.getLoadedAvatars()) {
             LuaTable tbl = avatar.luaRuntime == null ? new LuaTable() : avatar.luaRuntime.avatar_meta.storedStuff;
-            varList.put(avatar.owner.toString(), new ReadOnlyLuaTable(tbl));
+            // 복사하지 않는 읽기 전용 뷰 — 옛 구현은 부를 때마다 모든 아바타의 store 를 통째로 깊은 복사했다.
+            // ⚠ 스냅샷이 아니라 살아 있는 뷰다 (ReadOnlyLuaView 머리말)
+            varList.put(avatar.owner.toString(), new ReadOnlyLuaView(tbl));
         }
         return varList;
     }

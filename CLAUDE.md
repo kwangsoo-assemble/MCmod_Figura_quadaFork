@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-0.1.6+1.21.8-fabric-mc.jar`
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-09 지금 `0.1.6-but-ai-edited.1`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ 공개판 · 내부판 (2026-09-25)
@@ -216,6 +216,25 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - ⚠ 기본 바깥선 `0x202020` 은 R=0x20 — 사내 코어 텍스트 셰이더는 R ≤ 0x2F 를 효과 비트로 읽는다(하네스 `knowledge/shared/core_effects.md` §1) → 사내 아바타는 R ≥ 0x30 색을 준다
     - 공개 API 변경 없음 → 애드온 재빌드 불필요 · Lua 문서 `text_task.set_opacity` 에 곡선 한 줄
     - 확인: `:fabric:build` 성공(JDK 21) · 믹스인 처리기 새 경고 0 · 재매핑 jar javap(8벌 호출 인자 · `ARGB` → `class_9848`) · 배포 md5 `a875efed…` = 빌드
+
+17. **`entity:getVariable` · `world.avatarVars()` — 깊은 복사를 «읽기 전용 뷰» 로** (2026-10-09, 하네스 `projects/figura_controller` FC4 · ⚠ 인게임 확인 전):
+    - ★★ 원인 — 두 API 가 `new ReadOnlyLuaTable(storedStuff)` 를 **부를 때마다** 만들었고, 그 생성자는 원본 전체를 재귀로 깊은 복사한다.
+      키 하나(`getVariable("hitboxes")`)를 읽어도 그 아바타가 store 한 것 전부를, `avatarVars()` 는 **모든 아바타의 것 전부**를 복사했다.
+      템플릿 아바타는 클릭마다(히트박스 · 입력 · 래그돌 잡기) `world.avatarVars()` → `pairs` → `store["hitboxes"]` 를 돈다.
+      (오프라인 실측: 값 10만 개짜리 store 에서 키 하나 — 원본 읽기 118,007 → 2 · 할당 3.1 MB → 1.3 KB · 1.2 ms → 73 ns)
+    - `lua/ReadOnlyLuaView`(새) — 원본을 **복사하지 않고** 감싼다. 읽기(rawget · get · next · inext · 길이 · keys)는 원본에 raw 로 맡기고
+      테이블 값만 그 자리에서 뷰로 감싼다(게으르게). 쓰기(set · rawset · hashset · insert · remove · setmetatable)는 `table is read-only`.
+      같은 뿌리 안에서는 같은 원본에 같은 뷰를 준다(`t.a == t.a` · 순환) — 캐시는 키 · 값 모두 약한 참조라 쌓이지 않는다.
+      ★ 덤 — 옛 복사는 두 단 이상 순환(`a.b.a == a`)에서 StackOverflowError 였다. 뷰는 게으르니 문제없다.
+    - ⚠ **의미 변화 — 스냅샷이 아니라 살아 있는 뷰다.** 들고 있으면 그 아바타가 나중에 바꾼 store 가 보인다.
+      그 아바타가 리로드되면 새 저장소가 생기므로 다시 불러야 한다 · 읽는 쪽이 `pairs` 도중 주인 함수를 불러 주인이 키를 지우면 `next` 가 오류를 낼 수 있다(스냅샷엔 없던 일).
+      원본 메타테이블은 옛 사본처럼 안 본다(raw) · `table.insert(t, nil)` 이 이제 오류(옛 클래스는 조용히 넘어감).
+    - 다른 `ReadOnlyLuaTable` 사용처(Config · 어깨 NBT · Http · BlockState · ItemStack · LuaUtils · 문자열 메타테이블)는 그대로.
+    - 공개 API 시그니처 변화 없음(클래스 추가뿐) → 애드온 재빌드 불필요.
+    - 확인: `:fabric:build` 성공(JDK 21 · 믹스인 경고는 기존 2개뿐) · LuaJ 3.0.8-figura 소스로 재정의 대상을 확정(모드에 묶인 jar 와 클래스 동일) ·
+      오프라인 시험 72/72(Lua 53 · Java 19 — pairs · ipairs · next · # · 중첩 · rawget · concat · unpack · 쓰기 13종 오류 · 살아 있는 반영 ·
+      동일성 · 순환 · 키 하나 읽기 비용 · 캐시 누수 없음) — 시험 원본은 하네스 세션 스크래치(`viewtest/`)였다
+    - 산출물 `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar` md5 `bc97e650…`
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
