@@ -21,6 +21,11 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - README.md 는 영어판이고 **원본은 하네스의 한글판**이다 — `projects/mc_repositories/readme_ko/MCmod_Figura_quadaFork.md`. 기능을 바꾸면 거기 먼저 적고
   영어 README 에 옮긴 뒤 `repos.py mark-readme core`. 원본 README 는 `README.upstream.md`.
 - 레포 이름 규칙 — `MCmod_` / `MCplugin_` + 프로젝트 이름 (+ 포크는 `_quadaFork`). `but-ai-edited` 는 **버전명에만** 쓴다.
+- ★ **버전 · 릴리스** (🙋 2026-10-10 «기능 업데이트 할때마다 버전명 올리는 처리»): jar 에 들어가는 코드가 바뀌면 `gradle.properties` 의 `mod_version` 를 올린다 —
+  포크는 꼬리 `but-ai-edited.N` 의 **N+1**(원본 버전이 바뀌면 원본을 따르고 `.1` 부터). 그 작업의 **첫 코드 수정과 함께** 올리고(같은 작업의
+  시험 배포는 같은 버전) → 빌드 · 배포 · 🎬 → `repos.py release core`(태그 + GitHub Release 에 jar). 문서만 바뀌면 안 올린다.
+  안 올리면 `repos.py status` 가 `VERSION_STALE` · 올리고 안 내면 `UNRELEASED` 로 빨갛다.
+  ⚠ 코어 버전을 올리면 **Silly · Chat-Heads 의 `.libs/figura-<버전>+1.21.8-fabric-mc.jar` 참조**(빌드 설정)도 같이 바꾼다 · FSB ↔ 코어 비교는 꼬리를 뗀다(`FiguraMod.COMPARE_VERSION`)라 N 만 올려도 짝은 안 깨진다
 - 원본 CI(`.github/workflows`) · 이슈 양식 · 후원 링크(`FUNDING.yml`)는 뺐다 — 우리 레포에서 돌면 안 된다(옛 공개판도 뺐다).
 - `server-common/` 은 FSB 작업본(`../figura_fsbplugin_internal`)이 원본이다 — 고치면 여기로 복사한다(두 쪽이 다르면 통신이 깨진다).
 - `kr/asmbl/figuracontroller/protocol/` 은 FiguraController(`../../plugins/FiguraController`)가 원본이다 — 거기서 고치고 복사한다.
