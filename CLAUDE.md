@@ -252,6 +252,11 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 확인: `:fabric:build` 성공 · 하네스 `verify_core_serverdata.py` — 순수 모델 29 + **서버 플러그인 → 패킷 → 이 모델 무작위 이어 붙이기**(씨앗 20 · 대조 96만 · 실패 0 —
       그 시험이 플러그인의 «같은 틱 보기 시작 → 끝» 결함을 찾았다) · ⚠ 아바타에 나누는 규칙 · Lua API 는 인게임(T8)
     - 서버 플러그인이 없는 서버: HELLO 는 FSB 가 리스너 없이 버린다 · 우리 id 패킷이 안 오니 아무 일도 없다(안전)
+19. **`server_data.STATE_CHANGED` · `SIGNAL` 이 Lua 에서 nil 이던 것** (2026-10-10, 하네스 `projects/figura_controller` T8 인게임 첫 실측):
+    - 원인: `LuaTypeManager` 는 화이트리스트 **메서드만** 메타테이블에 싣는다 — `@LuaWhitelist` **필드**는 그 클래스가 `__index` 를 가져야 보인다
+      (`events` · `host` · `renderer` · `nameplate` … 코어의 필드 있는 19 클래스가 전부 그렇게 한다). 18 의 `ServerDataAPI` 만 `__index` 가 없었다
+    - 고침: `ServerDataAPI.__index(key)`(대소문자 무시 — `events` 와 같다) · `__newindex`(대입하면 처리기 — `function server_data.STATE_CHANGED(...)`) · 문서 `server_data.__index.comment1`
+    - ★ 18 의 확인은 Java 모델뿐이었다 — 하네스 `verify_core_serverdata.py` 에 ③ «Lua 표면»(코어 전체 정적 — 필드 있는 클래스는 `__index` 필수) · 자가 점검으로 이 결함을 되살리면 잡는다
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

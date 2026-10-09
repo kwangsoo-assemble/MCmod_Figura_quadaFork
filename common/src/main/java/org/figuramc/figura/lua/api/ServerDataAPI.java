@@ -7,16 +7,20 @@ import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.entity.EntityAPI;
 import org.figuramc.figura.lua.api.event.LuaEvent;
 import org.figuramc.figura.lua.docs.LuaFieldDoc;
+import org.figuramc.figura.lua.docs.LuaMetamethodDoc;
+import org.figuramc.figura.lua.docs.LuaMetamethodDoc.LuaMetamethodOverload;
 import org.figuramc.figura.lua.docs.LuaMethodDoc;
 import org.figuramc.figura.lua.docs.LuaMethodOverload;
 import org.figuramc.figura.lua.docs.LuaTypeDoc;
 import org.figuramc.figura.serverdata.JsonLua;
 import org.figuramc.figura.serverdata.ServerDataStore;
 import org.luaj.vm2.LuaError;
+import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -143,6 +147,33 @@ public class ServerDataAPI {
     public boolean send(@LuaNotNil String name, LuaValue data) {
         if (!owner.isHost) throw new LuaError("Only the host player avatar can send signals to the server");
         return ServerDataStore.sendSignal(owner.owner, name, JsonLua.toJson(data == null ? LuaValue.NIL : data));
+    }
+
+    /**
+     * ★ 이벤트 칸을 Lua 에 내보낸다 — `LuaTypeManager` 는 화이트리스트 **메서드만** 메타테이블에 싣고 필드는 안 싣는다.
+     * 이게 없으면 `server_data.STATE_CHANGED` 가 nil 이다(2026-10-10 인게임 실측 — 하네스 figura_controller T8. T4 시험은 Java 모델만 봤다).
+     * `events` 와 같게 대소문자를 안 가린다.
+     */
+    @LuaWhitelist
+    @LuaMetamethodDoc(overloads = @LuaMetamethodOverload(
+            types = {LuaEvent.class, ServerDataAPI.class, String.class},
+            comment = "server_data.__index.comment1"
+    ))
+    public LuaEvent __index(String key) {
+        if (key == null) return null;
+        return switch (key.toUpperCase(Locale.US)) {
+            case "STATE_CHANGED" -> STATE_CHANGED;
+            case "SIGNAL" -> SIGNAL;
+            default -> null;
+        };
+    }
+
+    /** `function server_data.STATE_CHANGED(...)` 처럼 대입하면 처리기를 단다(`events` 와 같다) */
+    @LuaWhitelist
+    public void __newindex(@LuaNotNil String key, LuaFunction func) {
+        LuaEvent event = __index(key);
+        if (event != null) event.register(func, null);
+        else throw new LuaError("Cannot assign value on key \"" + key + "\"");
     }
 
     @Override
