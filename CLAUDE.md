@@ -235,7 +235,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       오프라인 시험 72/72(Lua 53 · Java 19 — pairs · ipairs · next · # · 중첩 · rawget · concat · unpack · 쓰기 13종 오류 · 살아 있는 반영 ·
       동일성 · 순환 · 키 하나 읽기 비용 · 캐시 누수 없음) — 시험 원본은 하네스 세션 스크래치(`viewtest/`)였다
     - 산출물 `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar` md5 `bc97e650…`
-18. **`server_data` — 서버 플러그인 FiguraController 가 주인인 상태 · 신호를 코어 저장소로** (2026-10-10, 하네스 `projects/figura_controller` T2 · T4 · ⚠ 인게임 확인 전 · 배포는 T8 에서 플러그인과 함께):
+18. **`server_data` — 서버 플러그인 FiguraController 가 주인인 상태 · 신호를 코어 저장소로** (2026-10-10, 하네스 `projects/figura_controller` T2 · T4 · T8 배포 · ✅ 인게임 확인 — 19 를 고친 뒤 혼자 1 ~ 7(처음 모습 · set · 래그돌 · 히트박스 · 투명 · `/rc` · Flashback 되감기) · 여럿이 보는 것은 아직):
     - 규약 `figuracontroller:v1` — FSB `CustomFSBPacket`(`figura:ping/server`)의 `id` = `"figuracontroller:v1".hashCode()` · 몸 = 이진 op 줄.
       코덱 `common/src/main/java/kr/asmbl/figuracontroller/protocol/` 은 **플러그인 저장소(`plugins/FiguraController`)가 원본 · 여기는 그대로 사본** — 고치지 마라(하네스 `verify_codec.py` 가 대조)
     - `serverdata/ServerDataModel`(순수 — 패킷 적용 · «처음 건드리기 전» 기록 · 꺼내기 · Flashback 스냅샷) · `serverdata/ServerDataStore`(Minecraft 연결 — 가로채기 · 이벤트 나누기 · HELLO · 신호 보내기) · `serverdata/JsonLua`
@@ -252,7 +252,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 확인: `:fabric:build` 성공 · 하네스 `verify_core_serverdata.py` — 순수 모델 29 + **서버 플러그인 → 패킷 → 이 모델 무작위 이어 붙이기**(씨앗 20 · 대조 96만 · 실패 0 —
       그 시험이 플러그인의 «같은 틱 보기 시작 → 끝» 결함을 찾았다) · ⚠ 아바타에 나누는 규칙 · Lua API 는 인게임(T8)
     - 서버 플러그인이 없는 서버: HELLO 는 FSB 가 리스너 없이 버린다 · 우리 id 패킷이 안 오니 아무 일도 없다(안전)
-19. **`server_data.STATE_CHANGED` · `SIGNAL` 이 Lua 에서 nil 이던 것** (2026-10-10, 하네스 `projects/figura_controller` T8 인게임 첫 실측):
+19. **`server_data.STATE_CHANGED` · `SIGNAL` 이 Lua 에서 nil 이던 것** (2026-10-10, 하네스 `projects/figura_controller` T8 인게임 첫 실측 · `d98e5a2` · ✅ 인게임 확인 — 배포 md5 `81ff87ee…`):
     - 원인: `LuaTypeManager` 는 화이트리스트 **메서드만** 메타테이블에 싣는다 — `@LuaWhitelist` **필드**는 그 클래스가 `__index` 를 가져야 보인다
       (`events` · `host` · `renderer` · `nameplate` … 코어의 필드 있는 19 클래스가 전부 그렇게 한다). 18 의 `ServerDataAPI` 만 `__index` 가 없었다
     - 고침: `ServerDataAPI.__index(key)`(대소문자 무시 — `events` 와 같다) · `__newindex`(대입하면 처리기 — `function server_data.STATE_CHANGED(...)`) · 문서 `server_data.__index.comment1`
