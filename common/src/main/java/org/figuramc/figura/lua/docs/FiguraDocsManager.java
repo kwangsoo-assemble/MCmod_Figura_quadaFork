@@ -224,6 +224,10 @@ public class FiguraDocsManager {
                 ServerPacketsAPI.class
         ));
 
+        put("server_data", List.of(
+                org.figuramc.figura.lua.api.ServerDataAPI.class
+        ));
+
         put("textures", List.of(
                 TextureAPI.class,
                 FiguraTexture.class,

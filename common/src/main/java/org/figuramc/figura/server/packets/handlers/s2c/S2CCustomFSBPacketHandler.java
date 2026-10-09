@@ -10,6 +10,8 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 public class S2CCustomFSBPacketHandler extends ConnectedPacketHandler<CustomFSBPacket> {
     @Override
     protected void handlePacket(CustomFSBPacket packet) {
+        // server_data(figuracontroller:v1)는 아바타보다 먼저 코어 저장소로 — 아바타가 아직 안 실렸어도 안 잃는다
+        if (org.figuramc.figura.serverdata.ServerDataStore.intercept(packet)) return;
         ServerPacketsAPI.handlePacket(packet.avatarOwner(), packet.id(), packet.data());
     }
 

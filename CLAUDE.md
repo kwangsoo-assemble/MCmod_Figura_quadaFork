@@ -235,6 +235,23 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       오프라인 시험 72/72(Lua 53 · Java 19 — pairs · ipairs · next · # · 중첩 · rawget · concat · unpack · 쓰기 13종 오류 · 살아 있는 반영 ·
       동일성 · 순환 · 키 하나 읽기 비용 · 캐시 누수 없음) — 시험 원본은 하네스 세션 스크래치(`viewtest/`)였다
     - 산출물 `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar` md5 `bc97e650…`
+18. **`server_data` — 서버 플러그인 FiguraController 가 주인인 상태 · 신호를 코어 저장소로** (2026-10-10, 하네스 `projects/figura_controller` T2 · T4 · ⚠ 인게임 확인 전 · 배포는 T8 에서 플러그인과 함께):
+    - 규약 `figuracontroller:v1` — FSB `CustomFSBPacket`(`figura:ping/server`)의 `id` = `"figuracontroller:v1".hashCode()` · 몸 = 이진 op 줄.
+      코덱 `common/src/main/java/kr/asmbl/figuracontroller/protocol/` 은 **플러그인 저장소(`plugins/FiguraController`)가 원본 · 여기는 그대로 사본** — 고치지 마라(하네스 `verify_codec.py` 가 대조)
+    - `serverdata/ServerDataModel`(순수 — 패킷 적용 · «처음 건드리기 전» 기록 · 꺼내기 · Flashback 스냅샷) · `serverdata/ServerDataStore`(Minecraft 연결 — 가로채기 · 이벤트 나누기 · HELLO · 신호 보내기) · `serverdata/JsonLua`
+    - `S2CCustomFSBPacketHandler` — 우리 id 면 **아바타보다 먼저** 저장소로(아바타 `server_packets` 에는 안 간다)
+    - Lua `server_data`(`lua/api/ServerDataAPI` · `FiguraAPIManager` · 문서 `en_us.json` · `FiguraDocsManager` · `FiguraGlobalsDocs`):
+      `get(name)` · `get(entity|uuid, name)` — «자기 값 없으면 전역» · `getGlobal` · `getAll([entity|uuid])`(읽기 전용 · 부를 때마다 새 표) · `watch` · `unwatch` ·
+      `send(name, data)`(호스트 플레이어 아바타만) · 이벤트 `STATE_CHANGED(name, new, old, subject, initial)` · `SIGNAL(name, data, subject)`
+    - 이벤트는 패킷마다가 아니라 **다음 클라 틱 시작**(`AvatarManager.tickLoadedAvatars` 맨 앞 → `Avatar.queueLuaCall` — 핑과 같은 대기열 · 틱 예산)에 «처음 ↔ 지금» 비교 —
+      RESET 뒤 FULL(초기화 · 되감기)은 헛변화가 없다 · 같은 값이면 안 낸다(바이트 비교 — 1 ≠ 1.0) · 아바타가 실리면(`ENTITY_INIT` 직후) 지금 값을 `initial = true` 로 한 번
+    - HELLO — `FSB.handleHandshake`(처음 · 다시 악수) · 비우기 — `FSB.onDisconnect` · `MinecraftMixin.clearLevel`(월드 · 리플레이 나감)
+    - Flashback — `mixin/compat/FlashbackRecorderMixin`(`@Pseudo` · `writeCustomSnapshot` HEAD)이 녹화 스냅샷에 RESET · 이름 사전 · 전역/대상 FULL 을 넣는다
+      (하네스 T1 스파이크 실측: 스냅샷 커스텀 페이로드는 되감기마다 돌아온다 · Render thread)
+    - `AvatarManager.getLoadedCEMAvatars()` 추가 · 공개 API 는 추가뿐 → 애드온 재빌드 불필요
+    - 확인: `:fabric:build` 성공 · 하네스 `verify_core_serverdata.py` — 순수 모델 29 + **서버 플러그인 → 패킷 → 이 모델 무작위 이어 붙이기**(씨앗 20 · 대조 96만 · 실패 0 —
+      그 시험이 플러그인의 «같은 틱 보기 시작 → 끝» 결함을 찾았다) · ⚠ 아바타에 나누는 규칙 · Lua API 는 인게임(T8)
+    - 서버 플러그인이 없는 서버: HELLO 는 FSB 가 리스너 없이 버린다 · 우리 id 패킷이 안 오니 아무 일도 없다(안전)
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

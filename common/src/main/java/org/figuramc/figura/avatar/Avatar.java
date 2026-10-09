@@ -270,6 +270,8 @@ public class Avatar {
             if (entity != null) {
                 luaRuntime.setUser(entity);
                 run("ENTITY_INIT", init.post());
+                // server_data — 지금 값을 «처음»(initial = true) 으로 한 번씩 (다음 run 에서 돈다)
+                org.figuramc.figura.serverdata.ServerDataStore.onAvatarInit(this);
             }
         }
 
@@ -334,6 +336,20 @@ public class Avatar {
 
             FiguraLuaPrinter.sendPingMessage(this, name, data.length, args);
             luaRuntime.run(function.func, tick, (Object[]) args);
+        });
+    }
+
+    /**
+     * 다음 {@code run} 에서 이 아바타의 Lua 이벤트를 부른다 — 핑과 같은 대기열 · 같은 틱 예산(server_data 가 쓴다).
+     * 아바타가 안 실렸거나 오류로 멈췄으면 버린다. {@code target} 이 null 을 주면 안 부른다.
+     */
+    public void queueLuaCall(java.util.function.Function<FiguraLuaRuntime, Object> target, Object... args) {
+        events.offer(() -> {
+            if (scriptError || luaRuntime == null || !loaded)
+                return;
+            Object t = target.apply(luaRuntime);
+            if (t != null)
+                luaRuntime.run(t, tick, args);
         });
     }
 

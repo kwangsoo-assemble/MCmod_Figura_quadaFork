@@ -107,6 +107,8 @@ public abstract class FSB {
             connectedPlayers.clear();
             connectedPlayers.addAll(packet.connectedPlayers());
             AvatarManager.clearAllAvatars();
+            // server_data — 서버에 «준비됨»(HELLO). 다시 악수(서버가 세션을 잃음)여도 보낸다 — 서버가 RESET + 전부로 답한다
+            org.figuramc.figura.serverdata.ServerDataStore.sendHello();
         }
     }
 
@@ -153,6 +155,7 @@ public abstract class FSB {
         outputStreams.clear();
         connectedPlayers.clear();
         nextTransactionId = 0;
+        org.figuramc.figura.serverdata.ServerDataStore.clear();
     }
 
     public void tick() {

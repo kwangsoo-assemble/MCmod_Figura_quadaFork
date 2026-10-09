@@ -73,6 +73,9 @@ public class AvatarManager {
         if (panic)
             return;
 
+        // server_data — 지난 틱 동안 바뀐 것을 아바타 대기열에(이 틱의 run 에서 돈다)
+        org.figuramc.figura.serverdata.ServerDataStore.flushEvents();
+
         // tick the avatars
         for (UserData user : LOADED_USERS.values()) {
             Avatar avatar = user.getMainAvatar();
@@ -247,6 +250,11 @@ public class AvatarManager {
                 list.add(avatar);
         }
         return list;
+    }
+
+    // 지금 실린 몹(CEM) 아바타 전부 — server_data 가 이벤트를 나눌 때 쓴다(사본)
+    public static List<Avatar> getLoadedCEMAvatars() {
+        return new ArrayList<>(LOADED_CEM.values());
     }
 
     // -- avatar management -- // 

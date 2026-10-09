@@ -34,6 +34,7 @@
     "compat.GeckolibGeoArmorRendererMixin",
     "compat.GeckolibGeoRendererMixin",
     "compat.SimpleVCMixin",
+    "compat.FlashbackRecorderMixin",
     "font.BakedGlyphMixin",
     "font.BitmapGlyphMixin",
     "font.FontAccessor",

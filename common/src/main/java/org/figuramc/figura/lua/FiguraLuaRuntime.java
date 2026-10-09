@@ -56,6 +56,7 @@ public class FiguraLuaRuntime {
     public AvatarAPI avatar_meta;
     public PingAPI ping;
     public ServerPacketsAPI serverPackets;
+    public org.figuramc.figura.lua.api.ServerDataAPI serverData;
     public TextureAPI texture;
 
     //---------------------------------
