@@ -13,19 +13,6 @@ For example:
 So please don't casually use this mod, or redistribute and share it.
 It's meant for people who can analyze and understand the code — please use it or refer to it only if that's you.
 
-I made this repository public simply because I thought sharing it might be nice.
-After all, I'm just one of many Figura users, and I figured good things are worth sharing. :)
-That said, if the Figura team asks me to take this repository down, I will.
-
-A little aside — did you know?
-According to Pew Research Center, 50% of Americans say they are more concerned than excited about AI,
-while only 16% of South Koreans say the same.
-Ha, I'm Korean myself, and I have to admit I'm pretty optimistic about AI.
-Anyway, I asked the AI to document as transparently as possible where and how this fork differs from the
-original project, so you'll find the changes listed below.
-I don't think the AI wrote sloppy or potentially dangerous code, but just in case,
-please be sure to review everything carefully yourself.
-
 ---
 
 # MCmod_Figura_quadaFork
@@ -334,19 +321,6 @@ ex)
 
 그렇기에 이 모드를 함부로 사용하고 배포하여 공유하지 않는 것이 좋습니다.
 코드를 잘 분석하고 이해할 줄 아시는 분들만 사용하거나 참고하길 바랍니다.
-
-이 레포지토리는 그냥 공개하면 좋지 않을까 하는 생각에 공개한 것입니다.
-어쨌든 저도 여러 피구라 이용자 중 하나이고, 그저 좋은 건 공유하면 좋지 않을까 하는 생각에요. :)
-하지만 피구라 운영 팀에서 이 레포지토리를 내리라고 한다면 내릴 예정입니다.
-
-아래는 사담인데요. 여러분들 그것 아시나요?
-pew 리서치에 따르면 미국인의 50%가 AI를 우려한다고 답했다고 하더군요.
-그런데 한국인은 16%만 AI를 우려한다고 하더군요.
-하하, 사실 저도 한국인인데 AI에 대해 낙관적이긴 합니다.
-아무튼, 원본 프로젝트와 비교하여 어디를 어떻게 수정하였는지 최대한 투명하게 AI가 작성하라고 시켰으니
-아래에서 수정사항들을 확인할 수 있을 겁니다.
-제 생각엔 AI가 코드를 어설픈 품질로 작성했다거나 위험할 수 있는 코드가 있진 않을 것이라 생각하지만
-그래도 혹시 모르니 꼭 세세히 확인해 보셔야 할 것 같습니다.
 
 ---
 
