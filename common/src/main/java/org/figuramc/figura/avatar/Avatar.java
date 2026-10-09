@@ -271,6 +271,8 @@ public class Avatar {
             if (entity != null) {
                 luaRuntime.setUser(entity);
                 run("ENTITY_INIT", init.post());
+                // server_data — deliver the current values once as initial events (they run on the next run)
+                org.figuramc.figura.serverdata.ServerDataStore.onAvatarInit(this);
             }
         }
 
@@ -335,6 +337,20 @@ public class Avatar {
 
             FiguraLuaPrinter.sendPingMessage(this, name, data.length, args);
             luaRuntime.run(function.func, tick, (Object[]) args);
+        });
+    }
+
+    /**
+     * Calls one of this avatar's Lua events on the next {@code run} — same queue and tick budget as pings (used by server_data).
+     * Dropped when the avatar is not loaded or stopped on an error. Nothing is called when {@code target} returns null.
+     */
+    public void queueLuaCall(java.util.function.Function<FiguraLuaRuntime, Object> target, Object... args) {
+        events.offer(() -> {
+            if (scriptError || luaRuntime == null || !loaded)
+                return;
+            Object t = target.apply(luaRuntime);
+            if (t != null)
+                luaRuntime.run(t, tick, args);
         });
     }
 

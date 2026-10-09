@@ -73,6 +73,9 @@ public class AvatarManager {
         if (panic)
             return;
 
+        // server_data — queue last tick's changes on the avatars (they run in this tick's run calls)
+        org.figuramc.figura.serverdata.ServerDataStore.flushEvents();
+
         // tick the avatars
         for (UserData user : LOADED_USERS.values()) {
             Avatar avatar = user.getMainAvatar();
@@ -248,6 +251,11 @@ public class AvatarManager {
                 list.add(avatar);
         }
         return list;
+    }
+
+    // every currently loaded mob (CEM) avatar — used by server_data to deliver events (a copy)
+    public static List<Avatar> getLoadedCEMAvatars() {
+        return new ArrayList<>(LOADED_CEM.values());
     }
 
     // -- avatar management -- // 

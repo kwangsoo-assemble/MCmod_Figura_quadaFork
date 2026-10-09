@@ -132,6 +132,7 @@ public abstract class MinecraftMixin {
         AvatarManager.clearAllAvatars();
         FiguraLuaPrinter.clearPrintQueue();
         NetworkStuff.unsubscribeAll();
+        org.figuramc.figura.serverdata.ServerDataStore.clear(); // server_data — cleared when leaving the world (replays too)
     }
 
     @Inject(at = @At("HEAD"), method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V")

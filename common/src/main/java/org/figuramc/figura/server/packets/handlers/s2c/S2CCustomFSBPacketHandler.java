@@ -10,6 +10,8 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 public class S2CCustomFSBPacketHandler extends ConnectedPacketHandler<CustomFSBPacket> {
     @Override
     protected void handlePacket(CustomFSBPacket packet) {
+        // server_data (figuracontroller:v1) goes to the core store before avatars — nothing is lost while an avatar is not loaded yet
+        if (org.figuramc.figura.serverdata.ServerDataStore.intercept(packet)) return;
         ServerPacketsAPI.handlePacket(packet.avatarOwner(), packet.id(), packet.data());
     }
 

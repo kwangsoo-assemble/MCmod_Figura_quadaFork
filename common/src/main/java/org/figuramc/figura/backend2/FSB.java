@@ -107,6 +107,8 @@ public abstract class FSB {
             connectedPlayers.clear();
             connectedPlayers.addAll(packet.connectedPlayers());
             AvatarManager.clearAllAvatars();
+            // server_data — tell the server we are ready (HELLO). Also on a re-handshake (server lost the session) — it answers with RESET + everything
+            org.figuramc.figura.serverdata.ServerDataStore.sendHello();
         }
     }
 
@@ -153,6 +155,7 @@ public abstract class FSB {
         outputStreams.clear();
         connectedPlayers.clear();
         nextTransactionId = 0;
+        org.figuramc.figura.serverdata.ServerDataStore.clear();
     }
 
     public void tick() {
