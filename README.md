@@ -1,152 +1,299 @@
-<h1 align="center"> Figura </h1>
-<p align="center">
-  <img alt="fabric" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/fabric_vector.svg">
-  <img alt="forge" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/forge_vector.svg">
-  <img alt="quilt" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/quilt_vector.svg">
-  <img alt="neoforge" height="56" src="https://cdn.jsdelivr.net/gh/Hyperbole-Devs/vectors@neoforge_badges/assets/cozy/supported/neoforge_vector.svg">
-</p>
+# Notice
 
-## A Minecraft Java client mod that allows you to extensively customize your player model and have other players see your Avatar without requiring any server mods!
-![blockbench](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/blockbench.png)
+In this repository I've applied a number of changes to make the Figura mod behave the way I need it to
+(integration with and control from a game server for producing video content for broadcast, replay compatibility, and so on).
 
-## Utilizing the full potential of [Blockbench](https://www.blockbench.net/).
-![animation](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/anims.png)
+Because of that, this Figura mod includes features that break the existing rules of the Figura community.
+For example:
+- A `netlock` command, added to keep avatars fixed in place while watching replays.
+- A feature that lets you put any local avatar you choose on other players.
 
-![mesh](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/mesh_e.png)
+So please don't casually use this mod, or redistribute and share it.
+It's meant for people who can analyze and understand the code — please use it or refer to it only if that's you.
 
-## Not only can you customize your model but Figura also has an optional [Lua](https://www.lua.org/) API to make your own scripts!
+I made this repository public simply because I thought sharing it might be nice.
+After all, I'm just one of many Figura users, and I figured good things are worth sharing. :)
+That said, if the Figura team asks me to take this repository down, I will.
 
-![lua](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/lua.png)
+A little aside — did you know?
+According to Pew Research Center, 50% of Americans say they are more concerned than excited about AI,
+while only 16% of South Koreans say the same.
+Ha, I'm Korean myself, and I have to admit I'm pretty optimistic about AI.
+Anyway, I asked the AI to document as transparently as possible where and how this fork differs from the
+original project, so you'll find the changes listed below.
+I don't think the AI wrote sloppy or potentially dangerous code, but just in case,
+please be sure to review everything carefully yourself.
 
-## What if someone is invisible, or very small? Take advantage of Figura's robust permission system!
+---
 
-![perms](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/perms.png)
+# MCmod_Figura_quadaFork
 
-## We also have some extras, like:
-![Qol](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/wheel.png)
+> An **AI-assisted fork** of [Figura](https://github.com/FiguraMC/Figura) for Minecraft **1.21.8 (Fabric)**.
+> It brings the Figura 0.1.6 features to 1.21.8 and adds an **FSB (Figura Server Backend) client** — the server you are
+> connected to relays avatars — along with replay support, client-side selectors and per-part glow.
 
-![skullemoji](https://raw.githubusercontent.com/FiguraMC/Figura/HEAD/.github/assets/skull.png)
+> ⚠ **This is an unofficial fork** and is not affiliated with FiguraMC. Most changes were written with an AI coding
+> assistant (Claude Code) and checked by the maintainer in real use. Before reporting a problem to upstream Figura,
+> please make sure it is not caused by this fork.
 
-Meet us on the [FiguraMC Discord Server](https://discord.figuramc.org/) for more info and help!
+## At a glance
 
-Help translate Figura to your native language on [Weblate](https://translate.figuramc.org/projects/figuramc/figura/)!\
-![translate]
+| Item | Value |
+|---|---|
+| Minecraft | 1.21.8 |
+| Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
+| Java | 21 |
+| Mod version | `0.1.6-but-ai-edited.1` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
+| Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
+| Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 
-[translate]: https://translate.figuramc.org/widget/figuramc/figura/horizontal-auto.svg
-# Links
-[discord]: https://discord.com/api/guilds/1129805506354085959/widget.png
-[modrinth]: https://img.shields.io/badge/Modrinth-1bd96a?logo=modrinth&logoColor=ffffff
-[curseforge]: https://img.shields.io/badge/CurseForge-f16436?logo=curseforge&logoColor=ffffff
-[github]: https://img.shields.io/badge/GitHub-181717?logo=github
-[github-contrib]: https://img.shields.io/badge/GitHub-Contributing-grey?logo=github&labelColor=181717
-[kofi]: https://img.shields.io/badge/Ko--fi-00b9fe?logo=kofi&logoColor=ffffff
-[collective]: https://img.shields.io/badge/Open%20Collective-83b3fb?logo=opencollective&logoColor=ffffff
-[wiki]: https://img.shields.io/badge/Figura-Wiki-black?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAAM5JREFUaIHtmbENAjEMRRPECIiSmvrYAZobggXoGIMhGOIa2IHUNDTU7HAsYBeWgh6W/isTx7knS5Z1qaUTwzTPkfg21trj3kWPJCQSoJEATbgTeN2mbYJ53vZ6tDulr4AEaCRAIwEaCdBIgMadO4aLM/PsnfjxELq4TTc7z92JP9szUvoKSIBGAjQSoJEAjQRoqjfzlK194HPc/fBzSlldH/bG015OXwEJ0EiAZhk94HWJXn+no6SvgARoJEBT16dX6IX930hfAQnQSIDmC5x4H/qkICDcAAAAAElFTkSuQmCC&labelColor=166ddd&color=5ea5ff
-[weblate]: https://img.shields.io/badge/Weblate-Translating-125252?logo=Weblate&logoColor=ffffff&labelColor=2ECCAA
-[website]:  https://img.shields.io/badge/FiguraMC-Website-purple?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG4AAABuCAYAAADGWyb7AAAACXBIWXMAAAsSAAALEgHS3X78AAAAG3RFWHRTb2Z0d2FyZQBDZWxzeXMgU3R1ZGlvIFRvb2zBp+F8AAAHu0lEQVR4nO3dTWgcZRjA8X9AoR6sFKXoJdQI/SBiTkFQEOvRg6daoQc96EEh0RRRL6VC8CKxIEaoYAO2YEHpQQQLvWgvFmzpoaUVDSg9uWDRmkBBEIwH+7Szs/PxPu/7vO+8u9n/KZuP2YEfz8xOdmZ2YmNjg2HtpZMErfzxA0xYrUvqJoYBLhRI2zCAZguXGquuXBGzgssFC2Dr+cHvLX+YD2IWcLmDlcsBsFO4YQMr1yVgJ3DDDlauC8CkcKMGVi4lYBK4UQcrlwIwOlwuaCnAisXGiwqXA1pqsGIx8aLAbXawcjEAzeG6QptbcPu9EwfirkdVB3sw9YUtnilcCjQBevmht0yWt9JbAuKAHuz1P7bEM4OLiTa3YAfVlgVkGayYFZ4JXAy0lFhNrfSWnBGbwIpZ4AXDWaPlAlauCdAVrFgoXhCcJdrcAjz1117mnjyq+rszf65YrYJTRUAfsGIheN5wVmhzC/Dl9E8Wi0qK+NXuJZPl+OJ5wVmhbf/UBqxcKsAu8dRwuaNJo46ngrNAs9w0tpUKb6W3xP17w5ejwUsKF3vKqhqm/V4UuGFEk0YRzwlumNGkz398t+/xAw9ORnsuH7ype5fvPDg234rXCheKlnKf1lYZr5g1pCteH1ixFryocDmhSU14khViE14tmBQCN2pokgse2ACW8VrBijXgmcNtPQ8vnswXDdzhpBBAOVRQgUk+cFq04jvOWy7liyalxLs8GzC5NXjBcOVTBKzR9l/dXfuzkKnWwkm+gN54GjgXtKpzOqw2kU1YdWmf1xcO8sBTw9WdhGOB5gNWTrMOqfFWekvMPmezrxuAq0NrO2sqdBNpgSa54oXAgR+e1dS1wrmc5hY6bZZoksv6hMKBHs9q6vrgimia8xJDpi0GmtSGZwEHejyLqRuA055IGjJtMdGkpnWzggMdntfU7bgOhxar4eYX9AfcvtOWAk2qw7OEAx2e89TtuH7n6yo4H7Tcp02qW8ePv3+Nbdu2mz2P6dQVwYrdwguC6108zsN3Pa79s6RoUhXeB2f3sOXupwHMAIOnrg5MGsP9Dwd0htc3dW1gUhHOdzP5/q7RgANbPBXc64f1T3BoccIbrnfxOIAargs0qYxXhINu8C4/f49+4WO4PQO/Y4WXJZxsJiUNXi5wVWhSSjyvzaUvnEybNKpwEIY3hjPKFQ5s8KJtLg8tTkzMvaG/eKAMB+54OcC1oUHaqfPZz43hairCQdypU8NN3bSDg7zxNJtJKdXm8vLspNsB+NTN21+q4cqvKIsNA5wrGthMnQlcAUxSwR3swR/f1cOBG95mgoN2vFq4CjDJCa54yWwbHOSH54MGg3AQZ+oG4BrApEa4qmucXeCgHS81nBYNOoBzAJMq4ZouSneFgzzwfNEgMdwz11TL7INzuYuABu6bHz5rvYtC7HNOfNFgCOA0t33QwgGd4IWiQTUc6PGiwP2yX3c44AMHafFiosEmg4M0eBZoMIar/H4MQCswaeTgAN7+LQyuWAiiNZbUhAZjuL7+/uesdjWilT3c9BhuoDY0iAD3zr9uC5q+8+XExsYGv76geyM1Bhx0j+eCBh3ATZcezxyZ8IKzeIFSV1d4XaFBA1wZTMoRDtLjuaJBov1bHZiUKxykw9OgQeTNZBuY5AMnt33Y9/NW1z/JFk+LBpHgXMEkDVz5Ph0auHOrp7lx43fl2v1fLLws0GYnYf6aej1uwwG1eHU3Vrnw9bzz5vLc6mkAbzywA/QBk8zhTjgeBhSbOdJ/tU4Zru1OOBo4CJu6clrEECwpyqtJSzjNrYs0m0uwxUtdTptJKN914ZVl1avLLqcuZblNGwTCweaYutymDQzgYLTxspk2aICDJFMHw4EXBc1g2sAITruvk3LGi4EGNtMGdbc9TDR1kCdeNDSjaQNDOBgNvFhoYDdt0HRr302Ilxva2sxN7uMT3R1i1XC3zn2/8NGi1/4OusXLCW1t5s6p6Ho4cMOruMpk35lHHFavOov/a2qKCQa6/VoRDOrRIASu5UK8EDyIDxgbTHKZtjKY5A8Hg3iuty7CDg/sAFOBQTtaHRg0o4EGTgFWLBQP+gElV0jfixGf2Pls3+PV9Suqv29CawKTwuEA3jsc9Pk6FnhSFaJVMl07tz5a+XNXvDo0FzBoRwPN58dlhCdpEcubvTqgptrwqtBcwcANDbQftZkhXhfV4ZXRNGDgjgaJ4SDsOC+XquCKaFowKR4chOEVrnHed/Qx78V0XRGueJzmCwY6NPD9HHAtXs1F6cOKJ3AyZSFgoEeDgA9wd8JzuYvAtzu8/7/ZRUW0UDDwQ4MQOKjHU9z24XZDALi6foXLs5OsHbtqsjxfNAiFg348H7BymQKe2rVuBgZhaGABB3DyTYOFlMoE0BoMwtHACg7i4EmJEU/tWgcwBwMbNLCEA3u8qoshlncA/m/YViVQFi/rm7JCA2s4sMHTXr1yC9O5mvfHYoGBLRrEgAN/PC2YUTHBwB4NYsFJroBjMHVx4aAZb0TBIC4apICDQbwRBoP4aJAKTroU8ZChoVECk9LCSYkARxFM6gZOigQ4ymBSt3CSEeBmAJPygJM8ATcTmJQXXDEHxFF4We9bvnDFSojDfOBs1XDA1bTGq0ErPwxAdf0Hwx3OLyPuOrkAAAAASUVORK5CYII=&labelColor=01090E
+## Changes from upstream
 
+Compared against upstream branch `1.21.8` at [`19195ab`](https://github.com/FiguraMC/Figura/commit/19195ab98ae71f76957fdaf95156781daad728ca).
+The **Code** paths under each item are relative to `common/src/main/java/org/figuramc/figura/`, except those starting
+with `fabric/` or `server-common/`, which are relative to the repository root. **(new)** marks files that upstream does not have.
 
-## Social: [ ![discord] ](https://discord.figuramc.org/) [ ![website] ](https://figuramc.org/)
+### 1. Figura 0.1.6 features ported
 
-## Download: [ ![modrinth] ](https://modrinth.com/mod/figura) [ ![curseforge] ](https://curseforge.com/minecraft/mc-mods/figura) [ ![github] ](https://github.com/FiguraMC/Figura/releases/latest)
+Features added on upstream branch `0.1.6-dev/1.21.4` (MC 1.21.4) are carried over to 1.21.8.
 
-## Donate: [ ![collective] ](https://opencollective.com/figura) [ ![kofi] ](https://ko-fi.com/skyrina)
+- Updated settings and language entries
+- Lua quality-of-life — the vector `__div` metamethod is static, clearer operator error messages
+- `PermissivePath` — an OS-independent path implementation for resolving script and resource paths inside avatars
+- Badge system
+- **Rewritten Blockbench parser** (`BlockbenchParser2`) — V4 and V5 formats, lazily compiled keyframes
+- Small upstream fixes that came along — the sign of the 2×2 matrix inverse, the environment argument of Lua `load()`,
+  sizes shown in KiB, the error message for malformed links, Blockbench export format 4.10, and clearing a player's
+  avatar when they join so it is fetched fresh
+- 1.21.8 API changes — NBT getters returning `Optional` (`getXxxOr`), `ResourceLocation.fromNamespaceAndPath`,
+  and the common `Minecraft.disconnect(Screen, boolean)` entry point
 
-## Resources: [ ![wiki] ](https://wiki.figuramc.org/) [ ![weblate] ](https://translate.figuramc.org/projects/figuramc/figura/) [ ![github-contrib] ](https://github.com/FiguraMC/Figura/blob/HEAD/CONTRIBUTING.md)
+Code: `parsers/BlockbenchParser2.java` and 5 more new files in `parsers/` (the old `BlockbenchModel` and
+`BlockbenchModelParser` are removed) · `animation/Keyframe.java` · `utils/PermissivePath.java` (new) ·
+`commands/BadgeCommand.java` (new) · `lua/LuaTypeManager.java` · `math/` · `mixin/PlayerSocialManagerMixin.java` (new)
 
+### 2. FSB (Figura Server Backend) client
 
-# FAQ
+Instead of the official cloud, **the server you are connected to relays avatar uploads, downloads and pings**.
+The implementation from the official Figura repository's 1.20.6 branch (the diff against `35d1b591`, the last commit
+before FSB) is ported to 1.21.8.
 
-### • My avatars don't appear in the Figura list, even though they're in the correct folder?
-> Check if your avatar has a file called "avatar.json" (don't forget to check file extensions)
-> 
-> This file can be completely empty, it just needs to be present for Figura to recognise it as an avatar
+- Choosing where to upload — `Destination` (`BACKEND`, `FSB`, `BOTH`, `FSB_OR_BACKEND`)
+- Upload and delete entries in the Wardrobe right-click menu
+- FSB connection state in the status bar, and an FSB checkbox in the server edit screen
+- Lua — the `server_packets` global (avatar scripts and server plugins exchange packets), plus
+  `client:fsbConnected()`, `client:pingRateLimit()` and `client:pingSizeLimit()`
+- The `server-common/` module — the shared FSB protocol. It is **the same source** as the companion server plugin
 
-### • How do I hide the vanilla model?
-> At the top of your script, put:
->
-> • To hide literally everything (player, armor, elytra, held items):
-> ```lua
-> vanilla_model.ALL:setVisible(false)
-> ```
->
-> • To hide only the player:
-> ```lua
-> vanilla_model.PLAYER:setVisible(false)
-> ```
->
-> • To hide only armor:
-> ```lua
-> vanilla_model.ARMOR:setVisible(false)
-> ```
-> 
-> • To hide other, or specific parts, you can check the in-game docs
+Code: `backend2/FSB.java` · `server/` · `lua/api/ServerPacketsAPI.java` (all new) · `backend2/NetworkStuff.java` ·
+`gui/screens/WardrobeScreen.java` · `gui/widgets/StatusWidget.java` · `mixin/gui/EditServerScreenMixin.java` (new) ·
+`mixin/ServerDataMixin.java` (new) · `lua/api/ClientAPI.java` · `fabric/…/backend2/` (new) · `server-common/` (new)
 
-### • How do I play a Blockbench Animation?
-> Simply put this code in your script:
-> ```lua
-> animations.modelName.animationName:play()
-> ```
-> Where:
-> 
-> "`animations`" is the global table which contains all animations
-> 
-> "`modelName`" is the name of the model you are accessing the animation from
-> 
-> "`animationName`" is, as the name says, the animation name
+### 3. Server packets for other players' avatars (protocol change)
 
-### • What are Pings and how do I use them?
-> Pings are Lua functions that are executed for everyone running your avatar's script
-> 
-> Pings are sent from the host player, and can be used to sync things like keypresses or action wheel actions
-> 
-> To create a ping:
-> ```lua
-> function pings.myPing(arg1, arg2)
->   -- code to run once the ping is called
-> end
-> ```
-> And to execute the ping, it's as simple as calling a lua function:
-> ```lua
-> pings.myPing("Hello", "World")
-> ```
-> Note that pings are limited in their content and size, and are rate-limited
+`CustomFSBPacket` gains an `avatarOwner` UUID. Upstream only lets the host (your own avatar) use `server_packets`;
+now **other players' avatar scripts** can exchange packets with the server too.
 
-### • How can I add an emissive texture?
-> Name the texture the same as the non-emissive counterpart, then add `_e` to the end
-> 
-> And don't forget to set the places you don't want to glow to **transparent black** (#00000000), to also ensure compatibility with shader mods
+- ⚠ Because of this change the fork is **not wire-compatible** with the official FSB server or client. Use it together
+  with the companion server plugin.
+- The server decides whether to allow it — server setting `allowNonHostPackets` (off by default).
 
-### • My emissives doesn't glow, nor have bloom with Iris/OptiFine shaders?
-> Since some shaders do not support emissives, a compatibility setting (default on) will change the render type of emissive textures to render them at it were fullbright, however that can lead to some unintended results
->
-> You can force your avatar to use the correct emissive render type by using the render type `EYES` on your model
+Code: `server-common/…/packets/CustomFSBPacket.java` · `lua/api/ServerPacketsAPI.java` ·
+`server/packets/handlers/s2c/S2CCustomFSBPacketHandler.java`
 
-### • How can I use Figura with OptiFine?
-> Figura will work with OptiFine but due to its closed source nature issues might arise, therefore we still recommend you try using Sodium+Iris (Fabric) or Rubidium+Oculus (Forge) instead
-> 
-> Check out the full list of [alternatives](https://lambdaurora.dev/optifine_alternatives/)
+### 4. Flashback replay support
 
-### • Where can I find Avatars to download?
-> For now, you can find Avatars in the showcase channel in the official Discord server (A Web Based and In-Game browser is in the works!)
+While watching a [Flashback](https://modrinth.com/mod/flashback) replay, recorded FSB server packets are still
+delivered to avatars.
 
-### • My Minecraft is cracked (non-premium/non-original) or I'm trying to join a cracked offline mode server, why can't I use Figura?
-> Figura uses your account's UUID and your Mojang authentication as a way to prove you own that account, avoiding unwanted / malicious uploads
-> 
-> Non-premium Minecraft accounts don't authenticate with Mojang, and Offline mode servers don't report working UUID's, as such can neither upload nor download Figura avatars
+- An optional dependency attached through reflection. Everything works without Flashback.
+- Server packets are handled when `connected() || isInReplay()`.
 
+Code: `compat/FlashbackCompat.java` (new) · `backend2/FSB.java` · `server/packets/handlers/s2c/ConnectedPacketHandler.java`
 
-## Community Resources
+### 5. FSB avatar distribution fixes
 
-* Want to learn / get into Lua scripting?
-  check out this [Lua quickstart](https://manuel-3.github.io/lua-quickstart) made by Manuel.
+- The origin of an avatar hash is passed explicitly as an `AvatarSource` enum. Previously an FSB hash could be looked
+  up on the official cloud and the answer cached under the FSB hash name, which **brought old avatars back**.
+- The cache is split by origin (official cache file names are unchanged, so existing caches are kept).
+- Two missing `return`s in `FSB.acceptDataChunk` are fixed.
+- Added a receiver for the `s2c/stream/init` packet the server sends ahead of every avatar stream. Upstream had no receiver
+  for it, so every avatar download logged an `Unknown custom packet payload` warning (delivery was never affected — the new
+  receiver only accepts the packet).
 
-* If you are tired of having to be in-game to look in the wiki, applejuice hosts the wiki as a [website.](https://applejuiceyy.github.io/figs/)
+Code: `avatar/AvatarSource.java` (new) · `avatar/UserData.java` · `avatar/local/CacheAvatarLoader.java` ·
+`backend2/NetworkStuff.java` · `backend2/FSB.java` · `server/packets/handlers/s2c/S2CInitializeAvatarStreamPacketHandler.java` (new) ·
+`server/packets/handlers/s2c/Handlers.java`
 
-* Are you new to Figura and are looking for a video tutorial about how everything works? You should probably watch Chloe's [Figura tutorial series](https://www.youtube.com/playlist?list=PLNz7v2g2SFA8lOQUDS4z4-gIDLi_dWAhl) on YouTube.
+### 6. Per-part vanilla glow (outline)
 
-* Do you use VSCode and wish Figura's documentation autocompleted in the editor? GrandpaScout saves the day with their [VSDocs.](https://github.com/GrandpaScout/FiguraRewriteVSDocs/wiki)
+- Model part Lua methods `setGlow(bool)` and `setGlowColor(r, g, b)`, with getters `getGlow()` and `getGlowColor()` —
+  `nil` follows the parent, a value overrides it (values are not multiplied together).
+- Vanilla armor and items attached to a glowing part glow with it.
+- In first person, the held item is drawn at the avatar's pivot (first-person armor is not supported yet).
 
-* Katt has created a Blockbench extention which adds a special model format for Figura! Read more [here.](https://github.com/KitCat962/figura-format-bbplugin) - Note. This plugin is available on the Blockbench plugin browser and should be installed from there.
+![Per-part glow example](docs/images/part_glow.webp)
 
-* By searching "Figura" in the VSCode extention browser you can install Manuel's Figura [extension](https://marketplace.visualstudio.com/items?itemName=Manuel-Underscore.figura)! It adds multiple useful features including autocomplete for your model paths.
+*Each part can have its own glow color (red, blue), and vanilla items held by a part glow in that part's color.*
+
+Code: `model/FiguraModelPart.java` · `model/PartCustomization.java` · `model/rendering/` · `utils/RenderUtils.java` ·
+`avatar/Avatar.java` · `mixin/render/` (level renderer, layer and held-item mixins) · `fabric/…/mixin/fabric/` (armor and level renderer mixins)
+
+### 7. First-person rendering fixes
+
+- Fixed `partToWorldMatrix()` freezing in first person for skull parts inside item displays, item frames and
+  dropped items.
+- In first person, hidden parts skip matrix calculation — the same behavior as third person.
+- Fixed enchantment glint disappearing on parts that a shader pack draws pulled forward: the glint now gets the same
+  depth rank and is pulled forward the same way. Vanilla items and armor are unaffected.
+
+Code: `avatar/Avatar.java` · `fabric/…/mixin/fabric/LevelRendererMixinFabric.java` · `model/rendering/ImmediateAvatarRenderer.java` ·
+`model/rendering/texture/RenderTypes.java`
+
+### 8. New commands — `nonhost_load`, `nonhost_unload`, `netlock`
+
+Put a local avatar on another player and keep it there — for cases like recording replays, where **someone else's
+avatar has to stay fixed on your side**.
+
+- `/figura nonhost_load <target> <path>` — puts a local avatar on the target and **pins** it. Cloud, FSB and websocket
+  events can no longer overwrite it.
+- `/figura nonhost_unload <target|all>` — removes the pin.
+- `/figura netlock on|off|status` — stops loading avatars from the network entirely.
+- Pins and the lock are released when you leave the world (or the replay).
+- `<target>` accepts **client-side selectors** — `@s @p @r @a @e @n` with
+  `[type, name, team, gamemode, distance, x, y, z, dx, dy, dz, x_rotation, y_rotation, limit, sort]`.
+  Vanilla selectors are server-only and do not work in singleplayer or replays, so they are resolved from what the
+  client knows (world entities, the tab list, synced teams). Conditions the client cannot know (`tag`, `scores`,
+  `nbt`, …) produce an **error** instead of an empty result.
+- Public API — `AvatarManager.loadLocalAvatarFor`, `unpinAvatar`, `isPinned`, `getPinnedAvatars`,
+  `setNetworkLocked`, `isNetworkLocked`, `acceptsNetworkAvatar` and more.
+- Hot-reload watching of local avatars now applies to the host's avatar only.
+
+Code: `commands/NonhostLoadCommand.java` · `commands/NetlockCommand.java` · `commands/TargetArgumentType.java` ·
+`utils/selector/` (all new) · `avatar/AvatarManager.java` · the network entry points that respect pins
+(`avatar/UserData.java`, `backend2/`) · `mixin/MinecraftMixin.java` · `avatar/local/LocalAvatarLoader.java`
+
+### 9. New command — `/figura reload all`
+
+The same as the "Reload all" button in the permissions screen. It is also available as a command so that servers or
+scripts can ask the client to reload.
+
+Code: `commands/ReloadCommand.java`
+
+### 10. UI
+
+- The FSB connection state is shown with the same icon and color (green `+`) as the official cloud connection.
+
+Code: `gui/widgets/StatusWidget.java`
+
+### 11. Version number
+
+To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-release](https://semver.org/#spec-item-9) tag —
+`0.1.6-but-ai-edited.1` (jar: `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
+
+- The wardrobe, F3 and `client:getFiguraVersion()` show the tagged version.
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the tag. Under SemVer `0.1.6-…` is lower than
+  `0.1.6`, so without this the official 0.1.6 would look like a newer version and trigger update notices and avatar version warnings.
+- A mod that requires `figura >=0.1.6` will not accept this version (Fabric Loader compares by SemVer too) — use `>=0.1.6-` instead.
+
+Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
+`gui/screens/WardrobeScreen.java`
+
+### 12. Mob (CEM) avatars — leak fix, new commands `/figura cem build` and `status`, full vanilla hiding, name tag hiding
+
+Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every mob of that type** as an avatar (CEM).
+
+- **Leak fix** — avatars of mobs that died or went away were never released and kept running tick and render events. The 1.21.8 client
+  returns `null` for a removed entity, but the cleanup only checked `isRemoved()`. `null` now counts as gone too, and `clean()` is called
+  (a mob that leaves tracking range is dropped as well, and recreated when it comes back).
+- **`/figura cem build <folder>`** — compiles local avatar folders into CEM avatars. Meant for making several avatars, one per mob type, in one go.
+  - `<folder>` is relative to the local avatar folder, like `/figura load`. If it has a `cem.json`, that folder is built;
+    otherwise every direct subfolder that has one.
+  - `cem.json` is `{"entity": "minecraft:husk"}` — one mob type or a list. If two folders name the same type, nothing is built.
+  - Output goes to `figura/cem_out/<ns>/<type>.nbt` — copy it as-is under a resource pack's `assets/figura/cem/` (it never writes to a resource pack itself).
+  - The written file is read back and **applied right away** — mob avatars of that type are recreated on the next render. A resource reload (F3+T) goes back to the resource pack version.
+- **`/figura cem status`** — how many mob avatars are running right now, per type. Mob avatars load when first rendered and do not show up in F3, so this is how to see how many mobs actually have one.
+- **Full vanilla hiding** — when a mob avatar calls `vanilla_model.ALL:setVisible(false)`, the vanilla body and **every layer** (armor, held items,
+  outer clothing, head blocks, profession outfits) are not drawn. Upstream only hid the parts of humanoid models, so non-humanoid mobs such as
+  villagers kept their whole body, and the drowned, stray and bogged outer clothing (layers with their own models) stayed visible too.
+  Shadow, name tag and avatar parts (including the red tint when hurt) are unchanged. Player avatars are not affected.
+- **Mob name tag hiding** — `nameplate.ENTITY:setVisible(false)` now works for mob avatars (upstream only checked it for players). Useful when a
+  mob's custom name selects its variant and that name should not show.
+
+Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `commands/CemCommand.java` (new) ·
+`avatar/local/LocalAvatarLoader.java` (the compile inside `loadAvatar` moved out to `compileAvatarFolder`, the background queue `async` made public — same behavior) ·
+`mixin/render/renderers/LivingEntityRendererMixin.java` (vanilla body and layers) · `mixin/render/renderers/EntityRendererMixin.java` (name tag)
+
+### 13. Text task and name tag outlines
+
+- Fixed `setOutline(true)` outlines on text tasks (`TextTask`) and name tags **not showing**. In 1.21.8 `Font` uses the alpha of the
+  color it is given as is (older versions turned alpha 0 into opaque), and the outline color was passed on as the RGB from
+  `setOutlineColor` (alpha 0), so the shader discarded it.
+- Also fixed `setOpacity` being **ignored** on text tasks with an outline — the body color was fixed to opaque white.
+- On translucent text the outline **fades faster than the text** — outline alpha = text alpha ^ 8. The outline is drawn as 8 copies
+  of the text shifted by one step **under** the text, so as is, the inside of translucent glyphs would turn muddy with the outline color.
+  The outline therefore only shows when the text is nearly opaque (with the vanilla shader, there is no outline at an opacity of 0.75 or less).
+- See-through (`setSeeThrough(true)`) text draws its body only once, so it does not get denser from being drawn twice.
+
+Code: `model/rendertasks/TextTask.java` · `mixin/render/renderers/EntityRendererMixin.java`
+
+### 14. `entity:getVariable` and `world.avatarVars()` — read-only views instead of copies
+
+- Both APIs used to make a **recursive deep copy** of the other avatar's whole `avatar:store` on every call. They now return a
+  **read-only view** that wraps the store without copying. Reading one key wraps only that slot (lazily), so reading one key from a
+  large store is thousands of times cheaper.
+- Writes (`t.x = 1`, `rawset`, `table.insert`, `setmetatable`, …) raise `table is read-only`.
+- ⚠ It is a **live view**, not a snapshot: if you keep it, later changes by that avatar show through. Fetch it again after that avatar reloads.
+- Bonus: the old copy overflowed the stack on cyclic tables (`a.b.a == a`). The view does not.
+
+Code: `lua/ReadOnlyLuaView.java` · `lua/api/entity/EntityAPI.java` · `lua/api/world/WorldAPI.java`
+
+### 15. `server_data` — server-owned states and signals
+
+The companion server plugin (FiguraController — an unpublished Paper plugin) attaches states to players, mobs and a global scope.
+**The core receives and keeps them**, and every avatar can read them.
+
+- Transport: FSB `CustomFSBPacket` with `id` = `"figuracontroller:v1".hashCode()`; the body is a binary op stream (name dictionary, subject,
+  SET, UNSET, FULL, DROP, SIGNAL, RESET). The core intercepts it **before avatars**, so nothing is lost while an avatar is not loaded yet,
+  and mob avatars keep their values when they are recreated.
+- Lua `server_data` (read-only — only the server writes):
+  - `get(name)`, `get(entity|uuid, name)` — falls back to the **global value** when the subject has none · `getGlobal(name)` ·
+    `getAll([entity|uuid])` (read-only table)
+  - `watch(entity|uuid)`, `unwatch(…)` — also receive events for another subject
+  - `send(name, data)` — signal to the server (host player avatar only)
+  - events `STATE_CHANGED(name, new, old, subject, initial)` — **on the next tick, only when old ≠ new**; when an avatar loads, the current
+    values are delivered once with `initial = true` · `SIGNAL(name, data, subject)`
+- On connect the core sends HELLO; the server sends everything once and then only changes (no periodic full resend).
+- The store is written into Flashback recording snapshots, so rewinding restores the state of that moment.
+- On servers without the plugin it does nothing.
+
+Code: `serverdata/` · `lua/api/ServerDataAPI.java` · `mixin/compat/FlashbackRecorderMixin.java` · codec `kr/asmbl/figuracontroller/protocol/`
+(a copy from the plugin repository)
+
+Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
+`commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
+
+## Building
+
+JDK 21 is required (newer JDKs do not work with this Gradle version).
+
+```
+./gradlew :fabric:build
+```
+
+Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`
+
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.1) · `build.gradle` ·
+`common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
+
+## Related projects
+
+- [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) —
+  the companion server plugin (Paper / Purpur 1.21.8). It holds the original of `server-common/`.
+- [MCmod_SillyPlugin_quadaFork](https://github.com/kwangsoo-assemble/MCmod_SillyPlugin_quadaFork) —
+  the SillyPlugin add-on built against this fork.
+
+## License
+
+**PolyForm Noncommercial 1.0.0**, the same as upstream (`LICENSE.md`) — noncommercial use only.
+The upstream credits are in `CREDITS`, and the upstream README is kept as `README.upstream.md`.

@@ -11,21 +11,19 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-09 지금 `0.1.6-but-ai-edited.1`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
-## ★ 공개판 · 내부판 (2026-09-25)
+## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
 
-이 폴더는 **내부판**이다 — 작업은 여기서 한다(한글 주석 · 이 CLAUDE.md · 빌드 산출물). 로컬 git 만 있고 **원격이 없다.**
-공개판 `../figura_core_but_ai_edited` (GitHub `kwangsoo-assemble/figura_core_but_ai_edited`) 는 **같은 코드에 주석만 영어**인 사본이다
-(이 CLAUDE.md 는 없다 · 원본 README 는 `README.upstream.md` · 영어 README 는 하네스의 한글판을 옮긴 것).
+이 폴더가 GitHub `kwangsoo-assemble/MCmod_Figura_quadaFork` 의 **작업본**이다 — 한글 주석 · 이 CLAUDE.md 까지 그대로 올라간다.
+옛 «공개판» 사본(`figura_core_but_ai_edited` — 같은 코드에 주석만 영어)은 2026-10-10 에 없앴다 — 그 이력은 이 저장소에 합쳐 두었다.
 
-- 코드를 고쳤으면 **공개판에도 같은 변경을 옮긴다** — 주석은 영어로, 내부 이름(하네스 · 콘텐츠명 · 사람 인용)은 빼고 일반 표현으로.
-- 판정: `python ../../../mc_content_production/projects/mc_repositories/tools/repos.py status` — «주석을 빼면 같은가 · 공개판 한글 0 · 내부 문서 유출 0 · README 동기».
-- 올리기: `python ../../../mc_content_production/projects/mc_repositories/tools/repos.py publish core -F <메시지 파일>` — 위가 초록일 때만 커밋 · 푸시한다
-  (공개판 커밋 · 푸시는 세션이 자동으로 한다 — 하네스 `CLAUDE.md` 「외부 저장소 — mc_repositories」).
-- README 는 **한글판이 원본**이다 — 하네스 `projects/mc_repositories/readme_ko/figura_core_but_ai_edited.md`. 기능을 바꾸면 거기 먼저 적고
-  영어 README 에 옮긴 뒤 `repos.py mark-readme core`.
-- 내부판 변경은 **로컬 커밋**으로 남긴다(원격 없음).
-- `server-common/` 은 FSB 내부판(`../figura_fsbplugin_internal`)이 원본이다. 공개판도 같다 —
-  FSB 공개판에서 영어로 옮긴 뒤 **코어 공개판으로 복사**한다(두 공개판의 `server-common/` 이 다르면 통신이 깨진다).
+- 매듭마다 로컬 커밋 → `python ../../../mc_content_production/projects/mc_repositories/tools/repos.py publish core` 로 푸시한다
+  (세션이 자동으로 한다 · `--force` 금지 · 원격이 앞서 있거나 README 동기가 빨가면 멈춘다 — 하네스 `CLAUDE.md` 「외부 저장소 — mc_repositories」).
+- README.md 는 영어판이고 **원본은 하네스의 한글판**이다 — `projects/mc_repositories/readme_ko/MCmod_Figura_quadaFork.md`. 기능을 바꾸면 거기 먼저 적고
+  영어 README 에 옮긴 뒤 `repos.py mark-readme core`. 원본 README 는 `README.upstream.md`.
+- 레포 이름 규칙 — `MCmod_` / `MCplugin_` + 프로젝트 이름 (+ 포크는 `_quadaFork`). `but-ai-edited` 는 **버전명에만** 쓴다.
+- 원본 CI(`.github/workflows`) · 이슈 양식 · 후원 링크(`FUNDING.yml`)는 뺐다 — 우리 레포에서 돌면 안 된다(옛 공개판도 뺐다).
+- `server-common/` 은 FSB 작업본(`../figura_fsbplugin_internal`)이 원본이다 — 고치면 여기로 복사한다(두 쪽이 다르면 통신이 깨진다).
+- `kr/asmbl/figuracontroller/protocol/` 은 FiguraController(`../../plugins/FiguraController`)가 원본이다 — 거기서 고치고 복사한다.
 
 ## 모듈 구조
 
