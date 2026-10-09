@@ -737,6 +737,7 @@
     "figura.docs.server_data.send": "Sends a signal to the server plugin (host player avatar only)\nReturns false when not connected",
     "figura.docs.server_data.state_changed": "Runs on the next tick after a state changes, only when the old and the new value differ\nArguments: name, new value, old value, subject UUID (nil for a global change), initial (true for the values delivered when the avatar loads or starts watching)",
     "figura.docs.server_data.signal": "Runs when the server sends a one-shot signal to this avatar's entity (or to everyone)\nArguments: name, data, subject UUID (nil for a global signal)",
+    "figura.docs.server_data.__index.comment1": "Gets the STATE_CHANGED or SIGNAL event (case-insensitive)\nAssigning a function to one of them registers it, like events",
     "figura.docs.globals.textures": "The global instance of the TextureAPI",
     "figura.docs.globals.config": "The global instance of the ConfigAPI",
     "figura.docs.globals.raycast": "The global instance of RaycastAPI",

@@ -7,16 +7,20 @@ import org.figuramc.figura.lua.ReadOnlyLuaView;
 import org.figuramc.figura.lua.api.entity.EntityAPI;
 import org.figuramc.figura.lua.api.event.LuaEvent;
 import org.figuramc.figura.lua.docs.LuaFieldDoc;
+import org.figuramc.figura.lua.docs.LuaMetamethodDoc;
+import org.figuramc.figura.lua.docs.LuaMetamethodDoc.LuaMetamethodOverload;
 import org.figuramc.figura.lua.docs.LuaMethodDoc;
 import org.figuramc.figura.lua.docs.LuaMethodOverload;
 import org.figuramc.figura.lua.docs.LuaTypeDoc;
 import org.figuramc.figura.serverdata.JsonLua;
 import org.figuramc.figura.serverdata.ServerDataStore;
 import org.luaj.vm2.LuaError;
+import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -143,6 +147,32 @@ public class ServerDataAPI {
     public boolean send(@LuaNotNil String name, LuaValue data) {
         if (!owner.isHost) throw new LuaError("Only the host player avatar can send signals to the server");
         return ServerDataStore.sendSignal(owner.owner, name, JsonLua.toJson(data == null ? LuaValue.NIL : data));
+    }
+
+    /**
+     * Exposes the event fields to Lua — {@code LuaTypeManager} only puts whitelisted <b>methods</b> into the metatable, not fields.
+     * Without this, {@code server_data.STATE_CHANGED} is nil. Case-insensitive, like {@code events}.
+     */
+    @LuaWhitelist
+    @LuaMetamethodDoc(overloads = @LuaMetamethodOverload(
+            types = {LuaEvent.class, ServerDataAPI.class, String.class},
+            comment = "server_data.__index.comment1"
+    ))
+    public LuaEvent __index(String key) {
+        if (key == null) return null;
+        return switch (key.toUpperCase(Locale.US)) {
+            case "STATE_CHANGED" -> STATE_CHANGED;
+            case "SIGNAL" -> SIGNAL;
+            default -> null;
+        };
+    }
+
+    /** Assigning a function registers it, like {@code events}: {@code function server_data.STATE_CHANGED(...)} */
+    @LuaWhitelist
+    public void __newindex(@LuaNotNil String key, LuaFunction func) {
+        LuaEvent event = __index(key);
+        if (event != null) event.register(func, null);
+        else throw new LuaError("Cannot assign value on key \"" + key + "\"");
     }
 
     @Override
