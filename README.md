@@ -237,6 +237,39 @@ Code: `avatar/AvatarManager.java` (CEM cleanup, per-type `clearCEMAvatars`) · `
 
 Code: `model/rendertasks/TextTask.java` · `mixin/render/renderers/EntityRendererMixin.java`
 
+### 14. `entity:getVariable` and `world.avatarVars()` — read-only views instead of copies
+
+- Both APIs used to make a **recursive deep copy** of the other avatar's whole `avatar:store` on every call. They now return a
+  **read-only view** that wraps the store without copying. Reading one key wraps only that slot (lazily), so reading one key from a
+  large store is thousands of times cheaper.
+- Writes (`t.x = 1`, `rawset`, `table.insert`, `setmetatable`, …) raise `table is read-only`.
+- ⚠ It is a **live view**, not a snapshot: if you keep it, later changes by that avatar show through. Fetch it again after that avatar reloads.
+- Bonus: the old copy overflowed the stack on cyclic tables (`a.b.a == a`). The view does not.
+
+Code: `lua/ReadOnlyLuaView.java` · `lua/api/entity/EntityAPI.java` · `lua/api/world/WorldAPI.java`
+
+### 15. `server_data` — server-owned states and signals
+
+The companion server plugin (FiguraController — an unpublished Paper plugin) attaches states to players, mobs and a global scope.
+**The core receives and keeps them**, and every avatar can read them.
+
+- Transport: FSB `CustomFSBPacket` with `id` = `"figuracontroller:v1".hashCode()`; the body is a binary op stream (name dictionary, subject,
+  SET, UNSET, FULL, DROP, SIGNAL, RESET). The core intercepts it **before avatars**, so nothing is lost while an avatar is not loaded yet,
+  and mob avatars keep their values when they are recreated.
+- Lua `server_data` (read-only — only the server writes):
+  - `get(name)`, `get(entity|uuid, name)` — falls back to the **global value** when the subject has none · `getGlobal(name)` ·
+    `getAll([entity|uuid])` (read-only table)
+  - `watch(entity|uuid)`, `unwatch(…)` — also receive events for another subject
+  - `send(name, data)` — signal to the server (host player avatar only)
+  - events `STATE_CHANGED(name, new, old, subject, initial)` — **on the next tick, only when old ≠ new**; when an avatar loads, the current
+    values are delivered once with `initial = true` · `SIGNAL(name, data, subject)`
+- On connect the core sends HELLO; the server sends everything once and then only changes (no periodic full resend).
+- The store is written into Flashback recording snapshots, so rewinding restores the state of that moment.
+- On servers without the plugin it does nothing.
+
+Code: `serverdata/` · `lua/api/ServerDataAPI.java` · `mixin/compat/FlashbackRecorderMixin.java` · codec `kr/asmbl/figuracontroller/protocol/`
+(a copy from the plugin repository)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
