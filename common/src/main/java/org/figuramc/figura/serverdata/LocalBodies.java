@@ -100,12 +100,6 @@ public final class LocalBodies {
         expiries.clear();
     }
 
-    /** 검사만 — 몸을 만들지 않는다. ⚠ {@code --dry-run} 은 이것만 부른다: 몸을 만들고 안 넣으면 번호표만 앞서 나가 다음 op 가 버려진다 */
-    public static void check(String name, JsonElement value) {
-        validateName(name);
-        encode(value);
-    }
-
     public static void validateName(String name) {
         if (name == null || name.isEmpty()) throw new IllegalArgumentException("이름이 비었다");
         if (name.getBytes(StandardCharsets.UTF_8).length > MAX_NAME) throw new IllegalArgumentException("이름이 너무 길다(" + MAX_NAME + " 바이트)");
