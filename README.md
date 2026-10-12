@@ -19,7 +19,8 @@ It's meant for people who can analyze and understand the code — please use it 
 
 > An **AI-assisted fork** of [Figura](https://github.com/FiguraMC/Figura) for Minecraft **1.21.8 (Fabric)**.
 > It brings the Figura 0.1.6 features to 1.21.8 and adds an **FSB (Figura Server Backend) client** — the server you are
-> connected to relays avatars — along with replay support, client-side selectors, per-part glow and **server-owned states** (`server_data`).
+> connected to relays avatars — along with replay support, client-side selectors, per-part glow, **server-owned states** (`server_data`)
+> and a **single-player local mode** that checks those states, signals and pings without a server.
 
 > ⚠ **This is an unofficial fork** and is not affiliated with FiguraMC. Most changes were written with an AI coding
 > assistant (Claude Code) and checked by the maintainer in real use. Before reporting a problem to upstream Figura,
@@ -32,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6-but-ai-edited.1` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
+| Mod version | `0.1.6-but-ai-edited.2` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -179,7 +180,7 @@ Code: `gui/widgets/StatusWidget.java`
 ### 11. Version number
 
 To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-release](https://semver.org/#spec-item-9) tag —
-`0.1.6-but-ai-edited.1` (jar: `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
+`0.1.6-but-ai-edited.2` (jar: `figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show the tagged version.
 - **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the tag. Under SemVer `0.1.6-…` is lower than
@@ -275,6 +276,29 @@ Code: `serverdata/` (new) · `lua/api/ServerDataAPI.java` (new) · `mixin/compat
 `server/packets/handlers/s2c/S2CCustomFSBPacketHandler.java` (interception) · codec `kr/asmbl/figuracontroller/protocol/` (new — the original lives in the
 plugin repository; the same files are copied here)
 
+### 16. Single-player local mode — states, signals and pings without a server
+
+Single-player has no FiguraController or FSB server, so `server_data` stays empty, and with `sync_pings` on, pings do not run until the avatar is uploaded and the ping has made a round trip through the cloud.
+To check avatars quickly in single-player without joining a server, the core plays that part **only while an integrated server is running on this PC**.
+
+- When it is on — you are the host of the integrated server (single-player, or the host of a LAN world), it is not a Flashback replay, and FSB is not connected.
+  **It is off when you join a multiplayer server, in replays and for LAN guests, and then the original code runs unchanged.**
+- `/fc` — the same shape as the FiguraController server's `/fc`: `state get|set|unset|clear` · `signal` · `status` · `local quiet [on|off]`
+  - Targets are only you (`@s`, your name, your UUID) and `global` — no mobs
+  - Values are read the way the server reads them ("strict JSON gives that value, anything else stays a plain string"), and arguments are split on spaces like the server — a command typed in single-player works as-is on the server
+  - `--expire <ticks>` is emulated (it pauses while the game is paused) · `--private`, `--transient`, `--to` and `--dry-run` are accepted and ignored · there are no presets
+  - It is a client command, but **usable only while the mode is on** — otherwise it is an "unknown command" and Fabric passes it on to the server's `/fc` (it does not hide the server command or its suggestions in multiplayer)
+  - Commands an avatar types with `host:sendChatCommand("/fc …")` are handled too (when Figura's "chat messages" setting is on)
+- States and signals are turned into **the same protocol bodies** the server sends and put into the store → events, `old` and `initial` arrive through the same path as with a server. Everything is cleared when you leave the world (nothing is saved)
+- `server_data:send` — there is no server to receive it, so it is printed to chat as `[싱글 fc] 신호 ← name data` and returns `true` (turn it off with `/fc local quiet on`; it comes back on after a restart)
+- Pings — run **on the spot**, with no upload and no cloud round trip (even right after a file-save reload). Limits are counted the same way as the FSB server (a fixed 20-tick window), with the constants in `PingLimiter`
+  (currently 64 pings and 131,072 B — the maintainer's server FSB config, not the FSB defaults of 32 and 1,024); over the limit, the same error toast as the server appears and the ping is dropped. `client.pingRateLimit()` and `client.pingSizeLimit()` return these values too
+- Single-player recordings (Flashback) do not contain changes, signals or pings — check replay-related behaviour on a server
+
+Code: `serverdata/LocalServerData.java` · `serverdata/LocalBodies.java` · `serverdata/LocalValueParse.java` (a copy of FiguraController `core/ValueParse`) ·
+`serverdata/PingLimiter.java` · `serverdata/LocalArgs.java` · `commands/LocalFcCommand.java` (all new) · `serverdata/ServerDataStore.java` · `avatar/AvatarManager.java` ·
+`lua/api/ping/PingFunction.java` · `backend2/NetworkStuff.java` · `fabric/src/main/java/org/figuramc/figura/commands/fabric/FiguraCommandsFabric.java` (`/fc` registration)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -286,9 +310,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.1) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.2) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -328,7 +352,8 @@ ex)
 
 > [Figura](https://github.com/FiguraMC/Figura) 를 **AI 도구로 수정한 포크**다 — Minecraft **1.21.8 (Fabric)** 용.
 > Figura 0.1.6 기능을 1.21.8 로 옮기고, 접속한 서버가 아바타를 중계하는 **FSB(Figura Server Backend) 클라이언트**와
-> 리플레이 호환 · 클라이언트 셀렉터 · 파츠별 발광 · **서버가 주인인 상태**(`server_data`) 같은 기능을 더했다.
+> 리플레이 호환 · 클라이언트 셀렉터 · 파츠별 발광 · **서버가 주인인 상태**(`server_data`) · 서버 없이 싱글에서 그 상태 · 신호 · 핑을 확인하는
+> **싱글 로컬 모드** 같은 기능을 더했다.
 
 > ⚠ **비공식 포크다.** FiguraMC 와 관련이 없다. 수정의 대부분은 AI 코딩 도구(Claude Code)로 작성했고
 > 유지보수자가 실제 사용으로 확인했다. 공식 Figura 에 문제를 알리기 전에 이 포크 때문인지 먼저 확인해 달라.
@@ -340,7 +365,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6-but-ai-edited.1` — 업스트림 0.1.6 과 구분하려고 붙인 프리릴리스 꼬리 (아래 11) |
+| 모드 버전 | `0.1.6-but-ai-edited.2` — 업스트림 0.1.6 과 구분하려고 붙인 프리릴리스 꼬리 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -477,8 +502,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 버전에 [SemVer 프리릴리스](https://semver.org/#spec-item-9) 꼬리를 붙였다 — `0.1.6-but-ai-edited.1`
-(jar 는 `figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`). 끝 숫자는 이 포크의 판 번호다.
+공식 0.1.6 과 헷갈리지 않도록 버전에 [SemVer 프리릴리스](https://semver.org/#spec-item-9) 꼬리를 붙였다 — `0.1.6-but-ai-edited.2`
+(jar 는 `figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`). 끝 숫자는 이 포크의 판 번호다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 꼬리가 붙은 버전이 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 꼬리를 뗀 0.1.6 으로 비교한다. SemVer 로는 `0.1.6-…` 가 `0.1.6` 보다 낮아서,
@@ -566,6 +591,29 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 코드: `serverdata/` (새) · `lua/api/ServerDataAPI.java` (새) · `mixin/compat/FlashbackRecorderMixin.java` (새) ·
 `server/packets/handlers/s2c/S2CCustomFSBPacketHandler.java` (가로채기) · 코덱 `kr/asmbl/figuracontroller/protocol/` (새 — 원본은 플러그인 저장소 · 같은 파일을 복사한다)
 
+### 16. 싱글 로컬 모드 — 서버 없이 상태 · 신호 · 핑
+
+싱글에는 FiguraController · FSB 서버가 없어 `server_data` 가 비어 있고, `sync_pings` 를 켜 두면 핑도 업로드하고 클라우드를 한 바퀴 돌기 전에는 돌지 않는다.
+서버에 접속하지 않고 싱글에서 아바타를 빠르게 확인하려고, **내 PC 에 내장 서버가 떠 있을 때만** 코어가 그 몫을 흉내 낸다.
+
+- 켜지는 때 — 내장 서버의 호스트(싱글 · LAN 을 연 호스트)이고 · Flashback 재생이 아니고 · FSB 에 안 붙었을 때.
+  **멀티 접속 · 리플레이 · LAN 손님에서는 꺼져 있고, 그때는 원래 코드 그대로 돈다.**
+- `/fc` — 서버 FiguraController 의 `/fc` 와 같은 꼴: `state get|set|unset|clear` · `signal` · `status` · `local quiet [on|off]`
+  - 대상은 나(`@s` · 내 이름 · 내 UUID)와 `global` 만 — 몹은 없다
+  - 값은 서버처럼 «엄격한 JSON 이면 그 값, 아니면 글 그대로» · 인자도 서버처럼 빈칸으로 쪼갠다 — 싱글에서 친 명령을 서버에서 그대로 칠 수 있다
+  - `--expire <틱>` 은 흉내 낸다(일시정지 동안은 멈춘다) · `--private` · `--transient` · `--to` · `--dry-run` 은 받고 무시한다 · 프리셋은 없다
+  - 클라이언트 명령이지만 **켜져 있을 때만** 쓸 수 있다 — 꺼져 있으면 «모르는 명령» 이 되어 Fabric 이 서버의 `/fc` 로 넘긴다(멀티에서 서버 명령 · 자동완성을 가리지 않는다)
+  - 아바타가 `host:sendChatCommand("/fc …")` 로 친 것도 받는다(Figura «채팅 메시지» 설정이 켜져 있을 때)
+- 상태 · 신호는 서버와 **같은 규약 몸**을 만들어 저장소에 넣는다 → 이벤트 · `old` · `initial` 이 서버 때와 같은 경로로 온다. 월드를 나가면 비워진다(저장 없음)
+- `server_data:send` — 받을 서버가 없으니 채팅에 `[싱글 fc] 신호 ← 이름 데이터` 로 찍고 `true` 를 돌려준다(`/fc local quiet on` 으로 끈다 · 재시작하면 다시 켜짐)
+- 핑 — 업로드 · 클라우드 왕복 없이 **그 자리에서** 돈다(파일 저장 리로드 직후에도). 한도는 FSB 서버와 같은 셈법(20 틱 고정 창)으로, 값은 `PingLimiter` 의 상수
+  (지금 64번 · 131,072 B — 유지보수자 서버의 FSB 설정. FSB 기본값 32 · 1,024 가 아니다)로 센다 — 넘으면 서버와 같은 오류 토스트를 띄우고 그 핑은 버린다. `client.pingRateLimit()` · `client.pingSizeLimit()` 도 이 값을 돌려준다
+- 싱글 녹화(Flashback)에는 바뀜 · 신호 · 핑이 실리지 않는다 — 리플레이가 필요한 확인은 서버에서
+
+코드: `serverdata/LocalServerData.java` · `serverdata/LocalBodies.java` · `serverdata/LocalValueParse.java`(FiguraController `core/ValueParse` 사본) ·
+`serverdata/PingLimiter.java` · `serverdata/LocalArgs.java` · `commands/LocalFcCommand.java` (전부 새) · `serverdata/ServerDataStore.java` · `avatar/AvatarManager.java` ·
+`lua/api/ping/PingFunction.java` · `backend2/NetworkStuff.java` · `fabric/src/main/java/org/figuramc/figura/commands/fabric/FiguraCommandsFabric.java` (`/fc` 등록)
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -577,9 +625,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6-but-ai-edited.1+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6-but-ai-edited.1) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6-but-ai-edited.2) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
