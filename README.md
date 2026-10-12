@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6-but-ai-edited.2` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
+| Mod version | `0.1.6-but-ai-edited.3` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -180,7 +180,7 @@ Code: `gui/widgets/StatusWidget.java`
 ### 11. Version number
 
 To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-release](https://semver.org/#spec-item-9) tag —
-`0.1.6-but-ai-edited.2` (jar: `figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
+`0.1.6-but-ai-edited.3` (jar: `figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show the tagged version.
 - **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the tag. Under SemVer `0.1.6-…` is lower than
@@ -289,8 +289,9 @@ To check avatars quickly in single-player without joining a server, the core pla
   - `--expire <ticks>` is emulated (it pauses while the game is paused) · `--private`, `--transient`, `--to` and `--dry-run` are accepted and ignored · there are no presets
   - It is a client command, but **usable only while the mode is on** — otherwise it is an "unknown command" and Fabric passes it on to the server's `/fc` (it does not hide the server command or its suggestions in multiplayer)
   - Commands an avatar types with `host:sendChatCommand("/fc …")` are handled too (when Figura's "chat messages" setting is on)
+  - Success replies (set, unset, clear, signal) are printed in grey — `/fc local quiet on` turns them off **together with** the avatar-signal printout (queries and errors still show; it comes back on after a restart). On the server, `/fc` success replies are off by default (`commandFeedback`)
 - States and signals are turned into **the same protocol bodies** the server sends and put into the store → events, `old` and `initial` arrive through the same path as with a server. Everything is cleared when you leave the world (nothing is saved)
-- `server_data:send` — there is no server to receive it, so it is printed to chat as `[싱글 fc] 신호 ← name data` and returns `true` (turn it off with `/fc local quiet on`; it comes back on after a restart)
+- `server_data:send` — there is no server to receive it, so it is printed to chat as `[싱글 fc] 신호 ← name data` and returns `true` (turn it off with `/fc local quiet on`)
 - Pings — run **on the spot**, with no upload and no cloud round trip (even right after a file-save reload). Limits are counted the same way as the FSB server (a fixed 20-tick window), with the constants in `PingLimiter`
   (currently 64 pings and 131,072 B — the maintainer's server FSB config, not the FSB defaults of 32 and 1,024); over the limit, the same error toast as the server appears and the ping is dropped. `client.pingRateLimit()` and `client.pingSizeLimit()` return these values too
 - Single-player recordings (Flashback) do not contain changes, signals or pings — check replay-related behaviour on a server
@@ -310,9 +311,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.2) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.3) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -365,7 +366,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6-but-ai-edited.2` — 업스트림 0.1.6 과 구분하려고 붙인 프리릴리스 꼬리 (아래 11) |
+| 모드 버전 | `0.1.6-but-ai-edited.3` — 업스트림 0.1.6 과 구분하려고 붙인 프리릴리스 꼬리 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -502,8 +503,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 버전에 [SemVer 프리릴리스](https://semver.org/#spec-item-9) 꼬리를 붙였다 — `0.1.6-but-ai-edited.2`
-(jar 는 `figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`). 끝 숫자는 이 포크의 판 번호다.
+공식 0.1.6 과 헷갈리지 않도록 버전에 [SemVer 프리릴리스](https://semver.org/#spec-item-9) 꼬리를 붙였다 — `0.1.6-but-ai-edited.3`
+(jar 는 `figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`). 끝 숫자는 이 포크의 판 번호다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 꼬리가 붙은 버전이 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 꼬리를 뗀 0.1.6 으로 비교한다. SemVer 로는 `0.1.6-…` 가 `0.1.6` 보다 낮아서,
@@ -604,8 +605,9 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
   - `--expire <틱>` 은 흉내 낸다(일시정지 동안은 멈춘다) · `--private` · `--transient` · `--to` · `--dry-run` 은 받고 무시한다 · 프리셋은 없다
   - 클라이언트 명령이지만 **켜져 있을 때만** 쓸 수 있다 — 꺼져 있으면 «모르는 명령» 이 되어 Fabric 이 서버의 `/fc` 로 넘긴다(멀티에서 서버 명령 · 자동완성을 가리지 않는다)
   - 아바타가 `host:sendChatCommand("/fc …")` 로 친 것도 받는다(Figura «채팅 메시지» 설정이 켜져 있을 때)
+  - 성공 응답(set · unset · clear · signal)은 채팅에 회색으로 찍는다 — `/fc local quiet on` 이면 성공 응답과 아바타 신호 찍기를 **같이** 끈다(조회 · 오류는 보인다 · 재시작하면 다시 켜짐). 서버 `/fc` 는 성공 응답이 기본으로 꺼져 있다(`commandFeedback`)
 - 상태 · 신호는 서버와 **같은 규약 몸**을 만들어 저장소에 넣는다 → 이벤트 · `old` · `initial` 이 서버 때와 같은 경로로 온다. 월드를 나가면 비워진다(저장 없음)
-- `server_data:send` — 받을 서버가 없으니 채팅에 `[싱글 fc] 신호 ← 이름 데이터` 로 찍고 `true` 를 돌려준다(`/fc local quiet on` 으로 끈다 · 재시작하면 다시 켜짐)
+- `server_data:send` — 받을 서버가 없으니 채팅에 `[싱글 fc] 신호 ← 이름 데이터` 로 찍고 `true` 를 돌려준다(`/fc local quiet on` 으로 끈다)
 - 핑 — 업로드 · 클라우드 왕복 없이 **그 자리에서** 돈다(파일 저장 리로드 직후에도). 한도는 FSB 서버와 같은 셈법(20 틱 고정 창)으로, 값은 `PingLimiter` 의 상수
   (지금 64번 · 131,072 B — 유지보수자 서버의 FSB 설정. FSB 기본값 32 · 1,024 가 아니다)로 센다 — 넘으면 서버와 같은 오류 토스트를 띄우고 그 핑은 버린다. `client.pingRateLimit()` · `client.pingSizeLimit()` 도 이 값을 돌려준다
 - 싱글 녹화(Flashback)에는 바뀜 · 신호 · 핑이 실리지 않는다 — 리플레이가 필요한 확인은 서버에서
@@ -625,9 +627,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6-but-ai-edited.2+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6-but-ai-edited.2) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6-but-ai-edited.3) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트

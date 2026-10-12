@@ -89,7 +89,7 @@ public final class LocalFcCommand {
         if (op.equals("clear") && a[2].equalsIgnoreCase("all")) {
             if (a.length < 4 || !a[3].equalsIgnoreCase("confirm")) throw new LocalArgs.ArgError("전역 + 나의 상태를 모두 지운다 — /fc state clear all confirm");
             int n = LocalServerData.clear(null) + LocalServerData.clear(me(s).getUUID());
-            ok(s, "모두 지웠다 — 상태 " + n + "개");
+            say(s, "모두 지웠다 — 상태 " + n + "개");
             return;
         }
         UUID t = target(s, a[2]);
@@ -131,7 +131,7 @@ public final class LocalFcCommand {
         PingLimiter p = LocalServerData.pings();
         s.figura$sendFeedback(Component.literal("§e싱글 로컬 모드 §7— 켜짐 · 내 상태 " + ServerDataStore.own(me(s).getUUID()).size() + " · 전역 " + ServerDataStore.all(null).size()));
         s.figura$sendFeedback(Component.literal("§7핑 창(20틱) " + p.pings() + " / " + (p.rateLimit() + 1) + "번 · " + p.bytes() + " / " + p.sizeLimit()
-                + " B · 신호 찍기 " + (LocalServerData.quiet() ? "끔" : "켬")));
+                + " B · 알림(성공 응답 · 아바타 신호) " + (LocalServerData.quiet() ? "끔" : "켬")));
     }
 
     private static void local(FiguraClientCommandSource s, String[] a) {
@@ -146,7 +146,7 @@ public final class LocalFcCommand {
             default -> throw new LocalArgs.ArgError("/fc local quiet [on|off]");
         };
         LocalServerData.setQuiet(q);
-        ok(s, "아바타 신호 찍기 " + (q ? "끔" : "켬") + " (재시작하면 켬)");
+        say(s, q ? "알림 끔 — 성공 응답 · 아바타 신호를 안 찍는다(조회 · 오류는 보인다 · 재시작하면 켬)" : "알림 켬 — 성공 응답 · 아바타 신호를 찍는다");
     }
 
     private static void usage(FiguraClientCommandSource s) {
@@ -154,7 +154,7 @@ public final class LocalFcCommand {
         s.figura$sendFeedback(Component.literal("§e/fc state set <대상> <이름> <값> §7[--private] [--transient] [--expire <틱>]"));
         s.figura$sendFeedback(Component.literal("§e/fc state unset <대상> <이름> §7· §e/fc state clear <대상> | all confirm"));
         s.figura$sendFeedback(Component.literal("§e/fc signal <대상> <이름> [데이터] §7[--to self|trackers|all]"));
-        s.figura$sendFeedback(Component.literal("§e/fc status §7· §e/fc local quiet [on|off]"));
+        s.figura$sendFeedback(Component.literal("§e/fc status §7· §e/fc local quiet [on|off] §8(성공 응답 · 아바타 신호 알림 끄기)"));
         s.figura$sendFeedback(Component.literal("§8싱글 로컬 모드 — 대상은 나(@s · 내 이름) · global 만 · 프리셋 없음 · 저장 없음(월드를 나가면 비워진다)"));
     }
 
@@ -185,10 +185,16 @@ public final class LocalFcCommand {
         if (f.transientState()) x.add("--transient");
         if (f.to() != null) x.add("--to");
         if (f.dryRun()) x.add("--dry-run");
-        if (!x.isEmpty()) s.figura$sendFeedback(Component.literal("§8(" + String.join(" · ", x) + " 는 싱글에서 뜻이 없다 — 무시)"));
+        if (!x.isEmpty() && !LocalServerData.quiet()) s.figura$sendFeedback(Component.literal("§8(" + String.join(" · ", x) + " 는 싱글에서 뜻이 없다 — 무시)"));
     }
 
+    /** 성공 응답 — {@code /fc local quiet on} 이면 안 찍는다(서버 {@code /fc} 도 성공 응답은 설정 {@code commandFeedback} 으로만 · 기본 끔) */
     private static void ok(FiguraClientCommandSource s, String msg) {
+        if (!LocalServerData.quiet()) s.figura$sendFeedback(Component.literal(P + msg));
+    }
+
+    /** 늘 찍는다 — quiet 전환 알림 · 전부 지우기처럼 친 사람이 꼭 알아야 하는 것(서버도 {@code clear all} 은 늘 알린다) */
+    private static void say(FiguraClientCommandSource s, String msg) {
         s.figura$sendFeedback(Component.literal(P + msg));
     }
 

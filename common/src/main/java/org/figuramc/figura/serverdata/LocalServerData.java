@@ -21,7 +21,7 @@ import java.util.UUID;
  *       멀티 · 리플레이 · LAN 손님에서는 꺼져 있고, 꺼져 있으면 이 클래스는 아무것도 안 한다.</li>
  *   <li>상태 · 신호: {@link LocalBodies} 가 서버와 같은 규약 몸을 만들어 {@link ServerDataStore#applyLocal} 로 넣는다 — 그 뒤(이벤트 · {@code initial} · 나누기)는 서버 때와 같은 경로.</li>
  *   <li>핑: {@link #offerPing} — 라이브 서버와 같은 한도({@link PingLimiter}) · 넘으면 서버와 같은 토스트를 띄우고 버린다.</li>
- *   <li>아바타 → 서버 신호: 받을 서버가 없으니 채팅에 찍는다({@link #setQuiet} 로 끈다 · 재시작하면 다시 켜짐).</li>
+ *   <li>아바타 → 서버 신호: 받을 서버가 없으니 채팅에 찍는다. {@link #setQuiet}({@code /fc local quiet on})는 이것과 {@code /fc} 성공 응답을 같이 끈다 · 재시작하면 다시 켜짐.</li>
  * </ul>
  * 설계: 하네스 {@code projects/figura_controller/design/싱글_로컬서버/plan.md}.
  */
