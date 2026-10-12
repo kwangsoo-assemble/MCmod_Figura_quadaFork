@@ -73,6 +73,8 @@ public class AvatarManager {
         if (panic)
             return;
 
+        // server_data — 싱글 로컬 모드의 만료 · 핑 창을 먼저 센다(만료로 지운 것이 아래 꺼내기에 실린다)
+        org.figuramc.figura.serverdata.LocalServerData.tick();
         // server_data — 지난 틱 동안 바뀐 것을 아바타 대기열에(이 틱의 run 에서 돈다)
         org.figuramc.figura.serverdata.ServerDataStore.flushEvents();
 

@@ -326,10 +326,12 @@ public class NetworkStuff {
     }
 
     public static int pingsRateLimit() {
+        if (org.figuramc.figura.serverdata.LocalServerData.active()) return org.figuramc.figura.serverdata.LocalServerData.pings().rateLimit();
         return fsb().connected() ? fsb().handshake().pingsRateLimit() : pingsRateLimit;
     }
 
     public static int pingsSizeLimit() {
+        if (org.figuramc.figura.serverdata.LocalServerData.active()) return org.figuramc.figura.serverdata.LocalServerData.pings().sizeLimit();
         return fsb().connected() ? fsb().handshake().pingsSizeLimit() : pingsSizeLimit;
     }
 

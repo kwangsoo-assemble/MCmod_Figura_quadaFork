@@ -55,9 +55,15 @@ public final class ServerDataStore {
         return true;
     }
 
+    /** 싱글 로컬 모드 — 서버 패킷 대신 {@link LocalServerData} 가 만든 몸 · ⚠ 깨진 몸이면 삼키지 않고 올린다(우리 조립기의 결함이다) */
+    static void applyLocal(byte[] body) {
+        MODEL.apply(body);
+    }
+
     /** 서버를 떠남 · 월드를 나감(리플레이 포함) — 이벤트 없이 비운다(아바타도 같이 내려간다) */
     public static void clear() {
         MODEL.clear();
+        LocalServerData.reset();
     }
 
     // ── 읽기 (ServerDataAPI)
@@ -74,6 +80,11 @@ public final class ServerDataStore {
 
     public static Map<String, ServerDataModel.Entry> all(UUID subject) {
         return MODEL.all(subject);
+    }
+
+    /** 그 대상의 자기 값만(전역 빼고) — 싱글 로컬 모드 {@code /fc state get} */
+    public static Map<String, ServerDataModel.Entry> own(UUID subject) {
+        return MODEL.own(subject);
     }
 
     // ── 이벤트 (아바타 틱 앞에서)
@@ -154,8 +165,14 @@ public final class ServerDataStore {
         fsb.sendPacket(new CustomFSBPacket(self(), Protocol.CHANNEL_ID, C2S.hello(Protocol.VERSION)));
     }
 
-    /** 호스트 아바타 → 서버 신호 · @return 보냈나(FSB 연결이 없으면 안 보낸다) */
+    /** 호스트 아바타 → 서버 신호 · @return 보냈나(FSB 연결이 없으면 안 보낸다 · 싱글 로컬 모드면 채팅에 찍고 true) */
     public static boolean sendSignal(UUID owner, String name, JsonElement data) {
+        if (LocalServerData.active()) {
+            byte[] body = C2S.signal(name, data);
+            if (body.length > Protocol.MAX_BODY) throw new LuaError("Signal too large (" + body.length + " bytes)");
+            LocalServerData.onAvatarSignal(name, data);
+            return true;
+        }
         FSB fsb = FSB.instance();
         if (!fsb.connected()) return false;
         byte[] body = C2S.signal(name, data);
