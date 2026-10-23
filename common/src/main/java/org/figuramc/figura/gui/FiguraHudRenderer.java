@@ -63,9 +63,9 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
 
         prepareTexturesAndProjection(width, height);
 
+        // HUD 원점은 화면 왼쪽 위 · 단위는 GUI 픽셀(1.21.8 의 guiGraphics.pose() 그대로) — 텍스처가 물리 픽셀이라 GUI 배율을 곱한다
         PoseStack poseStack = new PoseStack();
-        // центр экрана — как раньше делал matrix4fStack.translation(0,0,-11000) + stack.setIdentity()
-        poseStack.translate(width / 2.0F, height / 2.0F, 0.0F);
+        poseStack.scale(guiScale, guiScale, 1.0F);
 
         this.renderToTexture(state, poseStack, this.submitNodeStorage);
 
@@ -100,7 +100,8 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
 
         RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(texture, GuiRenderer.CLEAR_COLOR, depthTexture, 0.0);
         RenderSystem.setProjectionMatrix(
-                hudProjectionMatrixBuffer.getBuffer(new Matrix4f().setOrtho(0.0F, width, height, 0.0F, 1000.0F, 11000.0F)),
+                // ⚠ 깊이는 0 둘레(초상화 렌더러와 같다) — 1000 ~ 11000 이면 z 0 근처의 HUD 파츠가 통째로 잘린다
+                hudProjectionMatrixBuffer.getBuffer(new Matrix4f().setOrtho(0.0F, width, height, 0.0F, 1000.0F, -1000.0F)),
                 ProjectionType.ORTHOGRAPHIC
         );
     }

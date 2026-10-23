@@ -19,6 +19,7 @@ import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.ducks.GameRendererAccessor;
+import org.figuramc.figura.gui.FiguraHudRenderer;
 import org.figuramc.figura.gui.FiguraPortraitRenderer;
 import org.figuramc.figura.lua.api.ClientAPI;
 import org.figuramc.figura.utils.RenderUtils;
@@ -77,6 +78,8 @@ public abstract class GameRendererMixin implements GameRendererAccessor {
     private List<PictureInPictureRenderer<?>> addPortraitRenderer(List<PictureInPictureRenderer<?>> list) {
         List<PictureInPictureRenderer<?>> newList = new ArrayList<>(list);
         newList.add(new FiguraPortraitRenderer());
+        // HUD 부모 파츠 — FiguraGui 가 FiguraHudRenderState 를 넣는다. 여기 없으면 바닐라가 그 상태를 조용히 건너뛰어 HUD 가 안 보인다
+        newList.add(new FiguraHudRenderer());
         return newList;
     }
 
