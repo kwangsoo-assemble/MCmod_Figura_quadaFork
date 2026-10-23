@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-23 지금 `0.1.6.4`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.5+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -25,7 +25,8 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
   포크는 `기본버전.N` 의 **N+1**(원본 버전이 바뀌면 원본을 따르고 `.1` 부터). 그 작업의 **첫 코드 수정과 함께** 올리고(같은 작업의
   시험 배포는 같은 버전) → 빌드 · 배포 · 🎬 → `repos.py release core`(태그 + GitHub Release 에 jar). 문서만 바뀌면 안 올린다.
   안 올리면 `repos.py status` 가 `VERSION_STALE` · 올리고 안 내면 `UNRELEASED` 로 빨갛다.
-  ⚠ 코어 버전을 올리면 **Silly · Chat-Heads 의 `.libs/figura-<버전>+1.21.8-fabric-mc.jar` 참조**(빌드 설정)도 같이 바꾼다 · FSB ↔ 코어 비교는 꼬리를 뗀다(`FiguraMod.COMPARE_VERSION`)라 N 만 올려도 짝은 안 깨진다
+  ⚠ 애드온(Silly · FiguraSVC · ShaderFX · Flashback)의 `.libs` 코어 jar 참조(빌드 설정)는 **그 애드온이 새 공개 API 를 쓸 때만** 바꾼다
+  (아래 «이 포크에 의존하는 애드온 모드» — 0.1.6.5 · 0.1.6.6 은 안 바꿨다) · FSB ↔ 코어 비교는 꼬리를 뗀다(`FiguraMod.COMPARE_VERSION`)라 N 만 올려도 짝은 안 깨진다
 - 원본 CI(`.github/workflows`) · 이슈 양식 · 후원 링크(`FUNDING.yml`)는 뺐다 — 우리 레포에서 돌면 안 된다(옛 공개판도 뺐다).
 - `server-common/` 은 FSB 작업본(`../figura_fsbplugin_internal`)이 원본이다 — 고치면 여기로 복사한다(두 쪽이 다르면 통신이 깨진다).
 - `kr/asmbl/figuracontroller/protocol/` 은 FiguraController(`../../plugins/FiguraController`)가 원본이다 — 거기서 고치고 복사한다.
@@ -281,6 +282,15 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - ★ `ServerDataStore.flushEvents` — **ENTITY_INIT 전인 아바타는 STATE_CHANGED · SIGNAL 분배에서 뺀다**. 리플레이 시작 때 애드온이 엔티티보다 아바타를 먼저 입히면
       변경 이벤트가 엔티티 없이 먼저 돌아 템플릿 `nickName.lua:18`(엔티티 API) 오류로 아바타가 멈췄다(🙋 🎬 3 «처음 아바타가 바뀌기까지 고장» · 로그 실측). 지금 값은 ENTITY_INIT 때 `onAvatarInit` 이 다시 준다
 
+22. **새 부모 타입 `FirstPerson` — 바닐라 1인칭 손 패스** (2026-10-24, 하네스 `projects/mc_repositories` M44 · 0.1.6.6 / 26.3 가지 0.1.6.5+26.3 · ✅ 인게임 확인 — 두 판 축 · 흔들림 · 벽 · BSL 그림자 · 안 보일 때 · 시야 · 반투명 · Lua 전환):
+    - `ParentType.FirstPerson`(분리 부모 · 별칭 대문자만) · `PartFilterScheme.FIRST_PERSON` · `Avatar.firstPersonPartsRender` — 손 포즈에 `scale(-1, -1, 1)`
+      (뿌리 행렬의 Z축 180° 를 되돌림 → 카메라 공간 +X 오른쪽 · +Y 위 · −Z 앞) · `partToWorldMatrix` 갱신은 끈다
+    - 걸 자리: `ItemInHandRendererMixin` — 1.21.8 `renderHandsWithItems` 의 `mulPose` ordinal 1 AFTER / 26.3 `submitHandsWithItems` 의 `rotateDegrees` ordinal 1 AFTER
+      (흔들림 셋이 다 곱해진 뒤 · 팔 호출은 조건부라 거기 걸지 않는다)
+    - 26.3 만: 반투명 정렬 표시를 `RenderUtils.preparingNonOitPass` 로 넓혀 HUD 와 손 패스 `prepareFrame` 동안 켠다(`GameRendererMixin.figura$sortHandPass`)
+    - ⚠ 옛 코어는 부모 이름을 모르면 `catch` 로 무시해 일반 몸 파츠로 둔다 — 콘텐츠는 보는 클라이언트 모두에 이 판이 깔린 뒤 쓴다
+    - 한계: 손 패스에는 OIT 가 없다(바닐라와 같다) — 서로 파고든 반투명은 면 중심 정렬로 일부 면이 빠진다 · Iris 셰이더팩 손 경로는 반투명 뒤 반투명이 더 빠진다
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴
@@ -324,7 +334,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 
 - Minecraft 26.3 용 시험 가지 `26.3` 은 **별도 작업 폴더** `../figura_core_internal_26.3`(git worktree)에 있다 — main(1.21.8) 폴더 · 배포 · 촬영과 따로 논다
 - 바탕은 NoFigura(원격 `nofigura` · Stranik2504/NoFigura) `26.3` 가지 위에 이 포크의 변경을 얹은 것 · 렌더는 NoFigura 쪽이고 우리 렌더 기능 일부는 아직 안 옮겼다(README «26.3 가지»)
-- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.4+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
+- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
 - 배포 `projects/mc_repositories/tools/deploy_263.py`(26.3 프로필 · 시험 서버 — 게임 · 서버가 켜져 있으면 안 쓴다) · 푸시 `repos.py publish core_263` · 릴리스 `repos.py release core_263`(태그 `v<버전>+26.3` · «Latest» 아님)
 - README 는 main 과 **같은 바이트**로 둔다(한글 원본의 «26.3 가지» 절) — main 에서 README 를 고치면 이 가지에도 복사한다
-- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다
+- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass`

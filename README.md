@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.5` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.6` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -182,15 +182,15 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.5`
-(jar: `figura-0.1.6.5+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.6`
+(jar: `figura-0.1.6.6+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
-- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.5` is higher than
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.6` is higher than
   `0.1.6` and official 0.1.6 avatars would look outdated.
 - `Version` reads, compares and prints the fourth number **only when it is present** — upstream-style versions (`0.1.5`) stay as they are.
-  Older forks and the official Figura read `0.1.6.5` as an invalid version and skip the comparison (avatars still show).
+  Older forks and the official Figura read `0.1.6.6` as an invalid version and skip the comparison (avatars still show).
 - Fabric Loader accepts a fourth number, so other mods' `figura >=0.1.6` requirements are met.
 
 Code: root `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -323,6 +323,25 @@ Code: `serverdata/LocalServerData.java` · `serverdata/LocalBodies.java` · `ser
 Code: `gui/screens/NonhostWardrobeScreen.java` (new) · `gui/widgets/lists/AvatarList.java` (`Picker`) · `gui/widgets/avatar/AvatarWidget.java` ·
 `mixin/MinecraftMixin.java` (`startUseItem`) · `avatar/AvatarManager.java` · `avatar/UserData.java` · `avatar/local/LocalAvatarLoader.java`
 
+### 18. New parent type `FirstPerson` — vanilla's first-person hand pass (0.1.6.6)
+
+- A group whose name starts with `FirstPerson` (aliases `FIRST_PERSON`, `FIRSTPERSON` — upper case only), or a part switched with
+  `part:setParentType("FirstPerson")` in Lua, is drawn **in the same pass as vanilla's first-person hands**.
+- **The coordinate space is camera space** — units are pixels (1/16 block) · +X right · +Y up · −Z forward (Blockbench's north is the view direction) · the origin is the eye.
+- Like vanilla hands it gets **hurt and walking bob** (following the "View Bobbing" option) and the **delayed look sway**. It does not get vanilla's
+  per-arm transforms (equip height, swing) — motion is up to the avatar's animations.
+- It is drawn with the hand depth, so it does not sink into walls or the floor. Shader packs (Iris) pick it up as a hand and light and shadow it like vanilla hands.
+- It shows when vanilla hands show — your own first-person view · GUI visible · not spectating · not sleeping. The field of view is the hand pass's own (FOV setting and sprinting do not change it).
+- No new Lua API. Hide the vanilla arms and held items with the existing `renderer:setRenderLeftArm`, `setRenderRightArm`, `vanilla_model.LEFT_ITEM`, `RIGHT_ITEM`.
+  The Lua `render` event (context `FIRST_PERSON`) runs before drawing.
+- Translucency is on par with vanilla hands — faces are sorted within one render type. Translucent volumes that cut into each other, or into a translucent
+  held item, lose some faces (the hand pass has no OIT). Under Iris shader packs, translucency behind translucency loses more.
+- ⚠ **Cores older than this release (official Figura included) do not know this parent name and draw those parts as normal body parts** — on other
+  players' screens the first-person parts stick to the body. Use it only once every client that sees the avatar has this release.
+
+Code: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `avatar/Avatar.java` (`firstPersonPartsRender`) ·
+`mixin/render/renderers/ItemInHandRendererMixin.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -335,13 +354,13 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
 |---|---|
 | Minecraft | 26.3 (Fabric) |
 | Java | 25 |
-| Mod version | `0.1.6.4+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
+| Mod version | `0.1.6.5+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
 | Based on | The `26.3` branch of [NoFigura](https://github.com/Stranik2504/NoFigura) (a 26.x port of Figura), with this fork's changes applied on top |
 | Companion plugins | The `26.3` branches of both plugin repositories (Paper / Purpur 26.3) |
-| Release | `v0.1.6.4+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
+| Release | `v0.1.6.5+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
 
 - **Included** — the FSB client (connect, upload, download, pings) · server packets for other players' avatars · `server_data` · single-player local mode ·
-  the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12).
+  the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12) · the `FirstPerson` parent type (18).
 - **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
   Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
   the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17).
@@ -350,10 +369,13 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
   `GLINT2` and `SOLID` now look the way they do on 1.21.8 · `SOLID` under Iris shader packs · a crash when quitting the game ·
   text backgrounds, text shadows and the far side of parts being cut off on the HUD and in portraits (projection depth range) ·
   translucent parts on the HUD being sorted in the wrong order with OIT on · World-parented parts (props included) not being drawn in first person ·
-  first-person arm parts barely rotating (radians passed as degrees).
+  first-person arm parts barely rotating (radians passed as degrees) ·
+  translucency sorting being off in the first-person hand pass with OIT on (vanilla translucent held items included).
 - **Known issues** — with OIT on, the blending render types Figura defines itself (`BLURRY`, `CUTOUT_EMISSIVE_SOLID`, `TEXTURED_GLINT`) lose translucency sorting ·
-  `END_PORTAL`, `END_GATEWAY` and `TEXTURED_PORTAL` come out black under Iris shader packs · there is no 26.3 build of SillyPlugin yet.
-- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.4+26.3-fabric-mc.jar`.
+  `END_PORTAL`, `END_GATEWAY` and `TEXTURED_PORTAL` come out black under Iris shader packs ·
+  the first-person hand pass does not use OIT (same as vanilla) — translucent parts that cut into each other, or into a translucent held item, lose some faces ·
+  there is no 26.3 build of SillyPlugin yet.
+- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar`.
 
 ## Building
 
@@ -363,9 +385,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.5+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.6+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.5) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.6) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -418,7 +440,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.5` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.6` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -558,14 +580,14 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.5`
-(jar 는 `figura-0.1.6.5+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.6`
+(jar 는 `figura-0.1.6.6+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
-- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.5` 가 `0.1.6` 보다 높아
+- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.6` 가 `0.1.6` 보다 높아
   공식 0.1.6 아바타를 옛 버전으로 본다.
 - `Version` 은 넷째 자리가 **있을 때만** 읽고 · 비교하고 · 문자열로 되돌린다 — 업스트림 꼴(`0.1.5`)은 그대로다. 옛 포크 · 공식 Figura 는
-  `0.1.6.5` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
+  `0.1.6.6` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
 - Fabric Loader 는 넷째 자리를 받는다 — 다른 모드의 `figura >=0.1.6` 조건도 채운다.
 
 코드: 루트 `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -690,6 +712,25 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 코드: `gui/screens/NonhostWardrobeScreen.java` (새) · `gui/widgets/lists/AvatarList.java`(`Picker`) · `gui/widgets/avatar/AvatarWidget.java` ·
 `mixin/MinecraftMixin.java`(`startUseItem`) · `avatar/AvatarManager.java` · `avatar/UserData.java` · `avatar/local/LocalAvatarLoader.java`
 
+### 18. 새 부모 타입 `FirstPerson` — 바닐라 1인칭 손 패스 (0.1.6.6)
+
+- 그룹 이름이 `FirstPerson` 으로 시작하거나(별칭 `FIRST_PERSON` · `FIRSTPERSON` — 대문자만) Lua 에서 `part:setParentType("FirstPerson")` 으로
+  바꾸면, 그 파츠는 **바닐라 1인칭 손과 같은 패스**에서 그려진다.
+- **좌표계는 카메라 공간**이다 — 단위 픽셀(1/16 블록) · +X 오른쪽 · +Y 위 · −Z 앞(Blockbench 의 북쪽이 시선 방향) · 원점은 눈.
+- 바닐라 손처럼 **피격 · 걷기 흔들림**(설정 «화면 흔들림» 을 따른다)과 **시선 지연**을 받는다. 팔마다 붙는 바닐라 변환(들기 높이 · 휘두르기)은
+  받지 않는다 — 모션은 아바타 애니메이션이 맡는다.
+- 손 깊이로 그리므로 벽 · 바닥에 박히지 않는다. 셰이더팩(Iris)이 손으로 잡아 빛 · 그림자를 바닐라 손처럼 받는다.
+- 보이는 때는 바닐라 손과 같다 — 내 화면의 1인칭 · GUI 보임 · 관전자 아님 · 잠자지 않음. 시야는 손 패스 그대로다(시야 설정 · 달리기와 무관).
+- 새 Lua API 는 없다. 바닐라 팔 · 손 아이템은 기존 `renderer:setRenderLeftArm` · `setRenderRightArm` · `vanilla_model.LEFT_ITEM` · `RIGHT_ITEM` 으로 가린다.
+  Lua `render` 이벤트(맥락 `FIRST_PERSON`)는 그리기 전에 돈다.
+- 반투명은 바닐라 손과 같은 수준이다 — 한 렌더 타입 안에서는 면을 정렬한다. 서로 파고든 반투명 부피 · 손에 든 반투명 아이템과 겹친 부피는
+  일부 면이 빠진다(손 패스에는 OIT 가 없다). Iris 셰이더팩에서는 반투명 뒤 반투명이 더 빠진다.
+- ⚠ **이 판보다 옛 코어(공식 Figura 포함)는 이 부모 이름을 몰라 그 파츠를 일반 몸 파츠로 그린다** — 다른 사람 화면에서 1인칭 파츠가 몸에 붙어 보인다.
+  그 아바타를 보는 모든 클라이언트에 이 판이 깔린 뒤에 쓴다.
+
+코드: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `avatar/Avatar.java`(`firstPersonPartsRender`) ·
+`mixin/render/renderers/ItemInHandRendererMixin.java`
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -702,13 +743,13 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 |---|---|
 | 게임 버전 | Minecraft 26.3 (Fabric) |
 | Java | 25 |
-| 모드 버전 | `0.1.6.4+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
+| 모드 버전 | `0.1.6.5+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
 | 바탕 | [NoFigura](https://github.com/Stranik2504/NoFigura) 의 `26.3` 가지 (Figura 의 26.x 이식) 위에 이 포크의 변경을 얹었다 |
 | 짝 플러그인 | 두 플러그인 저장소의 `26.3` 가지 (Paper · Purpur 26.3) |
-| 릴리스 | `v0.1.6.4+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
+| 릴리스 | `v0.1.6.5+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
 
 - **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
-  버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12).
+  버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12) · `FirstPerson` 부모 타입(18).
 - **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
   파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
   남 세팅용 옷장 화면(17).
@@ -717,10 +758,13 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
   `GLINT2` · `SOLID` 를 1.21.8 모습으로 · Iris 셰이더팩에서 `SOLID` · 게임을 끌 때 나던 크래시 ·
   HUD · 초상화에서 글 배경 · 글 그림자 · 파츠 뒤쪽이 잘리던 것(투영의 깊이 범위) ·
   OIT 를 켜면 HUD 반투명 파츠의 앞뒤 정렬이 틀리던 것 · 1인칭에서 월드 부모 파츠(소품 포함)가 안 그려지던 것 ·
-  1인칭 팔 파츠의 회전이 거의 사라지던 것(라디안을 도로 넘김).
+  1인칭 팔 파츠의 회전이 거의 사라지던 것(라디안을 도로 넘김) ·
+  OIT 를 켜면 1인칭 손 패스의 반투명 정렬이 꺼지던 것(바닐라 반투명 손 아이템 포함).
 - **알려진 문제** — OIT 를 켜면 Figura 가 만든 섞기 렌더 타입(`BLURRY` · `CUTOUT_EMISSIVE_SOLID` · `TEXTURED_GLINT`)이 반투명 정렬을 잃는다 ·
-  Iris 셰이더팩에서 `END_PORTAL` · `END_GATEWAY` · `TEXTURED_PORTAL` 이 검게 나온다 · SillyPlugin 의 26.3 판은 아직 없다.
-- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.4+26.3-fabric-mc.jar`.
+  Iris 셰이더팩에서 `END_PORTAL` · `END_GATEWAY` · `TEXTURED_PORTAL` 이 검게 나온다 ·
+  1인칭 손 패스는 OIT 를 쓰지 않는다(바닐라와 같다) — 서로 파고든 반투명 파츠 · 손에 든 반투명 아이템과 겹친 부피는 일부 면이 빠진다 ·
+  SillyPlugin 의 26.3 판은 아직 없다.
+- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar`.
 
 ## 빌드
 
@@ -730,9 +774,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.5+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.6+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.5) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.6) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
