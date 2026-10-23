@@ -269,6 +269,15 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       (`WardrobeScreen.refreshDestinations` · 안내 문구 `gui.wardrobe.main_cloud_off` · `server_cloud_off`). «둘 다» 항목은 뺐다 —
       `Destination.BOTH` 는 SillyPlugin `/figura upload both` 가 써서 남긴다
     - `ContextMenu.addAction` 이 만든 버튼을 돌려준다(항목 하나만 회색 · 안내 문구)
+    - ✅ 인게임 확인(🙋 «서버 접속시, 싱글접속시 각각 버튼 비활성화 잘 되네» · 누를 수 있는 항목 초록 글자) · 릴리스 `v0.1.6.4`
+
+21. **남 세팅용 옷장 · 데이터 고정 · 아바타 로드 알림 · 같은 폴더 한 번만 컴파일** (2026-10-23, 하네스 `projects/mc_repositories` M42 · 짝 애드온 `mods/figura_flashback` · ⚠ 인게임 확인 전):
+    - 디버그 막대기로 다른 플레이어 우클릭 → `NonhostWardrobeScreen`(탭 없음 · 대상 미리보기 · 아바타 목록 · 선택 해제 = 고정 풀기) — `MinecraftMixin.startUseItem` HEAD ·
+      상호작용 패킷 안 보냄 · 블록 · 공중 · 비플레이어는 바닐라. `AvatarList.Picker` 로 «고르면 할 일 · 고른 표시» 를 넘긴다(옷장은 `HOST` — 예전 그대로)
+    - 고정: 경로 표 `PINNED_USERS`(그대로) + 데이터 표 `PINNED_DATA`(새) · `pinAvatarData` · `getPinSource` · 경로가 늘 이긴다(`loadLocalAvatarFor` 가 데이터 고정을 지운다) ·
+      `fetchBackend` · `reloadAvatar` 가 데이터로도 되살린다 · `unpinAvatar` · `resetPinsAndLock` 은 둘 다 푼다
+    - 로드 알림: `UserData.loadAvatar` 끝 → 대기열 → `tickLoadedAvatars` 첫머리(클라 스레드 · panic 이어도)에서 듣는 쪽 호출
+    - `LocalAvatarLoader.compileAvatarFolder` — 폴더 지문(상대 경로 · 수정 시각 · 크기 · 순서 무관 합)이 같으면 사본 + `metadata.uuid` 만 바꿈 · 16개 넘으면 비움
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

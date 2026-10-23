@@ -50,6 +50,7 @@ public class UserData {
         this.avatars.add(avatar);
         avatar.load(nbt);
         FiguraMod.debug("--- loaded " + id + " ---");
+        AvatarManager.notifyAvatarLoaded(id, nbt); // 리플레이 애드온이 녹화 도중 바뀐 아바타를 끼워 넣는다(2026-10-23 M42)
     }
 
     public void loadBadges(Pair<BitSet, BitSet> pair) {

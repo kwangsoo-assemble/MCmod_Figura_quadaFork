@@ -46,7 +46,13 @@ public class AvatarManager {
 
     // ★ 네트워크 덮어쓰기 방지 (2026-09-22) — 「pin / netlock」 절 참고
     private static final Map<UUID, Path> PINNED_USERS = new ConcurrentHashMap<>();
+    // 데이터 고정 (2026-10-23 M42) — 리플레이 애드온이 녹화 당시 아바타 NBT 로 건다. 경로 고정(손 · 옷장)이 늘 이긴다
+    private static final Map<UUID, CompoundTag> PINNED_DATA = new ConcurrentHashMap<>();
     private static volatile boolean networkLocked = false;
+
+    // 아바타 로드 알림 (2026-10-23 M42) — 로드는 비동기 스레드에서 끝나므로 대기열에 넣었다가 틱(클라 스레드)에서 부른다
+    private static final List<java.util.function.BiConsumer<UUID, CompoundTag>> LOAD_LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final Queue<Pair<UUID, CompoundTag>> LOADED_QUEUE = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
     private static final Int2ObjectMap<Avatar> LOADED_CEM = new Int2ObjectOpenHashMap<>();
 
@@ -70,6 +76,8 @@ public class AvatarManager {
     // -- avatar events -- // 
 
     public static void tickLoadedAvatars() {
+        flushLoadListeners();
+
         if (panic)
             return;
 
@@ -330,8 +338,11 @@ public class AvatarManager {
     // reloads an avatar
     public static void reloadAvatar(UUID id) {
         Path pinned = PINNED_USERS.get(id);
+        CompoundTag pinnedData = PINNED_DATA.get(id);
         if (pinned != null)
             loadLocalAvatarFor(id, pinned); // pin 된 사용자는 그 로컬 경로를 다시 컴파일한다 (호스트의 !localUploaded 와 같은 뜻)
+        else if (pinnedData != null)
+            pinAvatarData(id, pinnedData);
         else if (!localUploaded && FiguraMod.isLocal(id))
             loadLocalAvatar(LocalAvatarLoader.getLastLoadedPath());
         else
@@ -358,11 +369,62 @@ public class AvatarManager {
 
     /** 네트워크(공식 클라우드·FSB)가 이 사용자의 아바타를 적용하거나 지워도 되는가. 모든 네트워크 진입점이 이걸 본다. */
     public static boolean acceptsNetworkAvatar(UUID id) {
-        return !networkLocked && !PINNED_USERS.containsKey(id);
+        return !networkLocked && !PINNED_USERS.containsKey(id) && !PINNED_DATA.containsKey(id);
     }
 
     public static boolean isPinned(UUID id) {
-        return PINNED_USERS.containsKey(id);
+        return PINNED_USERS.containsKey(id) || PINNED_DATA.containsKey(id);
+    }
+
+    /** 고정이 어디서 왔나 — 경로(손 · nonhost_load · 남 세팅용 옷장) · 데이터(리플레이 애드온) · 없음. 경로가 이긴다 */
+    public enum PinSource { NONE, PATH, DATA }
+
+    public static PinSource getPinSource(UUID id) {
+        if (PINNED_USERS.containsKey(id)) return PinSource.PATH;
+        if (PINNED_DATA.containsKey(id)) return PinSource.DATA;
+        return PinSource.NONE;
+    }
+
+    /**
+     * 아바타 NBT 를 그 사용자에게 입히고 데이터로 고정한다 (리플레이 애드온이 녹화 당시 아바타를 건다 · 2026-10-23 M42).
+     * 경로 고정(손)이 있으면 건드리지 않고 false. 무엇이 지워도 fetchBackend() 가 같은 데이터로 되살린다.
+     * 받은 NBT 는 복사해 둔다 — Avatar.load 가 넘겨받은 것을 그대로 쥐고 고칠 수 있다.
+     */
+    public static boolean pinAvatarData(UUID id, CompoundTag nbt) {
+        if (nbt == null || PINNED_USERS.containsKey(id))
+            return false;
+
+        CompoundTag kept = nbt.copy();
+        PINNED_DATA.put(id, kept);
+
+        clearAvatars(id);
+        FETCHED_USERS.add(id);
+        LOADED_USERS.computeIfAbsent(id, UserData::new).loadAvatar(kept.copy());
+        return true;
+    }
+
+    /** 아바타가 로드를 마칠 때마다(네트워크 · 로컬 · 데이터 고정) 클라 스레드 틱에서 부른다. 듣는 쪽 예외는 로그만 남긴다 */
+    public static void addAvatarLoadListener(java.util.function.BiConsumer<UUID, CompoundTag> listener) {
+        LOAD_LISTENERS.add(listener);
+    }
+
+    // UserData.loadAvatar 가 부른다 — 어느 스레드에서든
+    static void notifyAvatarLoaded(UUID id, CompoundTag nbt) {
+        if (!LOAD_LISTENERS.isEmpty() && nbt != null)
+            LOADED_QUEUE.add(Pair.of(id, nbt));
+    }
+
+    private static void flushLoadListeners() {
+        Pair<UUID, CompoundTag> loaded;
+        while ((loaded = LOADED_QUEUE.poll()) != null) {
+            for (java.util.function.BiConsumer<UUID, CompoundTag> listener : LOAD_LISTENERS) {
+                try {
+                    listener.accept(loaded.getFirst(), loaded.getSecond());
+                } catch (Throwable e) {
+                    FiguraMod.LOGGER.warn("Avatar load listener failed", e);
+                }
+            }
+        }
     }
 
     public static Path getPinnedPath(UUID id) {
@@ -393,6 +455,7 @@ public class AvatarManager {
         }
 
         PINNED_USERS.put(id, path);
+        PINNED_DATA.remove(id); // 손으로 고르면 리플레이 데이터 고정을 대신한다 — 풀면(unpin) 데이터 고정도 같이 풀린다
 
         // clear 직후 표식을 되돌려 놓는다 — loadLocalAvatar 와 같은 순서. 이 한 줄이 없어서 덮어썼다.
         clearAvatars(id);
@@ -407,14 +470,17 @@ public class AvatarManager {
      * @return pin 돼 있었는가
      */
     public static boolean unpinAvatar(UUID id) {
-        if (PINNED_USERS.remove(id) == null)
+        boolean path = PINNED_USERS.remove(id) != null;
+        boolean data = PINNED_DATA.remove(id) != null;
+        if (!path && !data)
             return false;
         clearAvatars(id);
         return true;
     }
 
     public static int unpinAll() {
-        List<UUID> ids = new ArrayList<>(PINNED_USERS.keySet());
+        Set<UUID> ids = new HashSet<>(PINNED_USERS.keySet());
+        ids.addAll(PINNED_DATA.keySet());
         for (UUID id : ids)
             unpinAvatar(id);
         return ids.size();
@@ -422,9 +488,10 @@ public class AvatarManager {
 
     /** 월드를 나갈 때. 이 세션 한정 상태(pin·netlock)를 모두 버린다. */
     public static void resetPinsAndLock() {
-        if (!PINNED_USERS.isEmpty() || networkLocked)
-            FiguraMod.LOGGER.info("Releasing " + PINNED_USERS.size() + " pinned avatar(s)" + (networkLocked ? " and the network lock" : ""));
+        if (!PINNED_USERS.isEmpty() || !PINNED_DATA.isEmpty() || networkLocked)
+            FiguraMod.LOGGER.info("Releasing " + (PINNED_USERS.size() + PINNED_DATA.size()) + " pinned avatar(s)" + (networkLocked ? " and the network lock" : ""));
         PINNED_USERS.clear();
+        PINNED_DATA.clear();
         networkLocked = false;
     }
 
@@ -506,6 +573,14 @@ public class AvatarManager {
             FiguraMod.debug("Restoring pinned avatar for " + id);
             UserData user = LOADED_USERS.computeIfAbsent(id, UserData::new);
             LocalAvatarLoader.loadAvatar(pinned, user);
+            return;
+        }
+
+        // 데이터 고정(리플레이)도 같은 뜻 — 네트워크 대신 고정해 둔 NBT 의 사본으로 되살린다
+        CompoundTag pinnedData = PINNED_DATA.get(id);
+        if (pinnedData != null) {
+            FiguraMod.debug("Restoring data-pinned avatar for " + id);
+            LOADED_USERS.computeIfAbsent(id, UserData::new).loadAvatar(pinnedData.copy());
             return;
         }
 

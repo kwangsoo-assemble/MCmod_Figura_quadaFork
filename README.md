@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.4` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.5` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -181,15 +181,15 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.4`
-(jar: `figura-0.1.6.4+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.5`
+(jar: `figura-0.1.6.5+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
-- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.4` is higher than
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.5` is higher than
   `0.1.6` and official 0.1.6 avatars would look outdated.
 - `Version` reads, compares and prints the fourth number **only when it is present** — upstream-style versions (`0.1.5`) stay as they are.
-  Older forks and the official Figura read `0.1.6.4` as an invalid version and skip the comparison (avatars still show).
+  Older forks and the official Figura read `0.1.6.5` as an invalid version and skip the comparison (avatars still show).
 - Fabric Loader accepts a fourth number, so other mods' `figura >=0.1.6` requirements are met.
 
 Code: root `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -305,6 +305,23 @@ Code: `serverdata/LocalServerData.java` · `serverdata/LocalBodies.java` · `ser
 `serverdata/PingLimiter.java` · `serverdata/LocalArgs.java` · `commands/LocalFcCommand.java` (all new) · `serverdata/ServerDataStore.java` · `avatar/AvatarManager.java` ·
 `lua/api/ping/PingFunction.java` · `backend2/NetworkStuff.java` · `fabric/src/main/java/org/figuramc/figura/commands/fabric/FiguraCommandsFabric.java` (`/fc` registration)
 
+### 17. Wardrobe for other players, data pins, compile-once (0.1.6.5)
+
+- **Right-click another player with a debug stick** to open a wardrobe for them — pick one of your local avatars to put on that player and pin it
+  (the screen version of `/figura nonhost_load`). Works in replays (Flashback's Replay Viewer), single-player, multiplayer and FSB servers.
+  - No top tabs and none of the upload/delete parts of your own wardrobe. The change is **only on your screen**.
+  - "Unselect" removes the pin — in a replay the avatar from the recording comes back ([MCmod_FiguraFlashback](https://github.com/kwangsoo-assemble/MCmod_FiguraFlashback)), otherwise the player's own avatar.
+  - No interaction packet is sent. Right-clicking blocks, air or non-player entities stays vanilla.
+- **Data pins** — `AvatarManager.pinAvatarData(UUID, CompoundTag)` and `getPinSource(UUID)` (`NONE`, `PATH`, `DATA`).
+  A path pin (by hand, `nonhost_load`, the wardrobe above) always wins. Whatever clears the avatar, the same data comes back.
+- **Avatar load listener** — `AvatarManager.addAvatarLoadListener((UUID, CompoundTag) -> …)`, called on the client tick thread whenever an avatar
+  finishes loading (network, local or data pin).
+- **Compile once per folder** — while a folder's fingerprint (file paths, modification times, sizes) stays the same, a copy of the compiled avatar is
+  handed out, so putting one avatar on many players or seeking a replay does not compile it again. Saving a file recompiles it.
+
+Code: `gui/screens/NonhostWardrobeScreen.java` (new) · `gui/widgets/lists/AvatarList.java` (`Picker`) · `gui/widgets/avatar/AvatarWidget.java` ·
+`mixin/MinecraftMixin.java` (`startUseItem`) · `avatar/AvatarManager.java` · `avatar/UserData.java` · `avatar/local/LocalAvatarLoader.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -316,9 +333,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.4+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.5+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.4) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.5) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -371,7 +388,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.4` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.5` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -510,14 +527,14 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.4`
-(jar 는 `figura-0.1.6.4+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.5`
+(jar 는 `figura-0.1.6.5+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
-- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.4` 가 `0.1.6` 보다 높아
+- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.5` 가 `0.1.6` 보다 높아
   공식 0.1.6 아바타를 옛 버전으로 본다.
 - `Version` 은 넷째 자리가 **있을 때만** 읽고 · 비교하고 · 문자열로 되돌린다 — 업스트림 꼴(`0.1.5`)은 그대로다. 옛 포크 · 공식 Figura 는
-  `0.1.6.4` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
+  `0.1.6.5` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
 - Fabric Loader 는 넷째 자리를 받는다 — 다른 모드의 `figura >=0.1.6` 조건도 채운다.
 
 코드: 루트 `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -625,6 +642,23 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 `serverdata/PingLimiter.java` · `serverdata/LocalArgs.java` · `commands/LocalFcCommand.java` (전부 새) · `serverdata/ServerDataStore.java` · `avatar/AvatarManager.java` ·
 `lua/api/ping/PingFunction.java` · `backend2/NetworkStuff.java` · `fabric/src/main/java/org/figuramc/figura/commands/fabric/FiguraCommandsFabric.java` (`/fc` 등록)
 
+### 17. 남 세팅용 옷장 · 데이터 고정 · 같은 폴더 한 번만 컴파일 (0.1.6.5)
+
+- **디버그 막대기로 다른 플레이어를 우클릭**하면 «남 세팅용 옷장» 이 열린다 — 로컬 아바타 목록에서 골라 그 플레이어에게 입히고 고정한다
+  (`/figura nonhost_load` 의 화면판). 리플레이(Flashback 의 Replay Viewer) · 싱글 · 멀티 · FSB 멀티 어디서나 된다.
+  - 위쪽 탭 · 업로드 · 삭제 같은 내 아바타용 부품은 없다. 바뀐 아바타는 **내 화면에서만** 보인다.
+  - «선택 해제» 는 고정을 푼다 — 리플레이면 녹화 당시 아바타([MCmod_FiguraFlashback](https://github.com/kwangsoo-assemble/MCmod_FiguraFlashback))로, 그 밖이면 그 플레이어의 아바타로 돌아간다.
+  - 상호작용 패킷은 보내지 않는다. 블록 · 공중 · 플레이어 아닌 엔티티 우클릭은 바닐라 그대로다.
+- **데이터로 고정** — `AvatarManager.pinAvatarData(UUID, CompoundTag)` · `getPinSource(UUID)`(`NONE` · `PATH` · `DATA`).
+  경로 고정(손 · `nonhost_load` · 남 세팅용 옷장)이 늘 이긴다. 무엇이 지워도 같은 데이터로 되살린다.
+- **아바타 로드 알림** — `AvatarManager.addAvatarLoadListener((UUID, CompoundTag) -> …)`. 네트워크 · 로컬 · 데이터 고정 어디서든
+  로드를 마치면 클라 스레드 틱에서 부른다.
+- **같은 폴더 한 번만 컴파일** — 폴더 지문(파일 경로 · 수정 시각 · 크기)이 같으면 컴파일 결과의 사본을 준다. 여럿에게 같은 아바타를 입히거나
+  되감을 때 다시 컴파일하지 않는다. 파일을 저장하면 저절로 다시 컴파일한다.
+
+코드: `gui/screens/NonhostWardrobeScreen.java` (새) · `gui/widgets/lists/AvatarList.java`(`Picker`) · `gui/widgets/avatar/AvatarWidget.java` ·
+`mixin/MinecraftMixin.java`(`startUseItem`) · `avatar/AvatarManager.java` · `avatar/UserData.java` · `avatar/local/LocalAvatarLoader.java`
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -636,9 +670,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.4+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.5+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.4) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.5) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트

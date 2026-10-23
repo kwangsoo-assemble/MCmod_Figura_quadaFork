@@ -138,6 +138,48 @@ public class LocalAvatarLoader {
      * @param trackState 단계를 {@link #getLoadState()} 에 알릴지 — 옷장 화면이 로컬 아바타 로드 단계로 보여 주므로 로컬 로드만 true
      */
     public static CompoundTag compileAvatarFolder(Path folder, UUID owner, boolean trackState) throws Exception {
+        // 같은 폴더 한 번만 컴파일 (2026-10-23 M42) — 남 세팅용 옷장 · nonhost_load 로 여럿에게 같은 아바타를 입히면
+        // 사람마다 · 되감기마다 통째로 다시 컴파일했다. 폴더 지문(상대 경로 · 수정 시각 · 크기)이 같으면 사본을 주고 uuid 만 바꾼다.
+        // 파일을 저장하면 지문이 바뀌어 저절로 다시 컴파일한다
+        Path key = folder.toAbsolutePath().normalize();
+        long fingerprint = folderFingerprint(key);
+        CompiledAvatar cached = COMPILED.get(key);
+        if (cached != null && cached.fingerprint == fingerprint) {
+            if (trackState) loadState = LoadState.METADATA2;
+            CompoundTag copy = cached.nbt.copy();
+            copy.getCompoundOrEmpty("metadata").putString("uuid", owner.toString());
+            return copy;
+        }
+
+        CompoundTag nbt = compileAvatarFolderUncached(folder, owner, trackState);
+        if (COMPILED.size() >= COMPILED_MAX)
+            COMPILED.clear();
+        COMPILED.put(key, new CompiledAvatar(fingerprint, nbt.copy()));
+        return nbt;
+    }
+
+    private record CompiledAvatar(long fingerprint, CompoundTag nbt) {}
+
+    private static final int COMPILED_MAX = 16;
+    private static final Map<Path, CompiledAvatar> COMPILED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // 순서와 무관한 합 — Files.walk 순서가 바뀌어도 같은 값
+    private static long folderFingerprint(Path root) throws IOException {
+        long hash = 17;
+        try (java.util.stream.Stream<Path> files = Files.walk(root)) {
+            for (Path file : (Iterable<Path>) files::iterator) {
+                if (!Files.isRegularFile(file))
+                    continue;
+                long entry = root.relativize(file).toString().hashCode();
+                entry = entry * 31 + Files.getLastModifiedTime(file).toMillis();
+                entry = entry * 31 + Files.size(file);
+                hash += entry * 0x9E3779B97F4A7C15L;
+            }
+        }
+        return hash;
+    }
+
+    private static CompoundTag compileAvatarFolderUncached(Path folder, UUID owner, boolean trackState) throws Exception {
         // load as folder
         CompoundTag nbt = new CompoundTag();
 
