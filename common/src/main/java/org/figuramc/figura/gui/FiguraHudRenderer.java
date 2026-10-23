@@ -16,17 +16,18 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.BlitRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.figuramc.figura.avatar.Avatar;
 import org.jspecify.annotations.NonNull;
-import org.joml.Matrix4f;
 
 import java.util.Optional;
 import java.util.OptionalDouble;
 
 public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderState> {
 
+    private final Projection hudProjection = new Projection();
     private final ProjectionMatrixBuffer hudProjectionMatrixBuffer = new ProjectionMatrixBuffer("Hud-PIP");
     private final SubmitNodeStorage submitNodeStorage = new SubmitNodeStorage();
 
@@ -96,11 +97,10 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
         }
 
         RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(texture, GuiRenderer.CLEAR_COLOR, depthTexture, 0.0);
-        RenderSystem.setProjectionMatrix(
-                // ⚠ 깊이는 0 둘레(초상화 렌더러와 같다) — 1000 ~ 11000 이면 z 0 근처의 HUD 파츠가 통째로 잘린다
-                hudProjectionMatrixBuffer.getBuffer(new Matrix4f().setOrtho(0.0F, width, height, 0.0F, 1000.0F, -1000.0F)),
-                ProjectionType.ORTHOGRAPHIC
-        );
+        // ⚠ 투영은 바닐라 Projection 으로 만든다(바닐라 그림 속 그림과 같은 값) — 기기의 깊이 범위(isZZeroToOne)를 따른다.
+        //   JOML setOrtho 를 날것으로 쓰면 깊이가 -1 ~ 1 로 나와 0 ~ 1 기기에서 z 가 0 보다 뒤인 것(글 배경 · 그림자 · 파츠 뒤쪽)이 잘린다
+        hudProjection.setupOrtho(-1000.0F, 1000.0F, width, height, true);
+        RenderSystem.setProjectionMatrix(hudProjectionMatrixBuffer.getBuffer(hudProjection), ProjectionType.ORTHOGRAPHIC);
     }
 
     @Override
