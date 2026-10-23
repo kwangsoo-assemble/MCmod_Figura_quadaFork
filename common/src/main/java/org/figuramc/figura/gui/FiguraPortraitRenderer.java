@@ -18,6 +18,7 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.BlitRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -25,7 +26,6 @@ import net.minecraft.resources.Identifier;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.gui.widgets.permissions.PlayerPermPackElement;
 import org.figuramc.figura.utils.ui.UIHelper;
-import org.joml.Matrix4f;
 import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
@@ -35,6 +35,7 @@ import java.util.OptionalDouble;
 
 public class FiguraPortraitRenderer extends PictureInPictureRenderer<FiguraPortraitRenderState> {
 
+    private final Projection avatarProjection = new Projection();
     private final ProjectionMatrixBuffer avatarProjectionMatrixBuffer = new ProjectionMatrixBuffer(
             "Portrait-PIP - " + this.getClass().getSimpleName()
     );
@@ -120,7 +121,9 @@ public class FiguraPortraitRenderer extends PictureInPictureRenderer<FiguraPortr
         }
 
         gpuDevice.createCommandEncoder().clearColorAndDepthTextures(entry.texture, GuiRenderer.CLEAR_COLOR, entry.depthTexture, 0.0);
-        RenderSystem.setProjectionMatrix(this.avatarProjectionMatrixBuffer.getBuffer(new Matrix4f().setOrtho(0.0F, i, j, 0.0F, 1000.0F, -1000.0F)), ProjectionType.ORTHOGRAPHIC);
+        // ⚠ 투영은 바닐라 Projection 으로(FiguraHudRenderer 와 같다) — JOML setOrtho 날것은 깊이 0 ~ 1 기기에서 z 가 0 보다 뒤인 쪽을 자른다
+        avatarProjection.setupOrtho(-1000.0F, 1000.0F, i, j, true);
+        RenderSystem.setProjectionMatrix(this.avatarProjectionMatrixBuffer.getBuffer(avatarProjection), ProjectionType.ORTHOGRAPHIC);
     }
 
     @Override
