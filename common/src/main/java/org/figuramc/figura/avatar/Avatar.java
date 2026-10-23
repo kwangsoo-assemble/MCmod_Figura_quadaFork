@@ -692,6 +692,38 @@ public class Avatar {
         FiguraMod.popProfiler(4);
     }
 
+    // ★ FirstPerson 부모 — 바닐라 손 패스의 포즈(피격 · 걷기 흔들림 · 시선 지연이 곱해진 눈)와 제출기로 그린다.
+    //   그래서 바닐라 손처럼 흔들리고, 셰이더팩의 손 프로그램을 탄다.
+    //   scale(-1, -1, 1) 은 뿌리 행렬의 Z축 180° 를 되돌린다(World 의 setMatrices(cam …) 와 같은 수)
+    //   → 파츠 좌표계 = 카메라 공간(픽셀 · +X 오른쪽 · +Y 위 · −Z 앞).
+    //   ⚠ 이 포즈는 월드 좌표가 아니라 partToWorldMatrix 갱신을 끈다.
+    public void firstPersonPartsRender(PoseStack stack, SubmitNodeCollector collector, Entity entity, int light, float tickDelta) {
+        if (renderer == null || !loaded)
+            return;
+
+        FiguraMod.pushProfiler(FiguraMod.MOD_ID);
+        FiguraMod.pushProfiler(this);
+        FiguraMod.pushProfiler("firstPersonPartsRender");
+
+        boolean prevAllowMatrixUpdate = renderer.allowMatrixUpdate;
+        renderer.allowMatrixUpdate = false;
+        renderer.entity = entity;
+
+        stack.pushPose();
+        stack.scale(-1, -1, 1);
+        renderer.setupRenderer(
+            PartFilterScheme.FIRST_PERSON, collector, stack,
+            tickDelta, light, 1f, OverlayTexture.NO_OVERLAY,
+            false, false, 0
+        );
+        complexity.use(renderer.renderSpecialParts());
+        stack.popPose();
+
+        renderer.allowMatrixUpdate = prevAllowMatrixUpdate;
+
+        FiguraMod.popProfiler(3);
+    }
+
     public void hudRender(PoseStack stack, SubmitNodeCollector collector, Entity entity, float tickDelta) {
         if (renderer == null || !loaded)
             return;

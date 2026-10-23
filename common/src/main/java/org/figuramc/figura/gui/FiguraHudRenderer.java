@@ -20,19 +20,13 @@ import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.figuramc.figura.avatar.Avatar;
+import org.figuramc.figura.utils.RenderUtils;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 import java.util.OptionalDouble;
 
 public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderState> {
-
-    // HUD 를 준비 · 그리는 중인가 — RenderTypeFeatureRendererGroupMixin 이 반투명 정렬을 살리는 데 쓴다(렌더 스레드에서만)
-    private static boolean preparing = false;
-
-    public static boolean isPreparing() {
-        return preparing;
-    }
 
     private final Projection hudProjection = new Projection();
     private final ProjectionMatrixBuffer hudProjectionMatrixBuffer = new ProjectionMatrixBuffer("Hud-PIP");
@@ -74,7 +68,8 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
 
         this.renderToTexture(state, poseStack, this.submitNodeStorage);
 
-        preparing = true;
+        // HUD 저장소는 OIT 를 안 쓴다 — 준비하는 동안 반투명 정렬을 살린다(RenderTypeFeatureRendererGroupMixin)
+        RenderUtils.preparingNonOitPass = true;
         try (
                 FeatureRenderDispatcher.PreparedFrame frame = featureRenderDispatcher.prepareFrame(this.submitNodeStorage);
                 RenderPass pass = RenderSystem.getDevice()
@@ -84,7 +79,7 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
             RenderSystem.bindDefaultUniforms(pass);
             FeatureRenderDispatcher.renderAllFeatures(pass, frame);
         } finally {
-            preparing = false;
+            RenderUtils.preparingNonOitPass = false;
         }
 
         this.blitTexture(state, guiRenderState);

@@ -47,6 +47,16 @@ public abstract class ItemInHandRendererMixin {
         FiguraMod.popProfiler(3);
     }
 
+    // ★ FirstPerson 부모 — 시선 지연 둘째 회전 바로 뒤(흔들림 셋이 다 곱해지고 팔마다 붙는 변환은 아직).
+    //   팔 호출(submitArmWithItem)은 조건부라 빠지는 프레임이 있어 거기에 걸지 않는다. 빛은 바닐라 팔과 같은 값.
+    @Inject(method = "submitHandsWithItems", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;rotateDegrees(Lcom/mojang/math/Axis;F)V", ordinal = 1, shift = At.Shift.AFTER))
+    private void submitFirstPersonParts(float partialTicks, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState state, CallbackInfo ci) {
+        if (avatar == null || playerState.avatarRenderState == null)
+            return;
+
+        avatar.firstPersonPartsRender(poseStack, submitNodeCollector, Minecraft.getInstance().player, playerState.avatarRenderState.lightCoords, partialTicks);
+    }
+
     @Inject(method = "submitHandsWithItems", at = @At("RETURN"))
     private void afterSubmitHandsWithItems(float partialTicks, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, PlayerRenderState playerState, FirstPersonHandsAndItemsRenderState state, CallbackInfo ci) {
         if (avatar == null)

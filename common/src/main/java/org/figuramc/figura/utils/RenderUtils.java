@@ -40,6 +40,10 @@ import java.util.function.BiFunction;
 
 public class RenderUtils {
 
+    // OIT 를 안 쓰는 저장소(HUD 그림 속 그림 · 1인칭 손)를 준비하는 중인가 — 렌더 스레드에서만.
+    // RenderTypeFeatureRendererGroupMixin 이 이 동안 반투명 정렬을 살린다(FiguraHudRenderer · GameRendererMixin 이 켠다)
+    public static boolean preparingNonOitPass = false;
+
     public static boolean vanillaModel(Avatar avatar) {
         return avatar != null && avatar.permissions.get(Permissions.VANILLA_MODEL_EDIT) >= 1;
     }

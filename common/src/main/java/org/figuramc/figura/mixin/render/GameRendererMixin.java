@@ -13,6 +13,8 @@ import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.PostChain;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -89,6 +91,20 @@ public abstract class GameRendererMixin implements GameRendererAccessor {
     private float figura$disableConfusionOnMatrix(float screenEffectScale) {
         Avatar avatar = AvatarManager.getAvatar(this.minecraft.getCameraEntity() == null ? this.minecraft.player : this.minecraft.getCameraEntity());
         return (!RenderUtils.vanillaModelAndScript(avatar) || hasShaders) ? screenEffectScale : 0.0f;
+    }
+
+    // 1인칭 손 저장소도 OIT 를 안 쓴다 — 준비하는 동안 반투명 정렬을 살린다(RenderTypeFeatureRendererGroupMixin · HUD 와 같은 까닭)
+    // 정렬 판단은 준비 단계(prepareFrame → prepareGroup)에서만 불린다
+    @WrapOperation(method = "renderItemInHand",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;prepareFrame(Lnet/minecraft/client/renderer/SubmitNodeStorage;)Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;"))
+    private FeatureRenderDispatcher.PreparedFrame figura$sortHandPass(FeatureRenderDispatcher instance, SubmitNodeStorage storage, Operation<FeatureRenderDispatcher.PreparedFrame> original) {
+        RenderUtils.preparingNonOitPass = true;
+        try {
+            return original.call(instance, storage);
+        } finally {
+            RenderUtils.preparingNonOitPass = false;
+        }
     }
 
     @Override
