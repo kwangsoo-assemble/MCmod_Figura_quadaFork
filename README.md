@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6-but-ai-edited.3` — a pre-release tag added to tell it apart from upstream 0.1.6 (see 11) |
+| Mod version | `0.1.6.4` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -70,7 +70,9 @@ The implementation from the official Figura repository's 1.20.6 branch (the diff
 before FSB) is ported to 1.21.8.
 
 - Choosing where to upload — `Destination` (`BACKEND`, `FSB`, `BOTH`, `FSB_OR_BACKEND`)
-- Upload and delete entries in the Wardrobe right-click menu
+- Upload and delete menus in the Wardrobe — **two choices: Main Cloud or FSB** (0.1.6.4). On a server with FSB the Main Cloud
+  entry is greyed out; elsewhere (single-player, replays, servers without FSB) the FSB entry is. Hover a greyed entry to see why.
+  "Both" was removed (template-based avatars quickly hit the Main Cloud size limit; `Destination.BOTH` stays for the SillyPlugin command)
 - FSB connection state in the status bar, and an FSB checkbox in the server edit screen
 - Lua — the `server_packets` global (avatar scripts and server plugins exchange packets), plus
   `client:fsbConnected()`, `client:pingRateLimit()` and `client:pingSizeLimit()`
@@ -179,15 +181,18 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version carries a [SemVer pre-release](https://semver.org/#spec-item-9) tag —
-`0.1.6-but-ai-edited.3` (jar: `figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`). The last number is this fork's own release number.
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.4`
+(jar: `figura-0.1.6.4+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
-- The wardrobe, F3 and `client:getFiguraVersion()` show the tagged version.
-- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the tag. Under SemVer `0.1.6-…` is lower than
-  `0.1.6`, so without this the official 0.1.6 would look like a newer version and trigger update notices and avatar version warnings.
-- A mod that requires `figura >=0.1.6` will not accept this version (Fabric Loader compares by SemVer too) — use `>=0.1.6-` instead.
+- The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.4` is higher than
+  `0.1.6` and official 0.1.6 avatars would look outdated.
+- `Version` reads, compares and prints the fourth number **only when it is present** — upstream-style versions (`0.1.5`) stay as they are.
+  Older forks and the official Figura read `0.1.6.4` as an invalid version and skip the comparison (avatars still show).
+- Fabric Loader accepts a fourth number, so other mods' `figura >=0.1.6` requirements are met.
 
-Code: root `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE`, `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
+Code: root `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
 `gui/screens/WardrobeScreen.java`
 
 ### 12. Mob (CEM) avatars — leak fix, new commands `/figura cem build` and `status`, full vanilla hiding, name tag hiding
@@ -311,9 +316,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.4+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6-but-ai-edited.3) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.4) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -366,7 +371,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6-but-ai-edited.3` — 업스트림 0.1.6 과 구분하려고 붙인 프리릴리스 꼬리 (아래 11) |
+| 모드 버전 | `0.1.6.4` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -401,7 +406,9 @@ ex)
 (FSB 도입 직전 커밋 `35d1b591` 과의 차이)을 1.21.8 로 옮겼다.
 
 - 업로드 대상 선택 — `Destination` (`BACKEND` · `FSB` · `BOTH` · `FSB_OR_BACKEND`)
-- 옷장(Wardrobe) 의 업로드 · 삭제 우클릭 메뉴
+- 옷장(Wardrobe) 의 업로드 · 삭제 메뉴 — **기본 클라우드 / FSB 두 갈래**(0.1.6.4). FSB 가 연결된 서버에서는 기본 클라우드가,
+  그 밖(싱글 · 리플레이 · FSB 없는 서버)에서는 FSB 가 회색이다 — 회색 항목에 마우스를 올리면 이유가 보인다.
+  «둘 다» 는 뺐다(템플릿 기반 아바타는 기본 클라우드 용량에 금방 걸린다 · `Destination.BOTH` 는 SillyPlugin 명령용으로 남는다)
 - 상태 표시줄에 FSB 연결 상태, 서버 편집 화면에 FSB 사용 체크박스
 - Lua — `server_packets` 전역(아바타 스크립트와 서버 플러그인이 패킷을 주고받는다),
   `client:fsbConnected()` · `client:pingRateLimit()` · `client:pingSizeLimit()`
@@ -503,15 +510,17 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 버전에 [SemVer 프리릴리스](https://semver.org/#spec-item-9) 꼬리를 붙였다 — `0.1.6-but-ai-edited.3`
-(jar 는 `figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`). 끝 숫자는 이 포크의 판 번호다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.4`
+(jar 는 `figura-0.1.6.4+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
-- 옷장 · F3 · `client:getFiguraVersion()` 에는 꼬리가 붙은 버전이 보인다.
-- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 꼬리를 뗀 0.1.6 으로 비교한다. SemVer 로는 `0.1.6-…` 가 `0.1.6` 보다 낮아서,
-  그대로 두면 공식 0.1.6 을 새 버전으로 보고 업데이트 알림과 아바타 버전 경고를 띄운다.
-- 다른 모드가 `figura >=0.1.6` 을 요구하면 이 버전은 조건을 못 채운다(Fabric Loader 도 SemVer 로 판정한다) — `>=0.1.6-` 로 적어야 한다.
+- 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
+- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.4` 가 `0.1.6` 보다 높아
+  공식 0.1.6 아바타를 옛 버전으로 본다.
+- `Version` 은 넷째 자리가 **있을 때만** 읽고 · 비교하고 · 문자열로 되돌린다 — 업스트림 꼴(`0.1.5`)은 그대로다. 옛 포크 · 공식 Figura 는
+  `0.1.6.4` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
+- Fabric Loader 는 넷째 자리를 받는다 — 다른 모드의 `figura >=0.1.6` 조건도 채운다.
 
-코드: 루트 `gradle.properties` · `FiguraMod.java` (`FORK_PRERELEASE` · `COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
+코드: 루트 `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
 `gui/screens/WardrobeScreen.java`
 
 ### 12. 몹(CEM) 아바타 — 누수 수정 · 새 명령 `/figura cem build` · `status` · 바닐라 통째 숨기기 · 이름표 숨기기
@@ -627,9 +636,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6-but-ai-edited.3+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.4+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6-but-ai-edited.3) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.4) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트

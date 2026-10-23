@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-09 지금 `0.1.6-but-ai-edited.1`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-23 지금 `0.1.6.4`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -20,9 +20,9 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
   (세션이 자동으로 한다 · `--force` 금지 · 원격이 앞서 있거나 README 동기가 빨가면 멈춘다 — 하네스 `CLAUDE.md` 「외부 저장소 — mc_repositories」).
 - README.md 는 영어판이고 **원본은 하네스의 한글판**이다 — `projects/mc_repositories/readme_ko/MCmod_Figura_quadaFork.md`. 기능을 바꾸면 거기 먼저 적고
   영어 README 에 옮긴 뒤 `repos.py mark-readme core`. 원본 README 는 `README.upstream.md`.
-- 레포 이름 규칙 — `MCmod_` / `MCplugin_` + 프로젝트 이름 (+ 포크는 `_quadaFork`). `but-ai-edited` 는 **버전명에만** 쓴다.
+- 레포 이름 규칙 — `MCmod_` / `MCplugin_` + 프로젝트 이름 (+ 포크는 `_quadaFork`). 버전은 `기본버전.N` — 업스트림 버전 뒤 넷째 자리가 포크 판 번호다(2026-10-23 M41 · 그 전 꼬리 `-but-ai-edited.N`).
 - ★ **버전 · 릴리스** (🙋 2026-10-10 «기능 업데이트 할때마다 버전명 올리는 처리»): jar 에 들어가는 코드가 바뀌면 `gradle.properties` 의 `mod_version` 를 올린다 —
-  포크는 꼬리 `but-ai-edited.N` 의 **N+1**(원본 버전이 바뀌면 원본을 따르고 `.1` 부터). 그 작업의 **첫 코드 수정과 함께** 올리고(같은 작업의
+  포크는 `기본버전.N` 의 **N+1**(원본 버전이 바뀌면 원본을 따르고 `.1` 부터). 그 작업의 **첫 코드 수정과 함께** 올리고(같은 작업의
   시험 배포는 같은 버전) → 빌드 · 배포 · 🎬 → `repos.py release core`(태그 + GitHub Release 에 jar). 문서만 바뀌면 안 올린다.
   안 올리면 `repos.py status` 가 `VERSION_STALE` · 올리고 안 내면 `UNRELEASED` 로 빨갛다.
   ⚠ 코어 버전을 올리면 **Silly · Chat-Heads 의 `.libs/figura-<버전>+1.21.8-fabric-mc.jar` 참조**(빌드 설정)도 같이 바꾼다 · FSB ↔ 코어 비교는 꼬리를 뗀다(`FiguraMod.COMPARE_VERSION`)라 N 만 올려도 짝은 안 깨진다
@@ -260,6 +260,15 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       (`events` · `host` · `renderer` · `nameplate` … 코어의 필드 있는 19 클래스가 전부 그렇게 한다). 18 의 `ServerDataAPI` 만 `__index` 가 없었다
     - 고침: `ServerDataAPI.__index(key)`(대소문자 무시 — `events` 와 같다) · `__newindex`(대입하면 처리기 — `function server_data.STATE_CHANGED(...)`) · 문서 `server_data.__index.comment1`
     - ★ 18 의 확인은 Java 모델뿐이었다 — 하네스 `verify_core_serverdata.py` 에 ③ «Lua 표면»(코어 전체 정적 — 필드 있는 클래스는 `__index` 필수) · 자가 점검으로 이 결함을 되살리면 잡는다
+
+20. **버전 이름 `0.1.6.4` · 옷장 업로드 · 삭제 메뉴 두 갈래** (2026-10-23, 하네스 `projects/mc_repositories` M41 · ⚠ 인게임 확인 전):
+    - 버전 — 꼬리 `-but-ai-edited.N` → 넷째 자리(`0.1.6.4`). `utils/Version.java` 가 넷째 자리 `fork` 를 **있을 때만** 읽고 · 비교하고 · 되돌린다
+      (없으면 -1 — 업스트림 꼴 `0.1.5` 가 `0.1.5.0` 으로 바뀌지 않게). `FiguraMod.COMPARE_VERSION` 은 넷째 자리를 뗀다(`FORK_PRERELEASE` 없앰)
+    - ⚠ 옛 포크 · 공식 클라는 `0.1.6.4` 를 «잘못된 버전» 으로 읽어 `compareTo` 가 0 — 아바타는 그대로 보인다
+    - 옷장 업로드 · 삭제 — 버튼을 누르면 늘 메뉴가 뜨고 두 갈래(기본 클라우드 · FSB)뿐. FSB 연결이면 기본이, 아니면(싱글 · 리플레이 · FSB 없는 서버) FSB 가 회색
+      (`WardrobeScreen.refreshDestinations` · 안내 문구 `gui.wardrobe.main_cloud_off` · `server_cloud_off`). «둘 다» 항목은 뺐다 —
+      `Destination.BOTH` 는 SillyPlugin `/figura upload both` 가 써서 남긴다
+    - `ContextMenu.addAction` 이 만든 버튼을 돌려준다(항목 하나만 회색 · 안내 문구)
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

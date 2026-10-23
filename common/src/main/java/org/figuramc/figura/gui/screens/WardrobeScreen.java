@@ -41,6 +41,8 @@ public class WardrobeScreen extends AbstractPanelScreen {
 
     private Button upload, delete, back;
     private ContextMenu uploadContext, deleteContext;
+    // 메뉴 항목 — 기본 클라우드 / FSB(서버 클라우드) 두 갈래 · FSB 연결 여부에 맞지 않는 쪽은 회색(refreshDestinations)
+    private Button uploadBackend, uploadFsb, deleteBackend, deleteFsb;
 
     public WardrobeScreen(Screen parentScreen) {
         super(parentScreen, FiguraText.of("gui.panels.title.wardrobe"));
@@ -80,10 +82,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
         int buttY = entity.getY() + entity.getHeight() + 4;
 
         // upload
-        addRenderableWidget(upload = new Button(buttX - 48, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/upload.png"), 72, 24, FiguraText.of("gui.wardrobe.upload.tooltip"), button -> {
-            if (FSB.instance().connected()) showUploadContext();
-            else uploadAvatar(NetworkStuff.Destination.FSB_OR_BACKEND);
-        }));
+        addRenderableWidget(upload = new Button(buttX - 48, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/upload.png"), 72, 24, FiguraText.of("gui.wardrobe.upload.tooltip"), button -> showUploadContext()));
         upload.setActive(false);
         generateUploadContext();
 
@@ -99,10 +98,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
         }));
 
         // delete
-        addRenderableWidget(delete = new Button(buttX + 24, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/delete.png"), 72, 24, FiguraText.of("gui.wardrobe.delete.tooltip"), button -> {
-            if (FSB.instance().connected()) showDeleteContext();
-            else deleteAvatar(NetworkStuff.Destination.FSB_OR_BACKEND);
-        }));
+        addRenderableWidget(delete = new Button(buttX + 24, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/delete.png"), 72, 24, FiguraText.of("gui.wardrobe.delete.tooltip"), button -> showDeleteContext()));
         delete.setActive(false);
         generateDeleteContext();
 
@@ -248,7 +244,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
     }
 
     private void showUploadContext() {
-        if (!FSB.instance().connected()) return;
+        refreshDestinations();
         Window window = minecraft.getWindow();
         double mouseX = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
         double mouseY = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
@@ -263,7 +259,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
     }
 
     private void showDeleteContext() {
-        if (!FSB.instance().connected()) return;
+        refreshDestinations();
         Window window = minecraft.getWindow();
         double mouseX = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
         double mouseY = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
@@ -273,34 +269,42 @@ public class WardrobeScreen extends AbstractPanelScreen {
         UIHelper.setContext(deleteContext);
     }
 
+    // 업로드 · 삭제 메뉴는 두 갈래(기본 클라우드 / FSB)만 — «둘 다» 는 뺐다(2026-10-23 M41 · 템플릿 아바타는 기본 클라우드 용량에 금방 걸린다).
+    // Destination.BOTH 는 남긴다 — SillyPlugin 명령(`both`)이 쓴다
     private void generateUploadContext() {
         uploadContext = new ContextMenu(upload);
-        uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_backend"), FiguraText.of("gui.wardrobe.upload_backend.tooltip"), button -> {
+        uploadBackend = uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_backend"), FiguraText.of("gui.wardrobe.upload_backend.tooltip"), button -> {
             uploadAvatar(NetworkStuff.Destination.BACKEND);
         });
 
-        uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_fsb"), FiguraText.of("gui.wardrobe.upload_fsb.tooltip"), button -> {
+        uploadFsb = uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_fsb"), FiguraText.of("gui.wardrobe.upload_fsb.tooltip"), button -> {
             uploadAvatar(NetworkStuff.Destination.FSB);
-        });
-
-        uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_both"), FiguraText.of("gui.wardrobe.upload_both.tooltip"), button -> {
-            uploadAvatar(NetworkStuff.Destination.BOTH);
         });
     }
 
     private void generateDeleteContext() {
         deleteContext = new ContextMenu(delete);
-        deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_backend"), FiguraText.of("gui.wardrobe.delete_backend.tooltip"), button -> {
+        deleteBackend = deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_backend"), FiguraText.of("gui.wardrobe.delete_backend.tooltip"), button -> {
             deleteAvatar(NetworkStuff.Destination.BACKEND);
         });
 
-        deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_fsb"), FiguraText.of("gui.wardrobe.delete_fsb.tooltip"), button -> {
+        deleteFsb = deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_fsb"), FiguraText.of("gui.wardrobe.delete_fsb.tooltip"), button -> {
             deleteAvatar(NetworkStuff.Destination.FSB);
         });
+    }
 
-        deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_both"), FiguraText.of("gui.wardrobe.delete_both.tooltip"), button -> {
-            deleteAvatar(NetworkStuff.Destination.BOTH);
-        });
+    // FSB 연결된 서버 → 기본 클라우드 회색 · 그 밖(싱글 · 리플레이 · FSB 없는 서버) → FSB 회색. 회색 항목의 안내 문구는 이유로 바꾼다
+    private void refreshDestinations() {
+        boolean fsb = FSB.instance().connected();
+        setDestination(uploadBackend, !fsb, "gui.wardrobe.upload_backend.tooltip", "gui.wardrobe.main_cloud_off");
+        setDestination(uploadFsb, fsb, "gui.wardrobe.upload_fsb.tooltip", "gui.wardrobe.server_cloud_off");
+        setDestination(deleteBackend, !fsb, "gui.wardrobe.delete_backend.tooltip", "gui.wardrobe.main_cloud_off");
+        setDestination(deleteFsb, fsb, "gui.wardrobe.delete_fsb.tooltip", "gui.wardrobe.server_cloud_off");
+    }
+
+    private static void setDestination(Button button, boolean active, String tooltip, String offTooltip) {
+        button.setActive(active);
+        button.setTooltip(active ? FiguraText.of(tooltip) : FiguraText.of(offTooltip).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
@@ -326,6 +330,8 @@ public class WardrobeScreen extends AbstractPanelScreen {
                         : FiguraText.of("gui.wardrobe.upload.tooltip")
         );
         delete.setActive((FSB.instance().connected() || NetworkStuff.isConnected()) && AvatarManager.localUploaded);
+        // 메뉴가 열린 채 FSB 연결이 바뀌어도 회색이 따라오게
+        refreshDestinations();
 
         updateMotdWidget();
     }
