@@ -21,6 +21,7 @@ public enum PartFilterScheme {
 
     WORLD(false, SchemeFunction.onlyThisSeparate(ParentType.World), ParentType.World),
     HUD(false, SchemeFunction.onlyThisSeparate(ParentType.Hud), ParentType.Hud),
+    FIRST_PERSON(false, SchemeFunction.onlyThisSeparate(ParentType.FirstPerson), ParentType.FirstPerson),
     SKULL(false, SchemeFunction.onlyThisSeparate(ParentType.Skull), ParentType.Skull),
     PORTRAIT(false, SchemeFunction.onlyThisSeparate(ParentType.Portrait), ParentType.Portrait),
     ARROW(false, SchemeFunction.onlyThisSeparate(ParentType.Arrow), ParentType.Arrow),

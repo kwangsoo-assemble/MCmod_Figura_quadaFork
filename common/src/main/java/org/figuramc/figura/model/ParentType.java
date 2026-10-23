@@ -30,6 +30,8 @@ public enum ParentType {
     World(true, false, "WORLD"),
     Hud(true, false, "HUD", "HeadsUpDisplay", "Gui", "GUI", "GraphicalUserInterface", "JraficalUserInterface"),
     Camera("CAMERA", "Billboard", "BILLBOARD"),
+    // ★ 바닐라 1인칭 손 패스에서 그리는 분리 부모 — 좌표계는 카메라 공간(Avatar.firstPersonPartsRender)
+    FirstPerson(true, false, "FIRST_PERSON", "FIRSTPERSON"),
     Skull(true, false, "SKULL", "☠"),
     Portrait(true, false, "PORTRAIT"),
     Arrow(true, false, "ARROW"),

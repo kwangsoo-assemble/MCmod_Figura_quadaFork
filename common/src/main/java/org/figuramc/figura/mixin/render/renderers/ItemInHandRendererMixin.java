@@ -50,6 +50,14 @@ public abstract class ItemInHandRendererMixin {
         FiguraMod.popProfiler(3);
     }
 
+    // ★ FirstPerson 부모 — 시선 지연 둘째 회전 바로 뒤(흔들림 셋이 다 곱해지고 팔마다 붙는 변환은 아직).
+    //   팔 호출(renderArmWithItem)은 조건부라 빠지는 프레임이 있어 거기에 걸지 않는다.
+    @Inject(method = "renderHandsWithItems", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionfc;)V", ordinal = 1, shift = At.Shift.AFTER))
+    private void renderFirstPersonParts(float tickDelta, PoseStack matrices, MultiBufferSource.BufferSource vertexConsumers, LocalPlayer player, int light, CallbackInfo ci) {
+        if (avatar != null)
+            avatar.firstPersonPartsRender(matrices, vertexConsumers, player, light, tickDelta);
+    }
+
     @Inject(method = "renderHandsWithItems", at = @At("RETURN"))
     private void afterRenderHandsWithItems(float tickDelta, PoseStack matrices, MultiBufferSource.BufferSource vertexConsumers, LocalPlayer player, int light, CallbackInfo ci) {
         if (avatar == null)
