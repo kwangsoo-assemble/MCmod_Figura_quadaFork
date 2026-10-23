@@ -5,8 +5,10 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.TextRenderable;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.Badges;
@@ -47,6 +49,9 @@ public class TextTask extends RenderTask {
     private boolean wrap = true;
 
     private int cachedComplexity, cacheWidth, cacheHeight;
+
+    // 바깥선 알파 = 글 알파 ^ 이 값 — 8벌이 본문 밑에 겹쳐 반투명 글 속이 바깥선 색으로 탁해진다(1.21.8 판과 같다)
+    private static final double OUTLINE_ALPHA_POW = 8;
 
     public TextTask(String name, Avatar owner, FiguraModelPart parent) {
         super(name, owner, parent);
@@ -108,6 +113,44 @@ public class TextTask extends RenderTask {
                 prepared.visit(visitor);
             }
         }
+    }
+
+    // 제출기가 있으면 배경 · 글을 바닐라 글 기능(TextFeatureRenderer)으로 넘긴다 — 아래 render() 의 효과 사각형 배경은
+    // 26.3 에서 월드 · HUD 모두 안 그려졌다(바닐라 텍스트 디스플레이 · 이름표 배경은 같은 기능으로 그려진다).
+    // 제출기가 없는 즉시 그리기(머리 블록 등)는 ImmediateFiguraRenderer 가 render() 로 돌린다
+    @Override
+    public boolean requiresDirectSubmit() {
+        return true;
+    }
+
+    @Override
+    public void renderDirect(PoseStack poseStack, SubmitNodeCollector collector, int light, int overlay) {
+        if (opacity == 0) return;
+
+        poseStack.scale(-1, -1, -1);
+
+        Font font = Minecraft.getInstance().font;
+        int l = this.customization.light != null ? this.customization.light : light;
+        int bg = backgroundColor != null ? ColorUtils.intRGBAToIntARGB(backgroundColor) : background ? (int) (Minecraft.getInstance().options.getBackgroundOpacity(0.25f) * 0xFF) << 24 : 0;
+        int op = opacity << 24 | 0xFFFFFF;
+        // ⚠ setOutlineColor 는 0xRRGGBB(알파 0) — 그대로 넘기면 셰이더가 바깥선을 버린다 → 알파를 붙인다(0 이면 바닐라가 바깥선을 안 그린다)
+        int out = outline ? ARGB.color(outlineAlpha(ARGB.alpha(op)), outlineColor != null ? outlineColor : 0x202020) : 0;
+        Font.DisplayMode displayMode = seeThrough ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.POLYGON_OFFSET;
+
+        if (bg != 0) {
+            int offset = alignment.apply(cacheWidth);
+            collector.submitTextBackground(poseStack, -1 - offset, -1f, cacheWidth - offset, cacheHeight, bg, displayMode, l);
+        }
+
+        for (int i = 0, j = 0; i < text.size(); i++, j += (font.lineHeight + 1)) {
+            Component line = this.text.get(i);
+            int x = -alignment.apply(font, line);
+            collector.submitText(poseStack, x, j, line.getVisualOrderText(), shadow, displayMode, l, op, 0, out);
+        }
+    }
+
+    private static int outlineAlpha(int textAlpha) {
+        return textAlpha >= 0xFF ? 0xFF : (int) Math.round(Math.pow(textAlpha / 255d, OUTLINE_ALPHA_POW) * 0xFF);
     }
 
     @Override

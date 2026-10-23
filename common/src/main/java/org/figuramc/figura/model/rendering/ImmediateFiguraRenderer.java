@@ -394,7 +394,8 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
                         FiguraMod.pushProfiler(task.getName());
                         var taskPose = task.prepare(customizationStack);
 
-                        if (task.requiresDirectSubmit()) {
+                        // ⚠ 즉시 그리기(제출기 없음 — 머리 블록 등)면 직접 제출 태스크도 대기열로 — renderDirect 에 null 을 넘기면 죽는다
+                        if (task.requiresDirectSubmit() && currentSubmitNodeCollector != null) {
                             task.renderDirect(taskPose, currentSubmitNodeCollector, light, overlay);
                         } else {
                             queuedRenderTasks.add(new FiguraSubmission.QueuedRenderTask(task, taskPose, light, overlay));
