@@ -44,10 +44,7 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
         if (state.avatar() == null)
             return;
 
-        // сохраняем ровно ту трансформацию, что раньше делал Avatar.hudRender сам:
-        poseStack.last().pose().scale(16, 16, -16);
-        poseStack.last().normal().scale(1, 1, -1);
-
+        // ⚠ 16 배 · z 뒤집기는 Avatar.hudRender 가 한다 — 여기서 또 곱하면 HUD 가 256 배로 화면 밖에 그려진다(1.21.8 도 hudRender 한 번뿐)
         state.avatar().hudRender(poseStack, submitNodeCollector, state.entity(), state.tickDelta());
     }
 
