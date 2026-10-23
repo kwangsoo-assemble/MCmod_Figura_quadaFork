@@ -271,7 +271,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - `ContextMenu.addAction` 이 만든 버튼을 돌려준다(항목 하나만 회색 · 안내 문구)
     - ✅ 인게임 확인(🙋 «서버 접속시, 싱글접속시 각각 버튼 비활성화 잘 되네» · 누를 수 있는 항목 초록 글자) · 릴리스 `v0.1.6.4`
 
-21. **남 세팅용 옷장 · 데이터 고정 · 아바타 로드 알림 · 같은 폴더 한 번만 컴파일** (2026-10-23, 하네스 `projects/mc_repositories` M42 · 짝 애드온 `mods/figura_flashback` · ⚠ 인게임 확인 전):
+21. **남 세팅용 옷장 · 데이터 고정 · 아바타 로드 알림 · 같은 폴더 한 번만 컴파일** (2026-10-23, 하네스 `projects/mc_repositories` M42 · 짝 애드온 `mods/figura_flashback` · ✅ 인게임 확인 — 디버그 막대기 옷장(FSB 멀티 · 리플레이) · 리플레이 아바타 · 숨김 · 옛 리플레이 · 처음 적용 오류 고친 뒤 정상):
     - 디버그 막대기로 다른 플레이어 우클릭 → `NonhostWardrobeScreen`(탭 없음 · 대상 미리보기 · 아바타 목록 · 선택 해제 = 고정 풀기) — `MinecraftMixin.startUseItem` HEAD ·
       상호작용 패킷 안 보냄 · 블록 · 공중 · 비플레이어는 바닐라. `AvatarList.Picker` 로 «고르면 할 일 · 고른 표시» 를 넘긴다(옷장은 `HOST` — 예전 그대로)
     - 고정: 경로 표 `PINNED_USERS`(그대로) + 데이터 표 `PINNED_DATA`(새) · `pinAvatarData` · `getPinSource` · 경로가 늘 이긴다(`loadLocalAvatarFor` 가 데이터 고정을 지운다) ·
