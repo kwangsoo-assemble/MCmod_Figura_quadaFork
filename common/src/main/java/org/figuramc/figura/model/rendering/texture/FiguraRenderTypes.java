@@ -80,6 +80,8 @@ public enum FiguraRenderTypes {
                 (texture, affectsOutline) ->
                         FiguraRenderTypeFactory.create("figura_cutout_emissive_solid",
                                 RenderSetup.builder(RenderPipelines.BEACON_BEAM_TRANSLUCENT)
+                                        // OIT 짝 — 바닐라 반투명 beacon_beam 과 같다. 없으면 OIT 를 켤 때 FiguraSubmitUtils 가 solid 로 보내 섞는 순서를 잃는다
+                                        .setOitPipelines(RenderPipelines.OIT_BEACON_BEAM)
                                         .withTexture("Sampler0", texture)
                                         .affectsCrumbling()
                                         .sortOnUpload()
@@ -105,6 +107,8 @@ public enum FiguraRenderTypes {
                 texture -> FiguraRenderTypeFactory.create(
                         "figura_blurry",
                         RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT)
+                                // OIT 짝 — 바닐라 entity_translucent 와 같다(다른 것은 흐린 샘플러 하나)
+                                .setOitPipelines(RenderPipelines.OIT_ENTITY)
                                 .affectsCrumbling()
                                 .sortOnUpload()
                                 .useLightmap()
@@ -140,6 +144,8 @@ public enum FiguraRenderTypes {
                         .createRenderSetup()
         );
 
+        // OIT 짝 없음 — 바닐라 GLINT 반짝임(patterned_shield_glint · trimmed_armor_glint)도 없다(다른 파이프라인의 짝은 안 맞는다).
+        // 더하기 섞기라 순서와 무관 · OIT 를 켜면 FiguraSubmitUtils 가 solid 단계로 보낸다
         public static final Function<Identifier, RenderType> TEXTURED_GLINT = Util.memoize(
                 texture -> FiguraRenderTypeFactory.create(
                         "figura_textured_glint_direct",
