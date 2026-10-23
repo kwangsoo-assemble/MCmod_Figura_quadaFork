@@ -296,15 +296,18 @@ public class WardrobeScreen extends AbstractPanelScreen {
     // FSB 연결된 서버 → 기본 클라우드 회색 · 그 밖(싱글 · 리플레이 · FSB 없는 서버) → FSB 회색. 회색 항목의 안내 문구는 이유로 바꾼다
     private void refreshDestinations() {
         boolean fsb = FSB.instance().connected();
-        setDestination(uploadBackend, !fsb, "gui.wardrobe.upload_backend.tooltip", "gui.wardrobe.main_cloud_off");
-        setDestination(uploadFsb, fsb, "gui.wardrobe.upload_fsb.tooltip", "gui.wardrobe.server_cloud_off");
-        setDestination(deleteBackend, !fsb, "gui.wardrobe.delete_backend.tooltip", "gui.wardrobe.main_cloud_off");
-        setDestination(deleteFsb, fsb, "gui.wardrobe.delete_fsb.tooltip", "gui.wardrobe.server_cloud_off");
+        setDestination(uploadBackend, !fsb, "gui.wardrobe.upload_backend", "gui.wardrobe.main_cloud_off");
+        setDestination(uploadFsb, fsb, "gui.wardrobe.upload_fsb", "gui.wardrobe.server_cloud_off");
+        setDestination(deleteBackend, !fsb, "gui.wardrobe.delete_backend", "gui.wardrobe.main_cloud_off");
+        setDestination(deleteFsb, fsb, "gui.wardrobe.delete_fsb", "gui.wardrobe.server_cloud_off");
     }
 
-    private static void setDestination(Button button, boolean active, String tooltip, String offTooltip) {
+    // 누를 수 있는 항목은 초록 글자(옛 «둘 다» 항목 색 — 🙋 2026-10-23) · 회색 항목은 색 없이 둬서 Button 의 회색이 보이게.
+    // ⚠ 색을 문구(lang)의 § 코드로 넣으면 회색 항목까지 덮는다 — 그래서 여기서 입힌다
+    private static void setDestination(Button button, boolean active, String key, String offTooltip) {
         button.setActive(active);
-        button.setTooltip(active ? FiguraText.of(tooltip) : FiguraText.of(offTooltip).withStyle(ChatFormatting.GRAY));
+        button.setMessage(active ? FiguraText.of(key).withStyle(ChatFormatting.GREEN) : FiguraText.of(key));
+        button.setTooltip(active ? FiguraText.of(key + ".tooltip") : FiguraText.of(offTooltip).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
