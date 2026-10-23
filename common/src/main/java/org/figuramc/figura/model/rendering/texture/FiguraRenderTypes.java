@@ -1,5 +1,6 @@
 package org.figuramc.figura.model.rendering.texture;
 
+import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.api.device.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -8,6 +9,7 @@ import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.feature.ItemFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.*;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
@@ -36,12 +38,12 @@ public enum FiguraRenderTypes {
     TEXTURED_PORTAL(FiguraRenderType.TEXTURED_PORTAL),
 
     GLINT(t -> RenderTypes.patternedShieldGlint(), false, false),
-    GLINT2(t -> RenderTypes.trimmedArmorGlint(), false, false),
+    GLINT2(t -> FiguraRenderType.GLINT, false, false),
     TEXTURED_GLINT(FiguraRenderType.TEXTURED_GLINT, true, false),
 
     LINES(t -> RenderTypes.lines(), false),
     LINES_STRIP(t -> RenderTypes.lines(), false),
-    SOLID(RenderTypes::entitySolid),
+    SOLID(t -> FiguraRenderType.SOLID, false),
 
     BLURRY(FiguraRenderType.BLURRY);
 
@@ -119,6 +121,25 @@ public enum FiguraRenderTypes {
                 )
         );
 
+        // 1.21.8 GLINT2 = RenderType.glint() — 26.3 에는 같은 타입이 없다.
+        // ⚠ trimmedArmorGlint 로 대신하지 마라 — 깊이를 밀어(VIEW_OFFSET_Z_LAYERING) 반짝임의 «깊이 같음» 검사에서 다 떨어진다
+        public static final RenderType GLINT = FiguraRenderTypeFactory.create(
+                "figura_glint",
+                RenderSetup.builder(RenderPipelines.GLINT)
+                        .withTexture("Sampler0", ItemFeatureRenderer.ENCHANTED_GLINT_ITEM)
+                        .setTextureTransform(TextureTransform.GLINT_TEXTURING)
+                        .withForcedSolidModelPhase()
+                        .createRenderSetup()
+        );
+
+        // 1.21.8 SOLID — 텍스처 없이 꼭짓점 색 하나로 채운다(entitySolid 는 텍스처를 입혀 모습이 다르다)
+        public static final RenderType SOLID = FiguraRenderTypeFactory.create(
+                "figura_solid",
+                RenderSetup.builder(FiguraRenderPipelines.FIGURA_SOLID_COLOR)
+                        .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                        .createRenderSetup()
+        );
+
         public static final Function<Identifier, RenderType> TEXTURED_GLINT = Util.memoize(
                 texture -> FiguraRenderTypeFactory.create(
                         "figura_textured_glint_direct",
@@ -132,6 +153,14 @@ public enum FiguraRenderTypes {
 
     public static class FiguraRenderPipelines {
         public static final RenderPipeline FIGURA_SOLID = buildFiguraSolid();
+
+        // SOLID 렌더 타입 — 바닐라 debug 채우기 조각(position_color · 반투명 섞기 · 사각형)에 깊이 쓰기를 켜고 컬링을 끈다(1.21.8 SOLID 와 같은 꼴).
+        // Iris 프로그램은 일부러 정하지 않는다 — 처음 쓸 때 Iris 가 형식으로 고른다(FIGURA_SOLID 의 ENTITIES 는 엔티티 형식용)
+        public static final RenderPipeline FIGURA_SOLID_COLOR = RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+                .withLocation(FiguraIdentifier.of("pipeline/solid_color"))
+                .withDepthStencilState(DepthStencilState.DEFAULT)
+                .withCull(false)
+                .build();
 
         private static RenderPipeline buildFiguraSolid() {
             RenderPipeline base = RenderPipelines.ENTITY_SOLID;
