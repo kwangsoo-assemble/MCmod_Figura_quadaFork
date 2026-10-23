@@ -267,7 +267,7 @@ public class AvatarManager {
 
     // 이 몹 종류들의 로드된 아바타만 내린다 — 다음 렌더에 CEM_AVATARS 에서 새로 만든다(/figura cem build 가 부른다).
     // 종류를 알 수 없는 것(사라진 몹 · 월드 없음)도 같이 내린다 — 어차피 다음 틱에 정리되거나 다시 만들어진다
-    public static void clearCEMAvatars(Collection<ResourceLocation> types) {
+    public static void clearCEMAvatars(Collection<Identifier> types) {
         if (LOADED_CEM.isEmpty() || types.isEmpty())
             return;
 

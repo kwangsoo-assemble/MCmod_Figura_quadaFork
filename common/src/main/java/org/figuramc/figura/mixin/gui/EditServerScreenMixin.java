@@ -3,7 +3,7 @@ package org.figuramc.figura.mixin.gui;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.screens.EditServerScreen;
+import net.minecraft.client.gui.screens.ManageServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(EditServerScreen.class)
+@Mixin(ManageServerScreen.class)
 public abstract class EditServerScreenMixin extends Screen {
     @Shadow private Button addButton;
 
@@ -28,7 +28,7 @@ public abstract class EditServerScreenMixin extends Screen {
         super(title);
     }
 
-    @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/EditServerScreen;updateAddButtonStatus()V"))
+    @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/ManageServerScreen;updateAddButtonStatus()V"))
     private void onInit(CallbackInfo ci) {
         int x = this.width / 2 + 102;
         int y = this.height / 4 + 72;

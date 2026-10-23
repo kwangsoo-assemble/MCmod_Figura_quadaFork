@@ -1,6 +1,5 @@
 package org.figuramc.figura.server.packets.handlers.s2c;
 
-import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.server.packets.*;
 import org.figuramc.figura.server.packets.s2c.*;
 import org.figuramc.figura.server.utils.Identifier;
@@ -36,7 +35,7 @@ public class Handlers {
         return (S2CPacketHandler<P>) PACKET_HANDLERS.get(identifier);
     }
 
-    public static <P extends Packet> S2CPacketHandler<P> getHandler(ResourceLocation resLoc) {
+    public static <P extends Packet> S2CPacketHandler<P> getHandler(net.minecraft.resources.Identifier resLoc) {
         Identifier identifier = new Identifier(resLoc.getNamespace(), resLoc.getPath());
         return getHandler(identifier);
     }

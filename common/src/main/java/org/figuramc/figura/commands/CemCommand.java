@@ -6,14 +6,14 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;
@@ -53,7 +53,7 @@ class CemCommand {
 
     private static final String CEM_FILE = "cem.json";
 
-    private record Job(Path folder, String name, List<ResourceLocation> types) {}
+    private record Job(Path folder, String name, List<Identifier> types) {}
 
     private record Line(Component text, boolean error) {}
 
@@ -76,7 +76,7 @@ class CemCommand {
 
         // 아바타가 있는 종류 전부(0 마리 포함) + 아바타 없이 돌고 있는 것("?" 등)
         Map<String, Integer> rows = new TreeMap<>();
-        for (ResourceLocation type : LocalAvatarLoader.CEM_AVATARS.keySet())
+        for (Identifier type : LocalAvatarLoader.CEM_AVATARS.keySet())
             rows.put(type.toString(), 0);
         rows.putAll(running);
 
@@ -115,9 +115,9 @@ class CemCommand {
         }
 
         // 몹 종류 하나에 아바타 하나 — 두 폴더가 같은 종류를 가리키면 뒤엣것이 조용히 덮으므로 막는다
-        Map<ResourceLocation, String> claimed = new HashMap<>();
+        Map<Identifier, String> claimed = new HashMap<>();
         for (Job job : jobs) {
-            for (ResourceLocation type : job.types()) {
+            for (Identifier type : job.types()) {
                 String other = claimed.putIfAbsent(type, job.name());
                 if (other != null) {
                     source.figura$sendError(FiguraText.of("command.cem.duplicate", type.toString(), other, job.name()));
@@ -130,7 +130,7 @@ class CemCommand {
 
         Minecraft client = source.figura$getClient();
         LocalAvatarLoader.async(() -> {
-            Map<ResourceLocation, CompoundTag> built = new LinkedHashMap<>();
+            Map<Identifier, CompoundTag> built = new LinkedHashMap<>();
             List<Line> lines = new ArrayList<>();
             int ok = 0;
 
@@ -139,10 +139,10 @@ class CemCommand {
                     CompoundTag compiled = LocalAvatarLoader.compileAvatarFolder(job.folder(), Util.NIL_UUID, false);
 
                     // 리소스팩이 읽을 것과 같게 — 쓴 파일을 다시 읽어 그걸 올린다(읽히지 않는 파일이면 여기서 실패한다)
-                    Map<ResourceLocation, CompoundTag> mine = new LinkedHashMap<>();
+                    Map<Identifier, CompoundTag> mine = new LinkedHashMap<>();
                     CompoundTag written = null;
                     long bytes = 0;
-                    for (ResourceLocation type : job.types()) {
+                    for (Identifier type : job.types()) {
                         Path file = write(type, compiled);
                         if (written == null) {
                             bytes = Files.size(file);
@@ -216,9 +216,9 @@ class CemCommand {
         if (ids.isEmpty())
             throw new IOException(where + ": \"entity\" needs an entity type id or a list of them");
 
-        List<ResourceLocation> types = new ArrayList<>();
+        List<Identifier> types = new ArrayList<>();
         for (String id : ids) {
-            ResourceLocation type = ResourceLocation.tryParse(id);
+            Identifier type = Identifier.tryParse(id);
             if (type == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(type))
                 throw new IOException(where + ": unknown entity type \"" + id + "\"");
             // 리소스팩 로더는 <ns>/<name>.nbt 의 마지막 두 조각만 읽는다 — 경로에 "/" 가 있는 종류는 CEM 파일로 못 적는다
@@ -230,7 +230,7 @@ class CemCommand {
         return new Job(folder, name, types);
     }
 
-    private static Path write(ResourceLocation type, CompoundTag nbt) throws IOException {
+    private static Path write(Identifier type, CompoundTag nbt) throws IOException {
         Path dir = FiguraMod.getFiguraDirectory().resolve("cem_out").resolve(type.getNamespace());
         Files.createDirectories(dir);
 
@@ -242,9 +242,9 @@ class CemCommand {
         return file;
     }
 
-    private static String joinTypes(List<ResourceLocation> types) {
+    private static String joinTypes(List<Identifier> types) {
         List<String> names = new ArrayList<>();
-        for (ResourceLocation type : types)
+        for (Identifier type : types)
             names.add(type.toString());
         return String.join(", ", names);
     }

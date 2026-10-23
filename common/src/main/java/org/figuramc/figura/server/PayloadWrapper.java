@@ -3,7 +3,7 @@ package org.figuramc.figura.server;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.BrandPayload;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
 
@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 public class PayloadWrapper<P extends Packet> implements CustomPacketPayload {
     private final P source;
-    public static final Function<ResourceLocation,Type<PayloadWrapper>> TYPE = id -> CustomPacketPayload.createType(id.toString());
+    public static final Function<Identifier,Type<PayloadWrapper>> TYPE = id -> CustomPacketPayload.createType(id.toString());
 
     public PayloadWrapper(P source) {
         this.source = source;
@@ -26,9 +26,9 @@ public class PayloadWrapper<P extends Packet> implements CustomPacketPayload {
         return source;
     }
 
-    public ResourceLocation id() {
+    public Identifier id() {
         var id = source.getId();
-        return new ResourceLocation(id.namespace(), id.path());
+        return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
     }
 
     @Override

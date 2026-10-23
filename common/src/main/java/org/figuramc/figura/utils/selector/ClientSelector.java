@@ -58,7 +58,7 @@ public final class ClientSelector {
         }
         // 탭리스트에만 있는 플레이어 (엔티티 미로드)
         for (PlayerInfo info : connection.getOnlinePlayers()) {
-            UUID id = info.getProfile().getId();
+            UUID id = info.getProfile().id();
             if (seen.add(id)) pool.add(fromInfo(info, level, self));
         }
 
@@ -77,7 +77,7 @@ public final class ClientSelector {
         c.isSelf = c.uuid.equals(self);
         c.typeId = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString();
         PlayerInfo info = c.isPlayer ? connection.getPlayerInfo(c.uuid) : null;
-        c.name = e instanceof Player p ? p.getGameProfile().getName() : e.getName().getString();
+        c.name = e instanceof Player p ? p.getGameProfile().name() : e.getName().getString();
         c.gamemode = info != null && info.getGameMode() != null ? info.getGameMode().getName() : null;
         PlayerTeam team = e.getTeam();
         c.team = team != null ? team.getName() : null;
@@ -94,11 +94,11 @@ public final class ClientSelector {
 
     private static Impl fromInfo(PlayerInfo info, ClientLevel level, UUID self) {
         Impl c = new Impl();
-        c.uuid = info.getProfile().getId();
+        c.uuid = info.getProfile().id();
         c.isPlayer = true;
         c.isSelf = c.uuid.equals(self);
         c.typeId = "minecraft:player";
-        c.name = info.getProfile().getName();
+        c.name = info.getProfile().name();
         c.gamemode = info.getGameMode() != null ? info.getGameMode().getName() : null;
         PlayerTeam team = level.getScoreboard().getPlayersTeam(c.name);
         c.team = team != null ? team.getName() : null;
