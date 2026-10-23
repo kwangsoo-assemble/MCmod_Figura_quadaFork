@@ -334,8 +334,9 @@ Code: `gui/screens/NonhostWardrobeScreen.java` (new) · `gui/widgets/lists/Avata
 - It shows when vanilla hands show — your own first-person view · GUI visible · not spectating · not sleeping. The field of view is the hand pass's own (FOV setting and sprinting do not change it).
 - No new Lua API. Hide the vanilla arms and held items with the existing `renderer:setRenderLeftArm`, `setRenderRightArm`, `vanilla_model.LEFT_ITEM`, `RIGHT_ITEM`.
   The Lua `render` event (context `FIRST_PERSON`) runs before drawing.
-- Translucency is on par with vanilla hands — faces are sorted within one render type. Translucent volumes that cut into each other, or into a translucent
-  held item, lose some faces (the hand pass has no OIT). Under Iris shader packs, translucency behind translucency loses more.
+- Faces are sorted within one render type. Translucent volumes that cut into each other, or into a translucent held item, lose some faces
+  (same as vanilla hands — 1.21.8, or OIT off). On the 26.3 branch with Improved Transparency (OIT) on, the hand pass is drawn with OIT too and blends correctly (no shader pack).
+  Under Iris shader packs, translucency behind translucency loses more.
 - ⚠ **Cores older than this release (official Figura included) do not know this parent name and draw those parts as normal body parts** — on other
   players' screens the first-person parts stick to the body. Use it only once every client that sees the avatar has this release.
 
@@ -354,10 +355,10 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
 |---|---|
 | Minecraft | 26.3 (Fabric) |
 | Java | 25 |
-| Mod version | `0.1.6.5+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
+| Mod version | `0.1.6.6+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
 | Based on | The `26.3` branch of [NoFigura](https://github.com/Stranik2504/NoFigura) (a 26.x port of Figura), with this fork's changes applied on top |
 | Companion plugins | The `26.3` branches of both plugin repositories (Paper / Purpur 26.3) |
-| Release | `v0.1.6.5+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
+| Release | `v0.1.6.6+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
 
 - **Included** — the FSB client (connect, upload, download, pings) · server packets for other players' avatars · `server_data` · single-player local mode ·
   the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12) · the `FirstPerson` parent type (18).
@@ -370,12 +371,13 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
   text backgrounds, text shadows and the far side of parts being cut off on the HUD and in portraits (projection depth range) ·
   translucent parts on the HUD being sorted in the wrong order with OIT on · World-parented parts (props included) not being drawn in first person ·
   first-person arm parts barely rotating (radians passed as degrees) ·
-  translucency sorting being off in the first-person hand pass with OIT on (vanilla translucent held items included).
+  translucency sorting being off in the first-person hand pass with OIT on (vanilla translucent held items included) ·
+  the first-person hand pass now uses OIT too — translucent parts that cut into each other, or into a held stained glass, blend correctly
+  (vanilla's hand pass has no OIT · only without a shader pack · runs only when translucent hand parts are present — measured about 0.08 ms per frame).
 - **Known issues** — with OIT on, the blending render types Figura defines itself (`BLURRY`, `CUTOUT_EMISSIVE_SOLID`, `TEXTURED_GLINT`) lose translucency sorting ·
   `END_PORTAL`, `END_GATEWAY` and `TEXTURED_PORTAL` come out black under Iris shader packs ·
-  the first-person hand pass does not use OIT (same as vanilla) — translucent parts that cut into each other, or into a translucent held item, lose some faces ·
   there is no 26.3 build of SillyPlugin yet.
-- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar`.
+- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.6+26.3-fabric-mc.jar`.
 
 ## Building
 
@@ -723,8 +725,9 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 - 보이는 때는 바닐라 손과 같다 — 내 화면의 1인칭 · GUI 보임 · 관전자 아님 · 잠자지 않음. 시야는 손 패스 그대로다(시야 설정 · 달리기와 무관).
 - 새 Lua API 는 없다. 바닐라 팔 · 손 아이템은 기존 `renderer:setRenderLeftArm` · `setRenderRightArm` · `vanilla_model.LEFT_ITEM` · `RIGHT_ITEM` 으로 가린다.
   Lua `render` 이벤트(맥락 `FIRST_PERSON`)는 그리기 전에 돈다.
-- 반투명은 바닐라 손과 같은 수준이다 — 한 렌더 타입 안에서는 면을 정렬한다. 서로 파고든 반투명 부피 · 손에 든 반투명 아이템과 겹친 부피는
-  일부 면이 빠진다(손 패스에는 OIT 가 없다). Iris 셰이더팩에서는 반투명 뒤 반투명이 더 빠진다.
+- 반투명은 한 렌더 타입 안에서 면을 정렬한다. 서로 파고든 반투명 부피 · 손에 든 반투명 아이템과 겹친 부피는 일부 면이 빠진다
+  (바닐라 손과 같다 — 1.21.8 · OIT 끔). 26.3 가지에서 Improved Transparency(OIT)를 켜면 손 패스도 OIT 로 그려 맞게 섞인다(셰이더팩이 없을 때).
+  Iris 셰이더팩에서는 반투명 뒤 반투명이 더 빠진다.
 - ⚠ **이 판보다 옛 코어(공식 Figura 포함)는 이 부모 이름을 몰라 그 파츠를 일반 몸 파츠로 그린다** — 다른 사람 화면에서 1인칭 파츠가 몸에 붙어 보인다.
   그 아바타를 보는 모든 클라이언트에 이 판이 깔린 뒤에 쓴다.
 
@@ -743,10 +746,10 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 |---|---|
 | 게임 버전 | Minecraft 26.3 (Fabric) |
 | Java | 25 |
-| 모드 버전 | `0.1.6.5+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
+| 모드 버전 | `0.1.6.6+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
 | 바탕 | [NoFigura](https://github.com/Stranik2504/NoFigura) 의 `26.3` 가지 (Figura 의 26.x 이식) 위에 이 포크의 변경을 얹었다 |
 | 짝 플러그인 | 두 플러그인 저장소의 `26.3` 가지 (Paper · Purpur 26.3) |
-| 릴리스 | `v0.1.6.5+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
+| 릴리스 | `v0.1.6.6+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
 
 - **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
   버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12) · `FirstPerson` 부모 타입(18).
@@ -759,12 +762,13 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
   HUD · 초상화에서 글 배경 · 글 그림자 · 파츠 뒤쪽이 잘리던 것(투영의 깊이 범위) ·
   OIT 를 켜면 HUD 반투명 파츠의 앞뒤 정렬이 틀리던 것 · 1인칭에서 월드 부모 파츠(소품 포함)가 안 그려지던 것 ·
   1인칭 팔 파츠의 회전이 거의 사라지던 것(라디안을 도로 넘김) ·
-  OIT 를 켜면 1인칭 손 패스의 반투명 정렬이 꺼지던 것(바닐라 반투명 손 아이템 포함).
+  OIT 를 켜면 1인칭 손 패스의 반투명 정렬이 꺼지던 것(바닐라 반투명 손 아이템 포함) ·
+  1인칭 손 패스도 OIT 로 — 서로 파고든 반투명 파츠 · 손에 든 색유리와 겹친 부피가 맞게 섞인다
+  (바닐라 손 패스에는 OIT 가 없다 · 셰이더팩이 없을 때 · 반투명 손 파츠가 있을 때만 돈다 — 실측 약 0.08 ms/프레임).
 - **알려진 문제** — OIT 를 켜면 Figura 가 만든 섞기 렌더 타입(`BLURRY` · `CUTOUT_EMISSIVE_SOLID` · `TEXTURED_GLINT`)이 반투명 정렬을 잃는다 ·
   Iris 셰이더팩에서 `END_PORTAL` · `END_GATEWAY` · `TEXTURED_PORTAL` 이 검게 나온다 ·
-  1인칭 손 패스는 OIT 를 쓰지 않는다(바닐라와 같다) — 서로 파고든 반투명 파츠 · 손에 든 반투명 아이템과 겹친 부피는 일부 면이 빠진다 ·
   SillyPlugin 의 26.3 판은 아직 없다.
-- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar`.
+- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.6+26.3-fabric-mc.jar`.
 
 ## 빌드
 

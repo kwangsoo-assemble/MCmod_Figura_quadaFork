@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.5+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.6+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -291,6 +291,14 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - ⚠ 옛 코어는 부모 이름을 모르면 `catch` 로 무시해 일반 몸 파츠로 둔다 — 콘텐츠는 보는 클라이언트 모두에 이 판이 깔린 뒤 쓴다
     - 한계: 손 패스에는 OIT 가 없다(바닐라와 같다) — 서로 파고든 반투명은 면 중심 정렬로 일부 면이 빠진다 · Iris 셰이더팩 손 경로는 반투명 뒤 반투명이 더 빠진다
 
+23. **26.3 가지 — 1인칭 손 회차 OIT** (2026-10-24, 하네스 `projects/mc_repositories` M45 · 0.1.6.6+26.3 · ✅ 인게임 확인 — 파고든 반투명 · 색유리 · 화면 효과 · 손 아이템 · 후처리 · OpenGL · Vulkan · Iris · 성능 약 0.08 ms):
+    - 바닐라 손 저장소(`handAndScreenSubmitNodeStorage`)는 늘 OIT 꺼짐 → 서로 파고든 반투명이 면 정렬로만 그려져 일부 면이 빠졌다
+    - `model/rendering/HandOitRenderer` — `renderItemInHand` 머리에서 손 저장소 `setUseImprovedTransparency(true)`(OIT 설정 켬 · 셰이더팩 없음) · 끝에서 끔 ·
+      바닐라 손 패스가 열리기 전에 «불투명 → OIT 세 단계 · 깊이 범위 컬링 → 합성» 을 Figura 패스로 · `renderAllFeatures` 는 비침 · 맨 위만 ·
+      대상 다섯 장은 `GameRenderer.resourcePool`(프레임 사이 풀)에서 레벨과 같은 꼴로 빌리고 돌려준다 · 반투명이 없으면 아무것도 안 한다
+    - ⚠ 화면 효과(`block_screen_effect` · `fire_screen_effect`)는 OIT 짝이 없다 — 같은 저장소의 다른 회차라 손 회차에만 켠다(켜 둔 채 넘기면 멈춘다)
+    - ⚠ OIT 꼴 묶음은 반투명 단계가 모두 `oitTranslucent` 하나 — `executeTranslucent` 를 부르면 두 번 그린다(레벨도 안 부른다)
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴
@@ -334,7 +342,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 
 - Minecraft 26.3 용 시험 가지 `26.3` 은 **별도 작업 폴더** `../figura_core_internal_26.3`(git worktree)에 있다 — main(1.21.8) 폴더 · 배포 · 촬영과 따로 논다
 - 바탕은 NoFigura(원격 `nofigura` · Stranik2504/NoFigura) `26.3` 가지 위에 이 포크의 변경을 얹은 것 · 렌더는 NoFigura 쪽이고 우리 렌더 기능 일부는 아직 안 옮겼다(README «26.3 가지»)
-- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.5+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
+- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.6+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
 - 배포 `projects/mc_repositories/tools/deploy_263.py`(26.3 프로필 · 시험 서버 — 게임 · 서버가 켜져 있으면 안 쓴다) · 푸시 `repos.py publish core_263` · 릴리스 `repos.py release core_263`(태그 `v<버전>+26.3` · «Latest» 아님)
 - README 는 main 과 **같은 바이트**로 둔다(한글 원본의 «26.3 가지» 절) — main 에서 README 를 고치면 이 가지에도 복사한다
-- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass`
+- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass` · 손 회차는 OIT 를 켜면 `HandOitRenderer`(23)
