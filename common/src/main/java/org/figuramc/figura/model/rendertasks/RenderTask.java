@@ -50,6 +50,8 @@ public abstract class RenderTask {
 
     public abstract void render(PoseStack stack, FiguraVertexConsumerProvider buffer, int light, int overlay);
     public boolean requiresDirectSubmit() { return false;}
+    // 대기열 태스크가 그릴 렌더 타입 — FiguraSubmitUtils 가 solid · translucent 단계를 고른다(null = 모름 → 반투명 단계)
+    public net.minecraft.client.renderer.rendertype.RenderType queuedRenderType() { return null; }
     public void renderDirect(PoseStack stack, SubmitNodeCollector collector, int light, int overlay) {}
 
     public abstract int getComplexity();

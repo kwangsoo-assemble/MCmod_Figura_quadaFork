@@ -19,6 +19,12 @@ public class FiguraFeatureRenderer extends RenderTypeFeatureRenderer<FiguraSubmi
     @Override
     protected void buildGroup(@NonNull FeatureFrameContext context, List<FiguraSubmission> submits) {
         for (FiguraSubmission submit : submits) {
+            if (submit.outlineOnly()) {
+                drawOutline(submit.primaryBuffers(), submit.outlineColor());
+                drawOutline(submit.secondaryBuffers(), submit.outlineColor());
+                continue;
+            }
+
             drawBuffered(submit.primaryBuffers());
             drawBuffered(submit.secondaryBuffers());
 

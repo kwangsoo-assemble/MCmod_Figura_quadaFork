@@ -80,6 +80,11 @@ public class SpriteTask extends RenderTask {
     }
 
     @Override
+    public net.minecraft.client.renderer.rendertype.RenderType queuedRenderType() {
+        return texture == null ? null : renderType.get(texture);
+    }
+
+    @Override
     public boolean shouldRender() {
         return super.shouldRender() && texture != null && renderType != FiguraRenderTypes.NONE;
     }
