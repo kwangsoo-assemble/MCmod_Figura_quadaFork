@@ -1,12 +1,6 @@
 package org.figuramc.figura.mixin.fabric;
 
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
-import com.mojang.renderpearl.api.commands.RenderPass;
-import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -14,8 +8,7 @@ import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,8 +19,6 @@ import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.math.matrix.FiguraMat3;
 import org.figuramc.figura.mixin.render.PoseStackAccessor;
 import org.figuramc.figura.utils.RenderUtils;
-import org.joml.Matrix4fc;
-import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -35,17 +26,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Optional;
-import java.util.OptionalDouble;
-
 @Mixin(LevelRenderer.class)
 public class LevelRendererMixinFabric {
     @Shadow @Final private EntityRenderDispatcher entityRenderDispatcher;
     @Shadow @Final private SubmitNodeStorage submitNodeStorage;
-    @Shadow @Final private FeatureRenderDispatcher featureRenderDispatcher;
 
-    @Inject(method = "render", at = @At("RETURN"))
-    private void renderLevelFirstPerson(GraphicsResourceAllocator resourceAllocator, boolean renderOutline, CameraRenderState cameraState, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky, boolean consistentDepthRequired, CallbackInfo ci) {
+    // 1인칭 월드 파츠 · 1인칭 행렬 — 레벨 프레임 안(카메라 회전이 걸린 뒤 · prepareFrame 바로 앞)에서 레벨 저장소에 함께 낸다.
+    // ⚠ render RETURN 에서 따로 그리지 마라 — renderAllFeatures 는 OIT 단계를 안 그리고(OIT 켬이면 반투명이 사라진다),
+    //   그때는 render 가 모델뷰 스택을 이미 되돌려 카메라 회전도 빠져 있다
+    @Inject(method = "submitFeatures", at = @At("RETURN"))
+    private void submitFirstPerson(LevelRenderState levelRenderState, SubmitNodeCollector collector, boolean bl, CallbackInfo ci) {
         Minecraft minecraft = Minecraft.getInstance();
         Camera camera = minecraft.gameRenderer.mainCamera();
         DeltaTracker dt = minecraft.getDeltaTracker();
@@ -76,9 +66,12 @@ public class LevelRendererMixinFabric {
 
         avatar.firstPersonWorldRender(e, stack, this.submitNodeStorage, camera, tickDelta);
 
-        if (Configs.FIRST_PERSON_MATRICES.value) {
-            Avatar.firstPerson = true;
+        if (!Configs.FIRST_PERSON_MATRICES.value)
+            return;
 
+        // Avatar.firstPerson 은 제출 순간에 읽힌다(LivingEntityRendererMixin 이 붙잡는다) — 제출 동안만 켠다
+        Avatar.firstPerson = true;
+        try {
             int lastIndex = ((PoseStackAccessor) stack).getLastIndex();
             stack.pushPose();
             Vec3 offset = entityRenderer.getRenderOffset(state);
@@ -89,31 +82,12 @@ public class LevelRendererMixinFabric {
                     Mth.lerp(tickDelta, livingEntity.zOld, livingEntity.getZ()) - cam.z() + offset.z()
             );
 
-            entityRenderer.submit(state, stack, this.submitNodeStorage, cameraState);
+            entityRenderer.submit(state, stack, this.submitNodeStorage, levelRenderState.cameraRenderState);
             do {
                 stack.popPose();
             } while (((PoseStackAccessor) stack).getLastIndex() > lastIndex);
+        } finally {
+            Avatar.firstPerson = false;
         }
-
-        GameRenderer gameRenderer = Minecraft.getInstance().gameRenderer;
-        RenderTarget mainTarget = gameRenderer.mainRenderTarget();
-
-        GpuTextureView depthTextureView = consistentDepthRequired
-                ? gameRenderer.hud3DTarget.getDepthTextureView()
-                : mainTarget.getDepthTextureView();
-
-        try (
-                FeatureRenderDispatcher.PreparedFrame frame = featureRenderDispatcher.prepareFrame(this.submitNodeStorage);
-                RenderPass pass = RenderSystem.getDevice()
-                        .createCommandEncoder()
-                        .createRenderPass(() -> "FiguraFirstPerson",
-                                mainTarget.getColorTextureView(), Optional.empty(),
-                                depthTextureView, OptionalDouble.empty());
-        ) {
-            RenderSystem.bindDefaultUniforms(pass);
-            FeatureRenderDispatcher.renderAllFeatures(pass, frame);
-        }
-
-        Avatar.firstPerson = false;
     }
 }
