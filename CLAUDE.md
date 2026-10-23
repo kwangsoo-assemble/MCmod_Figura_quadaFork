@@ -324,7 +324,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 
 - Minecraft 26.3 용 시험 가지 `26.3` 은 **별도 작업 폴더** `../figura_core_internal_26.3`(git worktree)에 있다 — main(1.21.8) 폴더 · 배포 · 촬영과 따로 논다
 - 바탕은 NoFigura(원격 `nofigura` · Stranik2504/NoFigura) `26.3` 가지 위에 이 포크의 변경을 얹은 것 · 렌더는 NoFigura 쪽이고 우리 렌더 기능 일부는 아직 안 옮겼다(README «26.3 가지»)
-- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.2+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
+- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.3+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
 - 배포 `projects/mc_repositories/tools/deploy_263.py`(26.3 프로필 · 시험 서버 — 게임 · 서버가 켜져 있으면 안 쓴다) · 푸시 `repos.py publish core_263` · 릴리스 `repos.py release core_263`(태그 `v<버전>+26.3` · «Latest» 아님)
 - README 는 main 과 **같은 바이트**로 둔다(한글 원본의 «26.3 가지» 절) — main 에서 README 를 고치면 이 가지에도 복사한다
 - 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다
