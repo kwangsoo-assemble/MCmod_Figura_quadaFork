@@ -155,7 +155,7 @@ public enum FiguraRenderTypes {
         public static final RenderPipeline FIGURA_SOLID = buildFiguraSolid();
 
         // SOLID 렌더 타입 — 바닐라 debug 채우기 조각(position_color · 반투명 섞기 · 사각형)에 깊이 쓰기를 켜고 컬링을 끈다(1.21.8 SOLID 와 같은 꼴).
-        // Iris 프로그램은 일부러 정하지 않는다 — 처음 쓸 때 Iris 가 형식으로 고른다(FIGURA_SOLID 의 ENTITIES 는 엔티티 형식용)
+        // Iris 프로그램은 IrisCompat 에서 BASIC 으로 정한다(FIGURA_SOLID 의 ENTITIES 는 엔티티 형식용)
         public static final RenderPipeline FIGURA_SOLID_COLOR = RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
                 .withLocation(FiguraIdentifier.of("pipeline/solid_color"))
                 .withDepthStencilState(DepthStencilState.DEFAULT)
