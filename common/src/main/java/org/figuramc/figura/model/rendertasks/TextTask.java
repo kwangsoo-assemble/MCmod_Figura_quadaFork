@@ -6,6 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
@@ -22,6 +24,8 @@ import org.figuramc.figura.math.vector.FiguraVec3;
 import org.figuramc.figura.math.vector.FiguraVec4;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.FiguraVertexConsumerProvider;
+import org.figuramc.figura.model.rendering.PartFilterScheme;
+import org.figuramc.figura.model.rendering.nodeRenderer.FiguraSubmission;
 import org.figuramc.figura.utils.ColorUtils;
 import org.figuramc.figura.utils.LuaUtils;
 import org.figuramc.figura.utils.TextUtils;
@@ -30,6 +34,8 @@ import org.luaj.vm2.LuaError;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Consumer;
 
 @LuaWhitelist
 @LuaTypeDoc(
@@ -139,7 +145,10 @@ public class TextTask extends RenderTask {
 
         if (bg != 0) {
             int offset = alignment.apply(cacheWidth);
-            collector.submitTextBackground(poseStack, -1 - offset, -1f, cacheWidth - offset, cacheHeight, bg, displayMode, l);
+            if (owner.renderer != null && owner.renderer.currentFilterScheme == PartFilterScheme.HUD && collector instanceof SubmitNodeStorage storage)
+                submitHudBackground(poseStack, storage, -1 - offset, -1f, cacheWidth - offset, cacheHeight, bg);
+            else
+                collector.submitTextBackground(poseStack, -1 - offset, -1f, cacheWidth - offset, cacheHeight, bg, displayMode, l);
         }
 
         for (int i = 0, j = 0; i < text.size(); i++, j += (font.lineHeight + 1)) {
@@ -147,6 +156,20 @@ public class TextTask extends RenderTask {
             int x = -alignment.apply(font, line);
             collector.submitText(poseStack, x, j, line.getVisualOrderText(), shadow, displayMode, l, op, 0, out);
         }
+    }
+
+    // ⚠ HUD(그림 속 그림)에서는 바닐라 글 배경(글꼴 효과 사각형)이 그려지지 않는다 — 같은 길의 글자는 그려진다 · 원인 미정(M43 진단 기록).
+    //   꼭짓점 색 사각형(debugQuads — 깊이 안 씀 · 컬링 없음)을 solid 단계에 내서 texts 단계의 글보다 먼저 깐다
+    private static void submitHudBackground(PoseStack poseStack, SubmitNodeStorage storage, float x0, float y0, float x1, float y1, int color) {
+        Matrix4f pose = new Matrix4f(poseStack.last().pose());
+        Consumer<VertexConsumer> quad = vc -> {
+            vc.addVertex(pose, x0, y1, -0.01f).setColor(color);
+            vc.addVertex(pose, x1, y1, -0.01f).setColor(color);
+            vc.addVertex(pose, x1, y0, -0.01f).setColor(color);
+            vc.addVertex(pose, x0, y0, -0.01f).setColor(color);
+        };
+        Map<RenderType, List<Consumer<VertexConsumer>>> buffers = Map.of(RenderTypes.debugQuads(), List.of(quad));
+        storage.order(0).solid.submit(new FiguraSubmission(buffers, Map.of(), List.of(), List.of(), 0));
     }
 
     private static int outlineAlpha(int textAlpha) {
