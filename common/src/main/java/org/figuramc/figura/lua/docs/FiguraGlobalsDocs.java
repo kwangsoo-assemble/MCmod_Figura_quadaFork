@@ -77,6 +77,11 @@ public abstract class FiguraGlobalsDocs {
     public EntityAPI<?> user;
     @LuaFieldDoc("globals.pings")
     public PingAPI pings;
+    @LuaFieldDoc("globals.server_packets")
+    public ServerPacketsAPI server_packets;
+
+    @LuaFieldDoc("globals.server_data")
+    public org.figuramc.figura.lua.api.ServerDataAPI server_data;
     @LuaFieldDoc("globals.textures")
     public TextureAPI textures;
     @LuaFieldDoc("globals.config")

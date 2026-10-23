@@ -16,6 +16,13 @@ repositories {
     }
 }
 
+configurations {
+    common
+    shadowCommon // Don't use shadow from the shadow plugin since it *excludes* files.
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+}
+
 dependencies {
     // Libraries
     implementation("com.github.FiguraMC.luaj:luaj-core:$luaj-figura")
@@ -39,6 +46,9 @@ dependencies {
     // Mods
     compileOnly "maven.modrinth:iris:$iris"
     compileOnly "maven.modrinth:immediatelyfast:$immediately_fast"
+
+    common(project(path: ":server-common")) { transitive false }
+    shadowCommon(project(path: ":server-common")) { transitive false }
 }
 
 publishing {

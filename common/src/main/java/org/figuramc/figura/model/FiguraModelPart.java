@@ -1155,6 +1155,43 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
         return this.customization.alpha;
     }
 
+    // ── 파츠별 바닐라 발광 ────────────────────────────────────────────────
+    // ⚠ 파라미터는 반드시 박싱 Boolean 이어야 한다. 원시 boolean 으로 두면 LuaTypeManager 가
+    //   nil 을 false 로 떨궈 "nil = 상속" 이 죽는다.
+    // 26.3 가지 첫 판은 값만 저장한다 — 발광 패스는 아직 옮기지 않았다(M43)
+
+    @LuaWhitelist
+    public FiguraModelPart setGlow(Boolean glow) {
+        this.customization.glow = glow;
+        return this;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart glow(Boolean glow) {
+        return setGlow(glow);
+    }
+
+    @LuaWhitelist
+    public Boolean getGlow() {
+        return this.customization.glow;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart setGlowColor(Object r, Double g, Double b) {
+        this.customization.glowColor = LuaUtils.nullableVec3("setGlowColor", r, g, b);
+        return this;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart glowColor(Object r, Double g, Double b) {
+        return setGlowColor(r, g, b);
+    }
+
+    @LuaWhitelist
+    public FiguraVec3 getGlowColor() {
+        return this.customization.glowColor;
+    }
+
     @LuaWhitelist
     @LuaMethodDoc(
             overloads = {

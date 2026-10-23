@@ -175,4 +175,9 @@ public abstract class AbstractAvatarWidget extends AbstractContainerElement impl
     public boolean isOf(Path path) {
         return this.avatar != null && this.avatar.getTheActualPathForThis().equals(path);
     }
+
+    // 고른 표시 — 목록의 Picker 가 정한다(옷장 = 나 자신 · 남 세팅용 옷장 = 대상의 고정)
+    public boolean isSelectedEntry() {
+        return this.avatar != null && this.parent.picker.isSelected(this.avatar);
+    }
 }

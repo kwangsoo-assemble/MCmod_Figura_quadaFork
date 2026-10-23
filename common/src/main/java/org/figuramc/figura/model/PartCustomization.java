@@ -48,6 +48,13 @@ public class PartCustomization {
     public Float alpha = null;
     public Integer light = null;
     public Integer overlay = null;
+    /**
+     * 파츠별 바닐라 발광(아웃라인). {@code null} = 부모에게서 상속.
+     * 26.3 가지 첫 판은 값만 받는다 — 발광 패스는 아직 옮기지 않았다(main 에 있다 · M43). 아바타의 {@code setGlow} 호출이 오류 없이 돌게 하려고 둔다
+     */
+    public Boolean glow = null;
+    /** 발광 색. {@code null} = 부모 상속 */
+    public FiguraVec3 glowColor = null;
 
     private FiguraRenderTypes primaryRenderType, secondaryRenderType;
     public TextureCustomization primaryTexture, secondaryTexture;
@@ -329,6 +336,8 @@ public class PartCustomization {
         target.alpha = alpha;
         target.light = light;
         target.overlay = overlay;
+        target.glow = glow;
+        target.glowColor = glowColor;
         target.needsMatrixRecalculation = needsMatrixRecalculation;
         target.visible = visible;
         target.vanillaVisible = vanillaVisible;
@@ -360,6 +369,13 @@ public class PartCustomization {
 
         if (other.overlay != null)
             overlay = other.overlay;
+
+        // light/overlay 와 같은 방식(nil = 상속 · 값 = 덮어쓰기)
+        if (other.glow != null)
+            glow = other.glow;
+
+        if (other.glowColor != null)
+            glowColor = other.glowColor;
 
         if (other.alpha != null) {
             if (alpha != null)

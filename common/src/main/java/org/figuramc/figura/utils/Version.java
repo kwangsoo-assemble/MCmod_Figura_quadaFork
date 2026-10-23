@@ -8,26 +8,28 @@ public class Version implements Comparable<Version> {
     // slightly modified regex of semver
     // difference only is that build metadata can be anything
     // also minor and patch are optionals
+    // 포크: 넷째 자리 `fork` 를 더 받는다 — 포크 판 번호(`0.1.6.4` = 업스트림 0.1.6 의 포크 4판, 2026-10-23 M41).
+    // 있을 때만 읽고 · 비교하고 · 문자열로 되돌린다(없으면 -1) — 업스트림 꼴(`0.1.5`)은 «0.1.5.0» 으로 바뀌지 않는다
     private static final Pattern PATTERN = Pattern.compile(
-            "^"+
-                    // #.#.#, with the minor and patch versions being optional.
-                    "(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*)(?:\\.(?<patch>0|[1-9]\\d*))?(?:\\.(?<sub>0|[1-9]\\d*))?)?"+
-                    // from the -, grab all characters until the +.
-                    "(?:-(?<pre>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][\\da-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][\\da-zA-Z-]*))*))?"+
-                    // from the +, grab all characters until the end of the string.
-                    "(?:\\+(?<build>[\\da-zA-Z-]+(?:\\.[\\da-zA-Z-]+)*))?"+
-                    "$"
+        "^"+
+        // #.#.#, with the minor and patch versions being optional.
+        "(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*)(?:\\.(?<patch>0|[1-9]\\d*)(?:\\.(?<fork>0|[1-9]\\d*))?)?)?"+
+        // from the -, grab all characters until the +.
+        "(?:-(?<pre>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][\\da-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][\\da-zA-Z-]*))*))?"+
+        // from the +, grab all characters until the end of the string.
+        "(?:\\+(?<build>[\\da-zA-Z-]+(?:\\.[\\da-zA-Z-]+)*))?"+
+        "$"
     );
 
     private final String src;
 
-    public final int major, minor, patch, sub;
+    public final int major, minor, patch, fork;
     public final String pre, build;
     public final boolean invalid;
 
     public Version(String version) {
         // temp vars
-        int major = 0, minor = 0, patch = 0, sub = 0;
+        int major = 0, minor = 0, patch = 0, fork = -1;
         String pre = null, build = null;
         boolean invalid = true;
 
@@ -45,9 +47,9 @@ public class Version implements Comparable<Version> {
                 if (p != null)
                     patch = Integer.parseInt(p);
 
-                String s = matcher.group("sub");
-                if (s != null)
-                    sub = Integer.parseInt(s);
+                String f = matcher.group("fork");
+                if (f != null)
+                    fork = Integer.parseInt(f);
 
                 pre = matcher.group("pre");
                 build = matcher.group("build");
@@ -62,7 +64,7 @@ public class Version implements Comparable<Version> {
         this.major = major;
         this.minor = minor;
         this.patch = patch;
-        this.sub = sub;
+        this.fork = fork;
         this.pre = pre == null ? "" : pre;
         this.build = build == null ? "" : build;
         this.invalid = invalid;
@@ -81,8 +83,9 @@ public class Version implements Comparable<Version> {
             ret = minor - o.minor;
         else if (patch != o.patch)
             ret = patch - o.patch;
-        else if (sub != o.sub)
-            ret = sub - o.sub;
+        // 넷째 자리가 없으면 0 으로 본다 — 0.1.6.4 > 0.1.6 == 0.1.6.0
+        else if (Math.max(fork, 0) != Math.max(o.fork, 0))
+            ret = Math.max(fork, 0) - Math.max(o.fork, 0);
 
         else if (pre.isBlank() && !o.pre.isBlank())
             ret = 1;
@@ -126,7 +129,7 @@ public class Version implements Comparable<Version> {
         if (invalid)
             return src;
 
-        String ver = major + "." + minor + "." + patch + "." + sub;
+        String ver = major + "." + minor + "." + patch + (fork >= 0 ? "." + fork : "");
         if (!pre.isBlank())
             ver += "-" + pre;
 
@@ -138,7 +141,7 @@ public class Version implements Comparable<Version> {
         if (invalid)
             return src;
 
-        String ver = major + "." + minor + "." + patch + "." + sub;
+        String ver = major + "." + minor + "." + patch + (fork >= 0 ? "." + fork : "");
         if (!pre.isBlank())
             ver += "-" + pre;
         if (!build.isBlank())

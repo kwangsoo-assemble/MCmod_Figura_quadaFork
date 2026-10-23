@@ -5,6 +5,7 @@ import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.lua.LuaWhitelist;
 import org.figuramc.figura.lua.docs.LuaTypeDoc;
+import org.figuramc.figura.serverdata.LocalServerData;
 import org.luaj.vm2.LuaFunction;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.Varargs;
@@ -57,9 +58,15 @@ public class PingFunction extends LuaFunction {
         if (!isHost)
             return NIL;
 
-        boolean sync = Configs.SYNC_PINGS.value;
         byte[] data = new PingArg(args).toByteArray();
 
+        // 싱글 로컬 모드 — 돌아올 서버가 없으니 그 자리에서(업로드 · 클라우드 없이) · 한도는 라이브 서버와 같게
+        if (LocalServerData.active()) {
+            if (LocalServerData.offerPing(data.length)) owner.runPing(id, data);
+            return NIL;
+        }
+
+        boolean sync = Configs.SYNC_PINGS.value;
         NetworkStuff.sendPing(id, sync, data);
         if (!sync) owner.runPing(id, data);
 

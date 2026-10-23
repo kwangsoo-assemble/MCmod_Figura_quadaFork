@@ -17,10 +17,10 @@ public class FeatureRendererDispatcherMixin {
     @Shadow
     private FeatureRendererMap featureRenderers;
     @Unique
-    final FiguraFeatureRenderer noFigura$figuraFeatureRenderer = new FiguraFeatureRenderer();
+    final FiguraFeatureRenderer figura$figuraFeatureRenderer = new FiguraFeatureRenderer();
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void figura$renderFiguraFeatures(CallbackInfo ci) {
-        featureRenderers.put(FiguraFeatureRenderer.TYPE, noFigura$figuraFeatureRenderer);
+        featureRenderers.put(FiguraFeatureRenderer.TYPE, figura$figuraFeatureRenderer);
     }
 }

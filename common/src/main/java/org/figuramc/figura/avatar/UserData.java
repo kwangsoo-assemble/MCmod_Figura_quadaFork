@@ -22,13 +22,24 @@ public class UserData {
         this.id = id;
     }
 
-    public void loadData(ArrayList<Pair<String, Pair<String, UUID>>> avatars, Pair<BitSet,BitSet> badges) {
+    /**
+     * @param source 이 해시들을 발급한 곳. 다운로드 경로와 캐시 네임스페이스를 결정한다.
+     *               해시를 만든 쪽이 전송로를 정해야 출처가 뒤바뀌지 않는다.
+     */
+    public void loadData(ArrayList<Pair<String, Pair<String, UUID>>> avatars, Pair<BitSet,BitSet> badges,
+                         AvatarSource source) {
+        // pin / netlock — 요청이 나간 뒤에 걸렸어도 응답은 여기서 막힌다 (비동기 스레드에서 불린다)
+        if (!AvatarManager.acceptsNetworkAvatar(id)) {
+            FiguraMod.debug("Ignoring network userdata for " + id + " (pinned or network locked)");
+            return;
+        }
         loadBadges(badges);
         clear();
         for (Pair<String, Pair<String, UUID>> avatar : avatars) {
-            if (!CacheAvatarLoader.checkAndLoad(avatar.getFirst(), this)) {
+            String hash = avatar.getFirst();
+            if (!CacheAvatarLoader.checkAndLoad(source, hash, this)) {
                 Pair<String, UUID> pair = avatar.getSecond();
-                NetworkStuff.getAvatar(this, pair.getSecond(), pair.getFirst(), avatar.getFirst());
+                NetworkStuff.getAvatar(this, source, pair.getSecond(), pair.getFirst(), hash);
             }
         }
     }
@@ -39,6 +50,7 @@ public class UserData {
         this.avatars.add(avatar);
         avatar.load(nbt);
         FiguraMod.debug("--- loaded " + id + " ---");
+        AvatarManager.notifyAvatarLoaded(id, nbt); // 리플레이 애드온이 녹화 도중 바뀐 아바타를 끼워 넣는다(2026-10-23 M42)
     }
 
     public void loadBadges(Pair<BitSet, BitSet> pair) {
@@ -62,4 +74,5 @@ public class UserData {
             avatar.clean();
         avatars.clear();
     }
+
 }

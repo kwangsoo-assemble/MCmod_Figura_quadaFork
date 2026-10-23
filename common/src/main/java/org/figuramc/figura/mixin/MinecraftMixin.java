@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.gui.ActionWheel;
@@ -120,9 +121,16 @@ public abstract class MinecraftMixin {
 
     @Inject(at = @At("RETURN"), method = "clearClientLevel")
     private void clearLevel(Screen screen, CallbackInfo ci) {
+        AvatarManager.resetPinsAndLock(); // 월드(리플레이 포함)를 나가면 nonhost_load pin · netlock 이 풀린다
         AvatarManager.clearAllAvatars();
         FiguraLuaPrinter.clearPrintQueue();
         NetworkStuff.unsubscribeAll();
+        org.figuramc.figura.serverdata.ServerDataStore.clear(); // server_data — 월드(리플레이 포함)를 나가면 비운다
+    }
+
+    @Inject(at = @At("HEAD"), method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V")
+    private void onDisconnect(Screen screen, boolean keepResourcePacks, CallbackInfo ci) {
+        FSB.instance().onDisconnect();
     }
 
     @Inject(at = @At("RETURN"), method = "setLevel")

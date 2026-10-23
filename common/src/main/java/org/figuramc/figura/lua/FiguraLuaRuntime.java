@@ -7,6 +7,7 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.api.AvatarAPI;
 import org.figuramc.figura.lua.api.HostAPI;
+import org.figuramc.figura.lua.api.ServerPacketsAPI;
 import org.figuramc.figura.lua.api.RendererAPI;
 import org.figuramc.figura.lua.api.TextureAPI;
 import org.figuramc.figura.lua.api.action_wheel.ActionWheelAPI;
@@ -54,6 +55,8 @@ public class FiguraLuaRuntime {
     public ActionWheelAPI action_wheel;
     public AvatarAPI avatar_meta;
     public PingAPI ping;
+    public ServerPacketsAPI serverPackets;
+    public org.figuramc.figura.lua.api.ServerDataAPI serverData;
     public TextureAPI texture;
 
     //---------------------------------

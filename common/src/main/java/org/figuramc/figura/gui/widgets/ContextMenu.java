@@ -70,8 +70,11 @@ public class ContextMenu extends AbstractContainerElement {
         }
     }
 
-    public void addAction(Component name, Component tooltip, Button.OnPress action) {
-        addElement(new ContextButton(getX(), getY() + getHeight(), name, tooltip, this, action));
+    // 만든 버튼을 돌려준다 — 항목 하나만 회색(setActive) · 안내 문구(setTooltip)를 바꿀 때 (옷장 업로드 · 삭제 메뉴, 2026-10-23 M41)
+    public Button addAction(Component name, Component tooltip, Button.OnPress action) {
+        ContextButton button = new ContextButton(getX(), getY() + getHeight(), name, tooltip, this, action);
+        addElement(button);
+        return button;
     }
 
     public void addDivisor() {

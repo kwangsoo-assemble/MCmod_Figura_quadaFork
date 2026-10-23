@@ -14,6 +14,7 @@ import net.minecraft.util.Util;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.avatar.AvatarSource;
 import org.figuramc.figura.avatar.Badges;
 import org.figuramc.figura.avatar.UserData;
 import org.figuramc.figura.avatar.local.CacheAvatarLoader;
@@ -24,6 +25,10 @@ import org.figuramc.figura.font.Emojis;
 import org.figuramc.figura.gui.FiguraToast;
 import org.figuramc.figura.permissions.PermissionManager;
 import org.figuramc.figura.permissions.Permissions;
+import org.figuramc.figura.server.avatars.EHashPair;
+import org.figuramc.figura.server.packets.c2s.C2SPingPacket;
+import org.figuramc.figura.server.packets.s2c.S2CAvatarReadyPacket;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.utils.FiguraText;
 import org.figuramc.figura.utils.RefilledNumber;
 import org.figuramc.figura.utils.TextUtils;
@@ -41,13 +46,17 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static org.figuramc.figura.server.utils.Utils.getHash;
 
 public class NetworkStuff {
 
@@ -81,6 +90,7 @@ public class NetworkStuff {
             uploadRate = new RefilledNumber(),
             downloadRate = new RefilledNumber();
     private static int maxAvatarSize = Integer.MAX_VALUE;
+    private static int pingsRateLimit = Integer.MAX_VALUE, pingsSizeLimit = Integer.MAX_VALUE;
 
     public static void tick() {
         //limits
@@ -105,6 +115,18 @@ public class NetworkStuff {
         //process requests
         if (isConnected())
             processRequests();
+
+        // process FSB uploaded avatars
+        FSB fsb = fsb();
+        if (fsb.connected()) {
+            S2CAvatarReadyPacket h;
+            while ((h = fsb.nextReadyAvatar()) != null) {
+                fsbAvatarUploadCompleted(h.avatarId, h.ref);
+            }
+            if (fsb.pollAvatarDeleted()) {
+                fsbDeleteAvatarCompleted();
+            }
+        }
 
         //pings counter
         if (lastPing > 0 && FiguraMod.ticks - lastPing >= 20)
@@ -216,6 +238,7 @@ public class NetworkStuff {
 
     public static void disconnect(String reason) {
         backendStatus = 1;
+        if (tasks != null) tasks.cancel(true);
         disconnectedReason = reason;
         disconnectAPI();
         disconnectWS();
@@ -274,7 +297,7 @@ public class NetworkStuff {
             latestVersion = new Version(json.get(config <= 1 ? "release" : "prerelease").getAsString());
             if (config == 0)
                 return;
-            if (latestVersion.compareTo(FiguraMod.VERSION) > 0)
+            if (latestVersion.compareTo(FiguraMod.COMPARE_VERSION) > 0)
                 FiguraToast.sendToast(FiguraText.of("toast.new_version"), latestVersion);
         });
     }
@@ -290,10 +313,39 @@ public class NetworkStuff {
 
             JsonObject limits = json.getAsJsonObject("limits");
             maxAvatarSize = limits.get("maxAvatarSize").getAsInt();
+
+            try {
+                pingsRateLimit = rate.get("pingRate").getAsInt();
+                pingsSizeLimit = rate.get("pingSize").getAsInt();
+            }
+            catch (Exception e) {
+                pingsRateLimit = 32;
+                pingsSizeLimit = 1024;
+            }
         });
     }
 
+    public static int pingsRateLimit() {
+        if (org.figuramc.figura.serverdata.LocalServerData.active()) return org.figuramc.figura.serverdata.LocalServerData.pings().rateLimit();
+        return fsb().connected() ? fsb().handshake().pingsRateLimit() : pingsRateLimit;
+    }
+
+    public static int pingsSizeLimit() {
+        if (org.figuramc.figura.serverdata.LocalServerData.active()) return org.figuramc.figura.serverdata.LocalServerData.pings().sizeLimit();
+        return fsb().connected() ? fsb().handshake().pingsSizeLimit() : pingsSizeLimit;
+    }
+
     public static void getUser(UserData user) {
+        boolean fetchUser = fsb().isPlayerConnected(user.id) || FiguraMod.isOffline(user.id);
+        if (fsb().connected() && fetchUser) {
+            fsb().getUserAndApply(user);
+            return;
+        }
+
+        getUserFromBackend(user);
+    }
+
+    public static void getUserFromBackend(UserData user) {
         if (checkUUID(user.id))
             return;
 
@@ -336,11 +388,26 @@ public class NetworkStuff {
             for (int i = 0; i < special.size(); i++)
                 specialSet.set(i, special.get(i).getAsInt() >= 1);
 
-            user.loadData(avatars, badgesPair);
+            user.loadData(avatars, badgesPair, AvatarSource.OFFICIAL);
         });
     }
 
-    public static void uploadAvatar(Avatar avatar) {
+    protected static Set<Hash> hashesAwaitingUpload = new HashSet<>();
+
+    public static void fsbAvatarUploadCompleted(String avatarId, EHashPair target) {
+        // something about a server->client attack vector?
+        if (!hashesAwaitingUpload.contains(target.hash())) return;
+        hashesAwaitingUpload.remove(target.hash());
+        FSB fsb = fsb();
+        if (fsb.connected()) {
+            FiguraToast.sendToast(FiguraText.of("backend.upload_success"));
+            fsb.equipAvatar(List.of(Pair.of(avatarId, target.hash())));
+            AvatarManager.localUploaded = true;
+        }
+    }
+
+    // TODO: multiple modes of upload (Backend, FSB, Backend + FSB)
+    public static void uploadAvatar(Avatar avatar, Destination destination) {
         if (avatar == null || avatar.nbt == null)
             return;
 
@@ -349,41 +416,71 @@ public class NetworkStuff {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             NbtIo.writeCompressed(avatar.nbt, baos);
-            queueString(Util.NIL_UUID, api -> api.uploadAvatar(id, baos.toByteArray()), (code, data) -> {
-                responseDebug("uploadAvatar", code, data);
 
-                if (code == 200) {
-                    //TODO - profile screen
-                    equipAvatar(List.of(Pair.of(avatar.owner, id)));
-                    AvatarManager.localUploaded = true;
-                }
+            if (destination.allowFSB()) {
+                fsb().uploadAvatar(id, baos.toByteArray());
+                hashesAwaitingUpload.add(getHash(baos.toByteArray()));
+            }
 
-                //feedback
-                switch (code) {
-                    case 200 -> FiguraToast.sendToast(FiguraText.of("backend.upload_success"));
-                    case 413 -> FiguraToast.sendToast(FiguraText.of("backend.upload_too_big"), FiguraToast.ToastType.ERROR);
-                    case 507 -> FiguraToast.sendToast(FiguraText.of("backend.upload_too_many"), FiguraToast.ToastType.ERROR);
-                    default -> FiguraToast.sendToast(FiguraText.of("backend.upload_error"), FiguraToast.ToastType.ERROR);
-                }
-            });
-            uploadRate.use();
+            if (destination.allowBackend()) {
+                queueString(Util.NIL_UUID, api -> api.uploadAvatar(id, baos.toByteArray()), (code, data) -> {
+                    responseDebug("uploadAvatar", code, data);
+
+                    if (code == 200) {
+                        //TODO - profile screen
+                        if (!destination.allowFSB()) {
+                            // use uploaded main backend only if not also uploading to FSB
+                            equipAvatar(List.of(Pair.of(avatar.owner, id)));
+                            AvatarManager.localUploaded = true;
+                        }
+                    }
+
+                    //feedback
+                    switch (code) {
+                        case 200 -> FiguraToast.sendToast(FiguraText.of("backend.upload_success"));
+                        case 413 -> FiguraToast.sendToast(FiguraText.of("backend.upload_too_big"), FiguraToast.ToastType.ERROR);
+                        case 507 -> FiguraToast.sendToast(FiguraText.of("backend.upload_too_many"), FiguraToast.ToastType.ERROR);
+                        default -> FiguraToast.sendToast(FiguraText.of("backend.upload_error"), FiguraToast.ToastType.ERROR);
+                    }
+                });
+                uploadRate.use();
+            }
             baos.close();
         } catch (Exception e) {
             FiguraMod.LOGGER.error("", e);
         }
     }
 
-    public static void deleteAvatar(String avatar) {
-        String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
-        queueString(Util.NIL_UUID, api -> api.deleteAvatar(id), (code, data) -> {
-            responseDebug("deleteAvatar", code, data);
+    public static void uploadAvatar(Avatar avatar) {
+        uploadAvatar(avatar, Destination.FSB_OR_BACKEND);
+    }
 
-            switch (code) {
-                case 200 -> FiguraToast.sendToast(FiguraText.of("backend.delete_success"));
-                case 404 -> FiguraToast.sendToast(FiguraText.of("backend.avatar_not_found"), FiguraToast.ToastType.ERROR);
-                default -> FiguraToast.sendToast(FiguraText.of("backend.delete_error"), FiguraToast.ToastType.ERROR);
-            }
-        });
+    public static void fsbDeleteAvatarCompleted() {
+        FiguraToast.sendToast(FiguraText.of("backend.delete_success"));
+    }
+
+    public static void deleteAvatar(String avatar, Destination destination) {
+        String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
+
+        if (destination.allowFSB()) {
+            fsb().deleteAvatar(id);
+        }
+
+        if (destination.allowBackend()) {
+            queueString(Util.NIL_UUID, api -> api.deleteAvatar(id), (code, data) -> {
+                responseDebug("deleteAvatar", code, data);
+
+                switch (code) {
+                    case 200 -> FiguraToast.sendToast(FiguraText.of("backend.delete_success"));
+                    case 404 -> FiguraToast.sendToast(FiguraText.of("backend.avatar_not_found"), FiguraToast.ToastType.ERROR);
+                    default -> FiguraToast.sendToast(FiguraText.of("backend.delete_error"), FiguraToast.ToastType.ERROR);
+                }
+            });
+        }
+    }
+
+    public static void deleteAvatar(String avatar) {
+        deleteAvatar(avatar, Destination.FSB_OR_BACKEND);
     }
 
     public static void equipAvatar(List<Pair<UUID, String>> avatars) {
@@ -403,7 +500,18 @@ public class NetworkStuff {
         });
     }
 
-    public static void getAvatar(UserData target, UUID owner, String id, String hash) {
+    /**
+     * ⚠ FSB 가 발급한 해시로 <b>공식 클라우드에 폴백하지 않는다.</b> 그게 바로 원래 버그였다 —
+     * 공식 GET 은 해시 주소지정이 아니라({@code HttpAPI.getAvatar} 는 owner/id 만 보낸다)
+     * "지금 owner/id 에 걸려 있는 것" 을 돌려주므로, 어떤 강도의 폴백이든 잘못된 바디를 받아
+     * 그것을 FSB 해시 이름으로 캐시에 저장하게 된다.
+     */
+    public static void getAvatar(UserData target, AvatarSource source, UUID owner, String id, String hash) {
+        if (source == AvatarSource.FSB) {
+            fsb().getAvatar(target, hash);
+            return;
+        }
+
         if (checkUUID(target.id))
             return;
 
@@ -423,7 +531,10 @@ public class NetworkStuff {
             //success
             try {
                 CompoundTag nbt = NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
-                CacheAvatarLoader.save(hash, nbt);
+                CacheAvatarLoader.save(AvatarSource.OFFICIAL, hash, nbt);
+                // 요청이 나간 뒤 pin/netlock 이 걸렸으면 캐시만 남기고 적용하지 않는다
+                if (!AvatarManager.acceptsNetworkAvatar(target.id))
+                    return;
                 target.loadAvatar(nbt);
             } catch (Exception e) {
                 FiguraMod.LOGGER.error("Failed to load avatar for " + target.id, e);
@@ -479,8 +590,11 @@ public class NetworkStuff {
             return;
 
         try {
-            ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
-            ws.sendBinary(buffer.array());
+            if (!fsb().connected()) {
+                ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
+                ws.sendBinary(buffer.array());
+            }
+            else fsb().sendPacket(new C2SPingPacket(id, sync, data));
 
             pingsSent++;
             if (lastPing == 0) lastPing = FiguraMod.ticks;
@@ -551,16 +665,26 @@ public class NetworkStuff {
     // -- global functions -- //
 
 
+    private static FSB fsb() {
+        return FSB.instance();
+    }
+
     public static boolean isConnected() {
+        // when FSB is connected, it will handle all requests
+        // so we don't need to check the connection to the backend
+        // some code checks isConnected() to determine if it's ok to send packets
+        if (fsb().connected()) {
+            return true;
+        }
         return api != null && checkWS();
     }
 
     public static boolean canUpload() {
-        return isConnected() && uploadRate.check();
+        return fsb().connected() || isConnected() && uploadRate.check();
     }
 
     public static int getSizeLimit() {
-        return isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
+        return fsb().connected() ? fsb().handshake().maxAvatarSize() : isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
     }
 
 
@@ -572,6 +696,29 @@ public class NetworkStuff {
         public boolean equals(Object o) {
             if (this == o) return true;
             return o instanceof Request request && owner.equals(request.owner);
+        }
+    }
+
+    public enum Destination {
+        BACKEND,
+        FSB,
+        BOTH,
+        FSB_OR_BACKEND;
+
+        public boolean allowBackend() {
+            return switch (this) {
+                case BACKEND, BOTH -> true;
+                case FSB -> false;
+                case FSB_OR_BACKEND -> !org.figuramc.figura.backend2.FSB.instance().connected();
+            };
+        }
+
+        public boolean allowFSB() {
+            return switch (this) {
+                case FSB, BOTH -> true;
+                case BACKEND -> false;
+                case FSB_OR_BACKEND -> org.figuramc.figura.backend2.FSB.instance().connected();
+            };
         }
     }
 }

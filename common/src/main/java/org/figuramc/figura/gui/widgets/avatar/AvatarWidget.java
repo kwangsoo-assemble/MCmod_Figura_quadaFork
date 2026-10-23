@@ -26,16 +26,13 @@ public class AvatarWidget extends AbstractAvatarWidget {
 
         AvatarWidget instance = this;
         Component description = Emojis.applyEmojis(Component.literal(avatar.getDescription()));
-        this.button = new Button(getX(), getY(), width, 24, getName(), null, button -> {
-            AvatarManager.loadLocalAvatar(avatar.getPath());
-            AvatarList.selectedEntry = avatar.getTheActualPathForThis();
-        }) {
+        this.button = new Button(getX(), getY(), width, 24, getName(), null, button -> parent.picker.pick(avatar)) {
             @Override
             public void extractContents(GuiGraphicsExtractor gui, int mouseX, int mouseY, float delta) {
                 super.extractContents(gui, mouseX, mouseY, delta);
 
                 // selected border
-                if (instance.isOf(AvatarList.selectedEntry))
+                if (instance.isSelectedEntry())
                     UIHelper.fillOutline(gui, getX(), getY(), getWidth(), getHeight(), 0xFFFFFFFF);
             }
 

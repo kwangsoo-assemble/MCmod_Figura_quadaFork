@@ -33,18 +33,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(SkullBlockRenderer.class)
 public abstract class SkullBlockRendererMixin implements BlockEntityRenderer<SkullBlockEntity, SkullBlockRenderState>, FiguraSkullAvatarAssociationExtension {
     @Unique
-    private Avatar noFigura$avatar;
+    private Avatar figura$avatar;
     @Unique
     private static SkullBlockRenderState block;
 
     @Override
     public Avatar figura$getAvatar() {
-        return noFigura$avatar;
+        return figura$avatar;
     }
 
     @Override
     public void figura$setAvatar(Avatar avatar) {
-        this.noFigura$avatar = avatar;
+        this.figura$avatar = avatar;
     }
 
     @Inject(at = @At("HEAD"), method = "submitSkull", cancellable = true)

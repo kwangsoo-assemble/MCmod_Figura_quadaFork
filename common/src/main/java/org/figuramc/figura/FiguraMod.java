@@ -15,6 +15,7 @@ import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.compat.GeckoLibCompat;
 import org.figuramc.figura.compat.IrisCompat;
 import org.figuramc.figura.compat.SimpleVCCompat;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.entries.EntryPointManager;
 import org.figuramc.figura.font.Emojis;
@@ -39,6 +40,10 @@ public class FiguraMod {
     public static final String MOD_NAME = "Figura";
     public static final FiguraModMetadata METADATA = FiguraModMetadata.getMetadataForMod(MOD_ID);
     public static final Version VERSION = new Version(PlatformUtils.getFiguraModVersionString());
+    // 포크 판 번호 — 업스트림 버전 뒤 넷째 자리(`0.1.6.4`, 2026-10-23 M41 · 그 전엔 프리릴리스 꼬리 `0.1.6-but-ai-edited.3`).
+    // 표시(옷장 · F3 · client:getFiguraVersion)에는 VERSION(넷째 자리 포함)을 쓰고, 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는
+    // 넷째 자리를 뗀 COMPARE_VERSION 을 쓴다 — 안 그러면 0.1.6.4 > 0.1.6 이라 공식 0.1.6 아바타를 «옛 버전» 으로 본다
+    public static final Version COMPARE_VERSION = stripForkNumber(VERSION);
     public static final Calendar CALENDAR = Calendar.getInstance();
     public static final Path GAME_DIR = PlatformUtils.getGameDir().normalize();
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
@@ -89,6 +94,7 @@ public class FiguraMod {
     public static void tick() {
         pushProfiler("network");
         NetworkStuff.tick();
+        FSB.instance().tick();
         popPushProfiler("files");
         LocalAvatarLoader.tick();
         LocalAvatarFetcher.tick();
@@ -128,6 +134,18 @@ public class FiguraMod {
     public static UUID getLocalPlayerUUID() {
         Entity player = Minecraft.getInstance().player;
         return player != null ? player.getUUID() : Minecraft.getInstance().getUser().getProfileId();
+    }
+
+    public static boolean isOffline(UUID other) {
+        return !Minecraft.getInstance().getConnection().getOnlinePlayerIds().contains(other);
+    }
+
+    // 넷째 자리(포크 판 번호)를 뗀다 (0.1.6.4+1.21.8 → 0.1.6+1.21.8). 없으면 그대로
+    private static Version stripForkNumber(Version v) {
+        if (v.invalid || v.fork < 0)
+            return v;
+        return new Version(v.major + "." + v.minor + "." + v.patch
+                + (v.pre.isEmpty() ? "" : "-" + v.pre) + (v.build.isEmpty() ? "" : "+" + v.build));
     }
 
     public static boolean isLocal(UUID other) {
@@ -190,9 +208,9 @@ public class FiguraMod {
         Kofi("https://ko-fi.com/skyrina", ColorUtils.Colors.KOFI.style),
         OpenCollective("https://opencollective.com/figura", ColorUtils.Colors.KOFI.style),
         Discord("https://discord.gg/weX4e9NC3T", ColorUtils.Colors.DISCORD.style),
-        Github("https://github.com/Stranik2504/NoFigura", ColorUtils.Colors.GITHUB.style),
-        Modrinth("https://modrinth.com/mod/nofigura", ColorUtils.Colors.MODRINTH.style),
-        Curseforge("https://www.curseforge.com/minecraft/mc-mods/nofigura", ColorUtils.Colors.CURSEFORGE.style),
+        Github("https://github.com/FiguraMC/Figura", ColorUtils.Colors.GITHUB.style),
+        Modrinth("https://modrinth.com/mod/figura", ColorUtils.Colors.MODRINTH.style),
+        Curseforge("https://www.curseforge.com/minecraft/mc-mods/figura", ColorUtils.Colors.CURSEFORGE.style),
         LuaManual("https://www.lua.org/manual/5.2/manual.html", ColorUtils.Colors.LUA_LOG.style);
 
         public final String url;

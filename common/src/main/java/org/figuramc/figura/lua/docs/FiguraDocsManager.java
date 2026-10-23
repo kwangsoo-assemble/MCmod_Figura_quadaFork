@@ -220,6 +220,14 @@ public class FiguraDocsManager {
                 PingFunction.class
         ));
 
+        put("server_packets", List.of(
+                ServerPacketsAPI.class
+        ));
+
+        put("server_data", List.of(
+                org.figuramc.figura.lua.api.ServerDataAPI.class
+        ));
+
         put("textures", List.of(
                 TextureAPI.class,
                 FiguraTexture.class,
