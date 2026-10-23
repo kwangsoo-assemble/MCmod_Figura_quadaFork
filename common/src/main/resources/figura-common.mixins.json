@@ -91,6 +91,7 @@
     "render.RenderTypeMixin",
     "render.TextureAtlasAccessor",
     "render.TextureManagerAccessor",
+    "render.TextureManagerMixin",
     "render.feature.FeatureRendererDispatcherMixin",
     "render.feature.FlameFeatureRendererMixin",
     "render.feature.ItemFeatureRendererMixin",
