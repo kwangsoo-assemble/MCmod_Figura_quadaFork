@@ -27,6 +27,13 @@ import java.util.OptionalDouble;
 
 public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderState> {
 
+    // HUD 를 준비 · 그리는 중인가 — RenderTypeFeatureRendererGroupMixin 이 반투명 정렬을 살리는 데 쓴다(렌더 스레드에서만)
+    private static boolean preparing = false;
+
+    public static boolean isPreparing() {
+        return preparing;
+    }
+
     private final Projection hudProjection = new Projection();
     private final ProjectionMatrixBuffer hudProjectionMatrixBuffer = new ProjectionMatrixBuffer("Hud-PIP");
     private final SubmitNodeStorage submitNodeStorage = new SubmitNodeStorage();
@@ -67,6 +74,7 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
 
         this.renderToTexture(state, poseStack, this.submitNodeStorage);
 
+        preparing = true;
         try (
                 FeatureRenderDispatcher.PreparedFrame frame = featureRenderDispatcher.prepareFrame(this.submitNodeStorage);
                 RenderPass pass = RenderSystem.getDevice()
@@ -75,6 +83,8 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
         ) {
             RenderSystem.bindDefaultUniforms(pass);
             FeatureRenderDispatcher.renderAllFeatures(pass, frame);
+        } finally {
+            preparing = false;
         }
 
         this.blitTexture(state, guiRenderState);

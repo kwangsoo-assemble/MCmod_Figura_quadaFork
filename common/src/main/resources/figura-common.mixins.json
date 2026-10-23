@@ -96,6 +96,7 @@
     "render.feature.FlameFeatureRendererMixin",
     "render.feature.ItemFeatureRendererMixin",
     "render.feature.ModelFeatureRendererMixin",
+    "render.feature.RenderTypeFeatureRendererGroupMixin",
     "render.feature.SubmitNodeCollectionSubmitRedirectMixin",
     "render.layers.CapeLayerMixin",
     "render.layers.CustomHeadLayerMixin",
