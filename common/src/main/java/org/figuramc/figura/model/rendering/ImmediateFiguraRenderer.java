@@ -686,6 +686,9 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
         int light = vertexData.fullBright ? LightCoordsUtil.FULL_BRIGHT : customization.light;
 
         vertexBuffer.getBufferFor(vertexData.renderType, vertexData.primary, vertexConsumer -> {
+            // 26.3 선 형식(POSITION_COLOR_NORMAL_LINE_WIDTH)은 정점마다 굵기를 받는다 — 빠지면 «Missing elements in vertex» 크래시.
+            // 1.21.8 lines() 의 기본 굵기(창 크기에 맞춘 값)와 같게 · 선 형식이 아니면 BufferBuilder 가 무시한다
+            float lineWidth = Minecraft.getInstance().getWindow().getAppropriateLineWidth();
             for (int i = 0; i < vertCount; i++) {
                 Vertex vertex = vertices.get(i);
 
@@ -704,6 +707,7 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
                         .setUv((float) uv.x, (float) uv.y)
                         .setOverlay(overlay)
                         .setLight(light)
+                        .setLineWidth(lineWidth)
                         .setNormal((float) normal.x, (float) normal.y, (float) normal.z);
             }
         });

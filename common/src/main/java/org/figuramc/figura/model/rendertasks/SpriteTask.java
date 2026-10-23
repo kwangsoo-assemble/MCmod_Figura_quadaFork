@@ -63,13 +63,15 @@ public class SpriteTask extends RenderTask {
         // setup texture render
         VertexConsumer consumer = buffer.getBuffer(renderType.get(texture));
 
-        // create vertices
+        // create vertices — 26.3 선 형식은 굵기 칸이 있다(ImmediateFiguraRenderer.pushToBuffer 와 같은 값)
+        float lineWidth = net.minecraft.client.Minecraft.getInstance().getWindow().getAppropriateLineWidth();
         for (Vertex v : vertices) {
             consumer.addVertex(pose, v.x, v.y, v.z)
                     .setColor(r, g, b, a)
                     .setUv(v.u, v.v)
                     .setOverlay(newOverlay)
                     .setLight(newLight)
+                    .setLineWidth(lineWidth)
                     .setNormal(poseStack.last(), v.nx, v.ny, v.nz);
         }
     }
