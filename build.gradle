@@ -8,6 +8,9 @@ architectury {
 }
 
 subprojects {
+	// server-common is a plain Java library shared with the FSB server plugin; no Minecraft/loom.
+	if (project.name == "server-common") return
+
 	apply plugin: "dev.architectury.loom"
 
 	loom {

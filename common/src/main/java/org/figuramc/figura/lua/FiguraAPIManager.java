@@ -130,6 +130,8 @@ public class FiguraAPIManager {
         add(Animation.class);
 
         add(HostAPI.class);
+        add(ServerPacketsAPI.class);
+        add(org.figuramc.figura.lua.api.ServerDataAPI.class);
 
         add(RendererAPI.class);
 
@@ -186,6 +188,8 @@ public class FiguraAPIManager {
         put("matrices", r -> MatricesAPI.INSTANCE);
         put("world", r -> WorldAPI.INSTANCE);
         put("pings", r -> r.ping = new PingAPI(r.owner));
+        put("server_packets", r -> r.serverPackets = new ServerPacketsAPI(r.owner));
+        put("server_data", r -> r.serverData = new org.figuramc.figura.lua.api.ServerDataAPI(r.owner));
         put("textures", r -> r.texture = new TextureAPI(r.owner));
         put("config", r -> new ConfigAPI(r.owner));
         put("data", r -> new DataAPI(r.owner));

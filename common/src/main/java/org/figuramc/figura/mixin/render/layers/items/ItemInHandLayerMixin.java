@@ -75,10 +75,13 @@ public abstract class ItemInHandLayerMixin<S extends ArmedEntityRenderState, M e
                 });
             }
 
+            // 피벗 파츠에 발광이 걸려 있으면 바닐라 아이템도 같이 발광시킨다
+            MultiBufferSource buf = RenderUtils.pivotGlowBuffer(avatar, multiBufferSource);
+
             // sorta have to do this manually otherwise itemRenderEvent isn't called
             ItemTransform transform = ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemTransform();
-            if (avatar == null || !avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$isLeftHanded(), stack, multiBufferSource, light, OverlayTexture.NO_OVERLAY))
-                itemStackRenderState.render(stack, multiBufferSource, light, OverlayTexture.NO_OVERLAY);
+            if (avatar == null || !avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$isLeftHanded(), stack, buf, light, OverlayTexture.NO_OVERLAY))
+                itemStackRenderState.render(stack, buf, light, OverlayTexture.NO_OVERLAY);
         })) {
             ci.cancel();
         }
@@ -99,8 +102,20 @@ public abstract class ItemInHandLayerMixin<S extends ArmedEntityRenderState, M e
                         : SkullBlockRendererAccessor.SkullRenderMode.THIRD_PERSON_RIGHT_HAND;
             });
         }
+        // ★ 그 손에 해당하는 팔 파츠가 발광 중이면 손에 든 아이템도 같이 발광시킨다.
+        //   (피벗 파츠가 있는 아바타는 위 pivotPartRender 경로에서 이미 처리된다)
+        MultiBufferSource itemBuf = vertexConsumers;
+        if (avatar != null) {
+            boolean leftHand = switch (((FiguraItemStackRenderStateExtension) instance).figura$getDisplayContext()) {
+                case THIRD_PERSON_LEFT_HAND, FIRST_PERSON_LEFT_HAND -> true;
+                default -> false;
+            };
+            itemBuf = RenderUtils.vanillaPartGlowBuffer(avatar, vertexConsumers,
+                    leftHand ? ParentType.LeftArm : ParentType.RightArm);
+        }
+
         ItemTransform transform = ((FiguraItemStackRenderStateExtension)instance).figura$getItemTransform();
-        if (avatar == null || !avatar.itemRenderEvent(ItemStackAPI.verify(stack), ((FiguraItemStackRenderStateExtension)instance).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension)instance).figura$isLeftHanded(), matrices, vertexConsumers, light, overlay))
-            original.call(instance, matrices, vertexConsumers, light, overlay);
+        if (avatar == null || !avatar.itemRenderEvent(ItemStackAPI.verify(stack), ((FiguraItemStackRenderStateExtension)instance).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension)instance).figura$isLeftHanded(), matrices, itemBuf, light, overlay))
+            original.call(instance, matrices, itemBuf, light, overlay);
     }
 }

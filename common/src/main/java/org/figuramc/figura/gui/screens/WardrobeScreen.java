@@ -9,6 +9,8 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
+import com.mojang.blaze3d.platform.Window;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.gui.FiguraToast;
@@ -38,6 +40,9 @@ public class WardrobeScreen extends AbstractPanelScreen {
     private Label panic;
 
     private Button upload, delete, back;
+    private ContextMenu uploadContext, deleteContext;
+    // 메뉴 항목 — 기본 클라우드 / FSB(서버 클라우드) 두 갈래 · FSB 연결 여부에 맞지 않는 쪽은 회색(refreshDestinations)
+    private Button uploadBackend, uploadFsb, deleteBackend, deleteFsb;
 
     public WardrobeScreen(Screen parentScreen) {
         super(parentScreen, FiguraText.of("gui.panels.title.wardrobe"));
@@ -77,15 +82,9 @@ public class WardrobeScreen extends AbstractPanelScreen {
         int buttY = entity.getY() + entity.getHeight() + 4;
 
         // upload
-        addRenderableWidget(upload = new Button(buttX - 48, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/upload.png"), 72, 24, FiguraText.of("gui.wardrobe.upload.tooltip"), button -> {
-            Avatar avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID());
-            try {
-                LocalAvatarLoader.loadAvatar(null, null);
-            } catch (Exception ignored) {}
-            NetworkStuff.uploadAvatar(avatar);
-            AvatarList.selectedEntry = null;
-        }));
+        addRenderableWidget(upload = new Button(buttX - 48, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/upload.png"), 72, 24, FiguraText.of("gui.wardrobe.upload.tooltip"), button -> showUploadContext()));
         upload.setActive(false);
+        generateUploadContext();
 
         // reload
         addRenderableWidget(new Button(buttX - 12, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/reload.png"), 72, 24, FiguraText.of("gui.wardrobe.reload.tooltip"), button -> {
@@ -99,10 +98,9 @@ public class WardrobeScreen extends AbstractPanelScreen {
         }));
 
         // delete
-        addRenderableWidget(delete = new Button(buttX + 24, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/delete.png"), 72, 24, FiguraText.of("gui.wardrobe.delete.tooltip"), button ->
-                NetworkStuff.deleteAvatar(null))
-        );
+        addRenderableWidget(delete = new Button(buttX + 24, buttY, 24, 24, 0, 0, 24, new FiguraIdentifier("textures/gui/delete.png"), 72, 24, FiguraText.of("gui.wardrobe.delete.tooltip"), button -> showDeleteContext()));
         delete.setActive(false);
+        generateDeleteContext();
 
         StatusWidget statusWidget = new StatusWidget(entity.getX() + entity.getWidth() - 64, 0, 64);
         statusWidget.setY(entity.getY() - statusWidget.getHeight() - 4);
@@ -114,7 +112,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
 
         // version
         MutableComponent versionText = FiguraText.of().append(" " + FiguraMod.VERSION.noBuildString()).withStyle(ChatFormatting.ITALIC);
-        int versionStatus = NetworkStuff.latestVersion != null ? NetworkStuff.latestVersion.compareTo(FiguraMod.VERSION) : 0;
+        int versionStatus = NetworkStuff.latestVersion != null ? NetworkStuff.latestVersion.compareTo(FiguraMod.COMPARE_VERSION) : 0;
         boolean oldVersion = versionStatus > 0;
         if (oldVersion) {
             versionText
@@ -236,6 +234,82 @@ public class WardrobeScreen extends AbstractPanelScreen {
         motdWidget.visible = motdWidget.getHeight() > 48;
     }
 
+    private void uploadAvatar(NetworkStuff.Destination destination) {
+        Avatar avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID());
+        try {
+            LocalAvatarLoader.loadAvatar(null, null);
+        } catch (Exception ignored) {}
+        NetworkStuff.uploadAvatar(avatar, destination);
+        AvatarList.selectedEntry = null;
+    }
+
+    private void showUploadContext() {
+        refreshDestinations();
+        Window window = minecraft.getWindow();
+        double mouseX = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+        double mouseY = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+        uploadContext.setX((int) mouseX);
+        uploadContext.setY((int) mouseY);
+        uploadContext.setVisible(true);
+        UIHelper.setContext(uploadContext);
+    }
+
+    private void deleteAvatar(NetworkStuff.Destination destination) {
+        NetworkStuff.deleteAvatar(null, destination);
+    }
+
+    private void showDeleteContext() {
+        refreshDestinations();
+        Window window = minecraft.getWindow();
+        double mouseX = minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+        double mouseY = minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+        deleteContext.setX((int) mouseX);
+        deleteContext.setY((int) mouseY);
+        deleteContext.setVisible(true);
+        UIHelper.setContext(deleteContext);
+    }
+
+    // 업로드 · 삭제 메뉴는 두 갈래(기본 클라우드 / FSB)만 — «둘 다» 는 뺐다(2026-10-23 M41 · 템플릿 아바타는 기본 클라우드 용량에 금방 걸린다).
+    // Destination.BOTH 는 남긴다 — SillyPlugin 명령(`both`)이 쓴다
+    private void generateUploadContext() {
+        uploadContext = new ContextMenu(upload);
+        uploadBackend = uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_backend"), FiguraText.of("gui.wardrobe.upload_backend.tooltip"), button -> {
+            uploadAvatar(NetworkStuff.Destination.BACKEND);
+        });
+
+        uploadFsb = uploadContext.addAction(FiguraText.of("gui.wardrobe.upload_fsb"), FiguraText.of("gui.wardrobe.upload_fsb.tooltip"), button -> {
+            uploadAvatar(NetworkStuff.Destination.FSB);
+        });
+    }
+
+    private void generateDeleteContext() {
+        deleteContext = new ContextMenu(delete);
+        deleteBackend = deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_backend"), FiguraText.of("gui.wardrobe.delete_backend.tooltip"), button -> {
+            deleteAvatar(NetworkStuff.Destination.BACKEND);
+        });
+
+        deleteFsb = deleteContext.addAction(FiguraText.of("gui.wardrobe.delete_fsb"), FiguraText.of("gui.wardrobe.delete_fsb.tooltip"), button -> {
+            deleteAvatar(NetworkStuff.Destination.FSB);
+        });
+    }
+
+    // FSB 연결된 서버 → 기본 클라우드 회색 · 그 밖(싱글 · 리플레이 · FSB 없는 서버) → FSB 회색. 회색 항목의 안내 문구는 이유로 바꾼다
+    private void refreshDestinations() {
+        boolean fsb = FSB.instance().connected();
+        setDestination(uploadBackend, !fsb, "gui.wardrobe.upload_backend", "gui.wardrobe.main_cloud_off");
+        setDestination(uploadFsb, fsb, "gui.wardrobe.upload_fsb", "gui.wardrobe.server_cloud_off");
+        setDestination(deleteBackend, !fsb, "gui.wardrobe.delete_backend", "gui.wardrobe.main_cloud_off");
+        setDestination(deleteFsb, fsb, "gui.wardrobe.delete_fsb", "gui.wardrobe.server_cloud_off");
+    }
+
+    // 누를 수 있는 항목은 초록 글자(옛 «둘 다» 항목 색 — 🙋 2026-10-23) · 회색 항목은 색 없이 둬서 Button 의 회색이 보이게.
+    // ⚠ 색을 문구(lang)의 § 코드로 넣으면 회색 항목까지 덮는다 — 그래서 여기서 입힌다
+    private static void setDestination(Button button, boolean active, String key, String offTooltip) {
+        button.setActive(active);
+        button.setMessage(active ? FiguraText.of(key).withStyle(ChatFormatting.GREEN) : FiguraText.of(key));
+        button.setTooltip(active ? FiguraText.of(key + ".tooltip") : FiguraText.of(offTooltip).withStyle(ChatFormatting.GRAY));
+    }
+
     @Override
     public void tick() {
         // children tick
@@ -245,9 +319,22 @@ public class WardrobeScreen extends AbstractPanelScreen {
         panic.setVisible(AvatarManager.panic);
 
         // backend buttons
-        Avatar avatar;
-        upload.setActive(NetworkStuff.canUpload() && !AvatarManager.localUploaded && (avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID())) != null && avatar.nbt != null && avatar.loaded);
-        delete.setActive(NetworkStuff.isConnected() && AvatarManager.localUploaded);
+        Avatar avatar = null;
+        upload.setActive(NetworkStuff.canUpload()
+                        && !AvatarManager.localUploaded
+                        && (avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID())) != null
+                        && avatar.nbt != null
+                        && avatar.loaded
+                        && (!avatar.scriptError || Configs.ALLOW_UPLOADING_ERRORED_AVATARS.value));
+        boolean isErrorBlockingUpload = avatar != null && avatar.scriptError && !Configs.ALLOW_UPLOADING_ERRORED_AVATARS.value;
+        upload.setTooltip(
+                isErrorBlockingUpload
+                        ? FiguraText.of("gui.wardrobe.upload.errored", avatar.errorText).withStyle(ChatFormatting.RED)
+                        : FiguraText.of("gui.wardrobe.upload.tooltip")
+        );
+        delete.setActive((FSB.instance().connected() || NetworkStuff.isConnected()) && AvatarManager.localUploaded);
+        // 메뉴가 열린 채 FSB 연결이 바뀌어도 회색이 따라오게
+        refreshDestinations();
 
         updateMotdWidget();
     }

@@ -1,6 +1,9 @@
 package org.figuramc.figura.mixin.render.renderers;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -36,7 +39,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -66,26 +68,52 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     private Avatar currentAvatar;
     @Unique
     private Matrix4f lastPose;
+    // ★ 몹(CEM) 아바타가 vanilla_model.ALL 을 숨겼나 — 이번 render 한 번 동안만 (2026-09-28, 하네스 entity_avatar_template P4)
+    //   파츠 숨기기(VanillaModelProvider)는 사람형 모델의 파츠만 알아서, 사람형이 아닌 몹(주민 등)은 몸이 통째로 남고
+    //   드라운드 · 스트레이 · 보그드의 겉옷은 **자기 모델을 가진 레이어**(DrownedOuterLayer · SkeletonClothingLayer)라 안 숨는다.
+    //   ⇒ 이 값이 참이면 바닐라 몸(renderToBuffer)과 **모든 레이어**(shouldRenderLayers)를 건너뛴다 — 아래 두 WrapOperation.
+    //   그대로인 것: 그림자 · 이름표 · 끈(EntityRenderer.render) · 아바타 파츠(피격 붉은빛 포함). 플레이어 아바타는 안 바꾼다.
+    @Unique
+    private boolean figura$hideVanilla;
 
     @Inject(at = @At("HEAD"), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
     private void onRender(S livingEntityRenderState, PoseStack poseStack, MultiBufferSource vertexConsumers, int i, CallbackInfo ci) {
+        figura$hideVanilla = false;
         currentAvatar = AvatarManager.getAvatar(livingEntityRenderState);
         if (currentAvatar == null)
             return;
 
+        figura$hideVanilla = !(livingEntityRenderState instanceof PlayerRenderState)
+                && currentAvatar.luaRuntime != null
+                && Boolean.FALSE.equals(currentAvatar.luaRuntime.vanilla_model.ALL.getVisible());
         lastPose = poseStack.last().pose();
     }
 
-    @ModifyArg(
+    // 바닐라 몸 — P4 면 건너뛴다. ⓘ 원래 여기 있던 @ModifyArg(customOverlay — 오버레이 덮어쓰기)를 합쳤다:
+    //   같은 호출을 @ModifyArg 와 @WrapOperation 이 같이 잡는 조합을 피하려고 (동작은 같다)
+    @WrapOperation(
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"
             ),
-            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            index = 3
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
     )
-    private int customOverlay(int thing) {
-        return LivingEntityRendererAccessor.overrideOverlay.orElse(thing);
+    private void figura$renderVanillaBody(EntityModel<?> model, PoseStack poseStack, VertexConsumer consumer, int light, int overlay, int color, Operation<Void> original) {
+        if (figura$hideVanilla)
+            return;
+        original.call(model, poseStack, consumer, light, LivingEntityRendererAccessor.overrideOverlay.orElse(overlay), color);
+    }
+
+    // 바닐라 레이어(갑옷 · 손에 든 것 · 겉옷 · 머리 위 블록 · 직업 옷 …) — P4 면 전부 건너뛴다
+    @WrapOperation(
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;shouldRenderLayers(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;)Z"
+            ),
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+    )
+    private boolean figura$renderVanillaLayers(LivingEntityRenderer<?, ?, ?> renderer, LivingEntityRenderState state, Operation<Boolean> original) {
+        return !figura$hideVanilla && original.call(renderer, state);
     }
 
     @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;)V", shift = At.Shift.AFTER), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", cancellable = true)
@@ -148,6 +176,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
 
     @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"), method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
     private void endRender(S livingEntityRenderState, PoseStack matrices, MultiBufferSource vertexConsumers, int i, CallbackInfo ci) {
+        figura$hideVanilla = false;
         if (currentAvatar == null)
             return;
 

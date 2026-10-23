@@ -10,7 +10,9 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
@@ -62,12 +64,20 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     }
 
 
-    @Inject(at = @At(value = "HEAD"), method = "renderNameTag")
+    @Inject(at = @At(value = "HEAD"), method = "renderNameTag", cancellable = true)
     private void setupAvatar(S entityRenderState, Component text, PoseStack matrices, MultiBufferSource vertexConsumers, int light, CallbackInfo ci) {
         figura$avatar = AvatarManager.getAvatar(entityRenderState);
         figura$custom = figura$avatar == null || figura$avatar.luaRuntime == null ? null : figura$avatar.luaRuntime.nameplate.ENTITY;
         figura$hasCustomNameplate = figura$custom != null && figura$avatar.permissions.get(Permissions.NAMEPLATE_EDIT) == 1;
         figura$enabled =  Configs.ENTITY_NAMEPLATE.value > 0 && !AvatarManager.panic && figura$hasCustomNameplate;
+
+        // ★ 몹(CEM) 아바타의 nameplate.ENTITY:setVisible(false) — 전에는 플레이어(PlayerRendererMixin)만 이것을 봐서
+        //   몹 이름표는 숨길 수 없었다 (2026-09-28, 하네스 entity_avatar_template P5 — 커스텀 이름으로 변형을 고르는 몹이 이름을 드러내지 않게).
+        //   조건은 플레이어 쪽과 같다(설정 entity_nameplate > 0 · panic 아님 · 이름표 편집 권한). 플레이어는 그쪽이 보므로 건너뛴다.
+        if (figura$enabled && !(entityRenderState instanceof PlayerRenderState) && !figura$custom.visible) {
+            ci.cancel();
+            return;
+        }
 
 
         figura$textList = TextUtils.splitText(text, "\n");
@@ -162,7 +172,8 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 
         if (figura$enabled && figura$avatar != null && figura$hasCustomNameplate && figura$custom.outline) {
             // This renders the opaque text with an outline if the player has that enabled.
-            int outlineColor = figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020;
+            // ★ 1.21.8 Font 는 알파 0 을 불투명으로 고쳐 주지 않는다 — setOutlineColor 는 0xRRGGBB(알파 0)라 그대로면 바깥선이 안 보인다 → 본문 색(바닐라 -1)의 알파를 붙인다
+            int outlineColor = ARGB.color(ARGB.alpha(color), figura$custom.outlineColor != null ? figura$custom.outlineColor : 0x202020);
             if (figura$isRenderingName()) {
                 for (int i = 0; i < figura$textList.size(); i++) {
                     Component text1 = figura$textList.get(i);

@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,6 +44,16 @@ public class AvatarManager {
     private static final Map<UUID, UserData> LOADED_USERS = new ConcurrentHashMap<>();
     private static final Set<UUID> FETCHED_USERS = new HashSet<>();
 
+    // ★ 네트워크 덮어쓰기 방지 (2026-09-22) — 「pin / netlock」 절 참고
+    private static final Map<UUID, Path> PINNED_USERS = new ConcurrentHashMap<>();
+    // 데이터 고정 (2026-10-23 M42) — 리플레이 애드온이 녹화 당시 아바타 NBT 로 건다. 경로 고정(손 · 옷장)이 늘 이긴다
+    private static final Map<UUID, CompoundTag> PINNED_DATA = new ConcurrentHashMap<>();
+    private static volatile boolean networkLocked = false;
+
+    // 아바타 로드 알림 (2026-10-23 M42) — 로드는 비동기 스레드에서 끝나므로 대기열에 넣었다가 틱(클라 스레드)에서 부른다
+    private static final List<java.util.function.BiConsumer<UUID, CompoundTag>> LOAD_LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final Queue<Pair<UUID, CompoundTag>> LOADED_QUEUE = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
     private static final Int2ObjectMap<Avatar> LOADED_CEM = new Int2ObjectOpenHashMap<>();
 
     public static final FiguraResourceListener RESOURCE_RELOAD_EVENT = FiguraResourceListener.createResourceListener("resource_reload_event", manager -> executeAll("resourceReloadEvent", Avatar::resourceReloadEvent));
@@ -65,8 +76,15 @@ public class AvatarManager {
     // -- avatar events -- // 
 
     public static void tickLoadedAvatars() {
+        flushLoadListeners();
+
         if (panic)
             return;
+
+        // server_data — 싱글 로컬 모드의 만료 · 핑 창을 먼저 센다(만료로 지운 것이 아래 꺼내기에 실린다)
+        org.figuramc.figura.serverdata.LocalServerData.tick();
+        // server_data — 지난 틱 동안 바뀐 것을 아바타 대기열에(이 틱의 run 에서 돈다)
+        org.figuramc.figura.serverdata.ServerDataStore.flushEvents();
 
         // tick the avatars
         for (UserData user : LOADED_USERS.values()) {
@@ -87,16 +105,21 @@ public class AvatarManager {
 
         for (int entityId : LOADED_CEM.keySet()) {
             Entity entity = Minecraft.getInstance().level.getEntity(entityId);
-            if (entity != null && entity.isRemoved()) {
+            // 1.21.8 클라는 엔티티를 지우는 순간 조회 목록에서도 뺀다(ClientLevel.removeEntity → EntityLookup.remove) —
+            // 죽거나 사라진 몹은 여기서 isRemoved() 가 아니라 null 로 보인다. 둘 다 «사라짐» 으로 보고 clearCEMAvatars 처럼 clean() 까지 부른다.
+            // 전에는 null 이면 캐시만 지워서 아바타가 남아 틱 · 렌더 이벤트를 계속 돌았다(누수 — 라운드마다 스폰하면 쌓인다, 2026-09-27).
+            // 추적 범위 밖으로 나간 몹도 null 이라 지워지고, 돌아오면 새로 만든다(로드 비용이 다시 든다 — 남아서 도는 것보다 낫다)
+            if (entity == null || entity.isRemoved()) {
                 toBeRemoved.add(entityId);
-                ENTITY_CACHE.remove(entityId);
-            } else if (entity == null) {
                 ENTITY_CACHE.remove(entityId);
             }
         }
 
-        for (int entity : toBeRemoved)
-            LOADED_CEM.remove(entity);
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
 
         // tick entities
         for (Avatar avatar : LOADED_CEM.values()) {
@@ -106,6 +129,27 @@ public class AvatarManager {
                 FiguraMod.popProfiler();
             }
         }
+    }
+
+    /**
+     * 로드된 아바타 중 하나라도 파츠 발광을 요청 중인가.
+     *
+     * <p>바닐라는 발광 엔티티가 하나도 없으면 {@code entity_outline} 후처리를 프레임그래프에
+     * <b>넣지 않는다.</b> 그래서 아웃라인 타겟에 그려도 테두리가 되지 않고
+     * <b>불투명 단색 실루엣</b>이 화면을 덮는다. 이 값으로 그 게이트만 연다.
+     *
+     * <p>⚠ {@code shouldEntityAppearGlowing} 을 건드려서 여는 것이 아니다 — 그러면 아바타가
+     * {@code OutlineBufferSource} 로 감싸이고, 그 안의 {@code setColor} 가 정점 색을 팀 색으로
+     * 덮어써 <b>파츠별 색이 하나로 뭉개진다.</b>
+     */
+    public static boolean anyLoadedAvatarHasPartGlow() {
+        if (panic) return false;
+        for (UserData user : LOADED_USERS.values()) {
+            Avatar avatar = user.getMainAvatar();
+            if (avatar != null && avatar.partGlowCount > 0)
+                return true;
+        }
+        return false;
     }
 
     public static void executeAll(String src, Consumer<Avatar> consumer) {
@@ -218,6 +262,11 @@ public class AvatarManager {
         return list;
     }
 
+    // 지금 실린 몹(CEM) 아바타 전부 — server_data 가 이벤트를 나눌 때 쓴다(사본)
+    public static List<Avatar> getLoadedCEMAvatars() {
+        return new ArrayList<>(LOADED_CEM.values());
+    }
+
     // -- avatar management -- // 
 
     // removes an loaded avatar
@@ -235,6 +284,39 @@ public class AvatarManager {
         for (Avatar avatar : LOADED_CEM.values())
             avatar.clean();
         LOADED_CEM.clear();
+    }
+
+    // 이 몹 종류들의 로드된 아바타만 내린다 — 다음 렌더에 CEM_AVATARS 에서 새로 만든다(/figura cem build 가 부른다).
+    // 종류를 알 수 없는 것(사라진 몹 · 월드 없음)도 같이 내린다 — 어차피 다음 틱에 정리되거나 다시 만들어진다
+    public static void clearCEMAvatars(Collection<ResourceLocation> types) {
+        if (LOADED_CEM.isEmpty() || types.isEmpty())
+            return;
+
+        ClientLevel level = Minecraft.getInstance().level;
+        IntSet toBeRemoved = new IntOpenHashSet();
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            if (entity == null || types.contains(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())))
+                toBeRemoved.add(entityId);
+        }
+
+        for (int entityId : toBeRemoved) {
+            Avatar avatar = LOADED_CEM.remove(entityId);
+            if (avatar != null)
+                avatar.clean();
+        }
+    }
+
+    // 몹 종류별로 지금 돌고 있는 CEM 아바타 수 (/figura cem status). 몹이 사라졌는데 아직 정리 전이면 "?" 로 센다
+    public static Map<String, Integer> countCEMAvatars() {
+        Map<String, Integer> counts = new TreeMap<>();
+        ClientLevel level = Minecraft.getInstance().level;
+        for (int entityId : LOADED_CEM.keySet()) {
+            Entity entity = level == null ? null : level.getEntity(entityId);
+            String type = entity == null ? "?" : BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+            counts.merge(type, 1, Integer::sum);
+        }
+        return counts;
     }
 
     // clears ALL loaded avatars, including local
@@ -255,10 +337,180 @@ public class AvatarManager {
 
     // reloads an avatar
     public static void reloadAvatar(UUID id) {
-        if (!localUploaded && FiguraMod.isLocal(id))
+        Path pinned = PINNED_USERS.get(id);
+        CompoundTag pinnedData = PINNED_DATA.get(id);
+        if (pinned != null)
+            loadLocalAvatarFor(id, pinned); // pin 된 사용자는 그 로컬 경로를 다시 컴파일한다 (호스트의 !localUploaded 와 같은 뜻)
+        else if (pinnedData != null)
+            pinAvatarData(id, pinnedData);
+        else if (!localUploaded && FiguraMod.isLocal(id))
             loadLocalAvatar(LocalAvatarLoader.getLastLoadedPath());
         else
             clearAvatars(id);
+    }
+
+    // -- pin / netlock -- //
+    //
+    // 문제 (2026-09-22): `/figura nonhost_load` 로 남에게 로컬 아바타를 입혀도 몇 프레임 뒤 클라우드 아바타가 덮어썼다.
+    //   ① clearAvatars() 가 FETCHED_USERS 표식을 지우는데 그것을 되돌려 놓는 공개 API 가 없어서
+    //      다음 렌더의 getAvatarForPlayer() → fetchBackend() 가 백엔드를 다시 쳤다. (호스트의 loadLocalAvatar 는
+    //      clear 직후 FETCHED_USERS.add 를 하므로 멀쩡했다 — 같은 순서를 남에게도 적용해야 했다)
+    //   ② 그 뒤로도 웹소켓 event(reloadAvatar) · FSB S2CConnected/S2CNotify(clearAvatars) · 비동기 응답
+    //      (UserData.loadData / loadAvatar) 이 언제든 다시 덮는다. 리플레이(Flashback)는 녹화된 FSB 패킷을
+    //      재생·탐색 때마다 다시 흘려보내므로 ②가 반복된다.
+    // 해법 — 두 겹의 스위치. 네트워크 진입점은 전부 acceptsNetworkAvatar() 를 본다.
+    //   pin      사용자별. loadLocalAvatarFor() 가 건다. 네트워크가 그 사용자를 못 건드리고,
+    //            무엇이 아바타를 지워도 fetchBackend() 가 pin 된 경로에서 되살린다.
+    //   netlock  전역. /figura netlock. 아무 사용자의 아바타도 네트워크(공식 클라우드·FSB)에서 새로 받지 않는다.
+    //            이미 로드된 것은 그대로 남는다. 로컬 로드(/figura load · nonhost_load)는 영향 없다.
+    //   둘 다 월드를 나갈 때 풀린다 (MinecraftMixin.clearLevel → resetPinsAndLock).
+    //   ⚠ clearAllAvatars() 는 풀지 않는다 — 그건 in-world «전부 다시 불러오기» 라서 pin 된 것은 되살아나고
+    //     잠금은 유지돼야 한다. FSB 핸드셰이크·권한 화면·/figura reload all 이 그 경로다.
+
+    /** 네트워크(공식 클라우드·FSB)가 이 사용자의 아바타를 적용하거나 지워도 되는가. 모든 네트워크 진입점이 이걸 본다. */
+    public static boolean acceptsNetworkAvatar(UUID id) {
+        return !networkLocked && !PINNED_USERS.containsKey(id) && !PINNED_DATA.containsKey(id);
+    }
+
+    public static boolean isPinned(UUID id) {
+        return PINNED_USERS.containsKey(id) || PINNED_DATA.containsKey(id);
+    }
+
+    /** 고정이 어디서 왔나 — 경로(손 · nonhost_load · 남 세팅용 옷장) · 데이터(리플레이 애드온) · 없음. 경로가 이긴다 */
+    public enum PinSource { NONE, PATH, DATA }
+
+    public static PinSource getPinSource(UUID id) {
+        if (PINNED_USERS.containsKey(id)) return PinSource.PATH;
+        if (PINNED_DATA.containsKey(id)) return PinSource.DATA;
+        return PinSource.NONE;
+    }
+
+    /**
+     * 아바타 NBT 를 그 사용자에게 입히고 데이터로 고정한다 (리플레이 애드온이 녹화 당시 아바타를 건다 · 2026-10-23 M42).
+     * 경로 고정(손)이 있으면 건드리지 않고 false. 무엇이 지워도 fetchBackend() 가 같은 데이터로 되살린다.
+     * 받은 NBT 는 복사해 둔다 — Avatar.load 가 넘겨받은 것을 그대로 쥐고 고칠 수 있다.
+     */
+    public static boolean pinAvatarData(UUID id, CompoundTag nbt) {
+        if (nbt == null || PINNED_USERS.containsKey(id))
+            return false;
+
+        CompoundTag kept = nbt.copy();
+        PINNED_DATA.put(id, kept);
+
+        clearAvatars(id);
+        FETCHED_USERS.add(id);
+        LOADED_USERS.computeIfAbsent(id, UserData::new).loadAvatar(kept.copy());
+        return true;
+    }
+
+    /** 아바타가 로드를 마칠 때마다(네트워크 · 로컬 · 데이터 고정) 클라 스레드 틱에서 부른다. 듣는 쪽 예외는 로그만 남긴다 */
+    public static void addAvatarLoadListener(java.util.function.BiConsumer<UUID, CompoundTag> listener) {
+        LOAD_LISTENERS.add(listener);
+    }
+
+    // UserData.loadAvatar 가 부른다 — 어느 스레드에서든
+    static void notifyAvatarLoaded(UUID id, CompoundTag nbt) {
+        if (!LOAD_LISTENERS.isEmpty() && nbt != null)
+            LOADED_QUEUE.add(Pair.of(id, nbt));
+    }
+
+    private static void flushLoadListeners() {
+        Pair<UUID, CompoundTag> loaded;
+        while ((loaded = LOADED_QUEUE.poll()) != null) {
+            for (java.util.function.BiConsumer<UUID, CompoundTag> listener : LOAD_LISTENERS) {
+                try {
+                    listener.accept(loaded.getFirst(), loaded.getSecond());
+                } catch (Throwable e) {
+                    FiguraMod.LOGGER.warn("Avatar load listener failed", e);
+                }
+            }
+        }
+    }
+
+    public static Path getPinnedPath(UUID id) {
+        return PINNED_USERS.get(id);
+    }
+
+    public static Map<UUID, Path> getPinnedAvatars() {
+        return Collections.unmodifiableMap(PINNED_USERS);
+    }
+
+    public static boolean isNetworkLocked() {
+        return networkLocked;
+    }
+
+    public static void setNetworkLocked(boolean locked) {
+        networkLocked = locked;
+        FiguraMod.LOGGER.info("Avatar network lock " + (locked ? "enabled" : "disabled"));
+    }
+
+    /**
+     * 로컬 아바타 폴더를 임의 플레이어에게 입히고 pin 한다. 로컬 플레이어면 {@link #loadLocalAvatar} 와 같다.
+     * 클라이언트 한정 — 서버·타 클라이언트에는 아무것도 보내지 않는다.
+     */
+    public static void loadLocalAvatarFor(UUID id, Path path) {
+        if (FiguraMod.isLocal(id)) {
+            loadLocalAvatar(path);
+            return;
+        }
+
+        PINNED_USERS.put(id, path);
+        PINNED_DATA.remove(id); // 손으로 고르면 리플레이 데이터 고정을 대신한다 — 풀면(unpin) 데이터 고정도 같이 풀린다
+
+        // clear 직후 표식을 되돌려 놓는다 — loadLocalAvatar 와 같은 순서. 이 한 줄이 없어서 덮어썼다.
+        clearAvatars(id);
+        FETCHED_USERS.add(id);
+
+        UserData user = LOADED_USERS.computeIfAbsent(id, UserData::new);
+        LocalAvatarLoader.loadAvatar(path, user); // 비호스트면 로더가 핫리로드 감시를 건드리지 않는다
+    }
+
+    /**
+     * pin 해제. netlock 이 아니면 다음 렌더에서 네트워크 아바타를 다시 받는다.
+     * @return pin 돼 있었는가
+     */
+    public static boolean unpinAvatar(UUID id) {
+        boolean path = PINNED_USERS.remove(id) != null;
+        boolean data = PINNED_DATA.remove(id) != null;
+        if (!path && !data)
+            return false;
+        clearAvatars(id);
+        return true;
+    }
+
+    public static int unpinAll() {
+        Set<UUID> ids = new HashSet<>(PINNED_USERS.keySet());
+        ids.addAll(PINNED_DATA.keySet());
+        for (UUID id : ids)
+            unpinAvatar(id);
+        return ids.size();
+    }
+
+    /** 월드를 나갈 때. 이 세션 한정 상태(pin·netlock)를 모두 버린다. */
+    public static void resetPinsAndLock() {
+        if (!PINNED_USERS.isEmpty() || !PINNED_DATA.isEmpty() || networkLocked)
+            FiguraMod.LOGGER.info("Releasing " + (PINNED_USERS.size() + PINNED_DATA.size()) + " pinned avatar(s)" + (networkLocked ? " and the network lock" : ""));
+        PINNED_USERS.clear();
+        PINNED_DATA.clear();
+        networkLocked = false;
+    }
+
+    /** 네트워크가 요청한 삭제 — pin·netlock 이면 무시한다. 네트워크 핸들러는 clearAvatars 대신 이걸 부른다. */
+    public static void clearAvatarsFromNetwork(UUID id) {
+        if (!acceptsNetworkAvatar(id)) {
+            FiguraMod.debug("Ignoring network clear for " + id + " (pinned or network locked)");
+            return;
+        }
+        clearAvatars(id);
+    }
+
+    /** 네트워크가 요청한 리로드 — pin·netlock 이면 무시한다. */
+    public static void reloadAvatarFromNetwork(UUID id) {
+        if (!acceptsNetworkAvatar(id)) {
+            FiguraMod.debug("Ignoring network reload for " + id + " (pinned or network locked)");
+            return;
+        }
+        reloadAvatar(id);
     }
 
     // load the local player avatar
@@ -301,6 +553,7 @@ public class AvatarManager {
         try {
             UserData user = LOADED_USERS.computeIfAbsent(id, UserData::new);
             clearAvatars(id);
+            FETCHED_USERS.add(id); // nonhost_load 와 같은 결함이었다 — 표식을 안 되돌리면 다음 렌더가 백엔드로 덮는다
             user.loadAvatar(nbt);
         } catch (Exception e) {
             FiguraMod.LOGGER.error("Failed to set avatar for " + id, e);
@@ -313,6 +566,28 @@ public class AvatarManager {
             return;
 
         FETCHED_USERS.add(id);
+
+        // pin 된 사용자는 네트워크 대신 pin 된 경로에서 되살린다 — 무엇이 지웠든 (reload nonhost · clearAllAvatars · …)
+        Path pinned = PINNED_USERS.get(id);
+        if (pinned != null) {
+            FiguraMod.debug("Restoring pinned avatar for " + id);
+            UserData user = LOADED_USERS.computeIfAbsent(id, UserData::new);
+            LocalAvatarLoader.loadAvatar(pinned, user);
+            return;
+        }
+
+        // 데이터 고정(리플레이)도 같은 뜻 — 네트워크 대신 고정해 둔 NBT 의 사본으로 되살린다
+        CompoundTag pinnedData = PINNED_DATA.get(id);
+        if (pinnedData != null) {
+            FiguraMod.debug("Restoring data-pinned avatar for " + id);
+            LOADED_USERS.computeIfAbsent(id, UserData::new).loadAvatar(pinnedData.copy());
+            return;
+        }
+
+        if (networkLocked) {
+            FiguraMod.debug("Network lock: not fetching userdata for " + id);
+            return;
+        }
 
         if (EntityUtils.checkInvalidPlayer(id)) {
             FiguraMod.debug("Voiding userdata for " + id);
@@ -373,9 +648,11 @@ public class AvatarManager {
             }
 
             if (LOADED_USERS.get(targetUUID) != null) {
+                if (FiguraMod.isLocal(targetUUID)) {
+                    context.getSource().figura$sendError(Component.literal("Cannot set your own avatar this way; use '/figura load' instead"));
+                    return 0;
+                }
                 setAvatar(targetUUID, avatar.nbt);
-                if (FiguraMod.isLocal(targetUUID))
-                    localUploaded = true;
                 context.getSource().figura$sendFeedback(Component.literal("Set avatar for " + t));
                 return 1;
             }

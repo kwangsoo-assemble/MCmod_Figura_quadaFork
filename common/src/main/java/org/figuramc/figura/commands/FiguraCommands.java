@@ -34,11 +34,24 @@ public class FiguraCommands {
         // reload
         root.then(ReloadCommand.getCommand());
 
+        // nonhost_load / nonhost_unload — 남에게 로컬 아바타 입히기 (pin). 2026-09-22 SillyPlugin 에서 이관
+        root.then(NonhostLoadCommand.getLoadCommand());
+        root.then(NonhostLoadCommand.getUnloadCommand());
+
+        // netlock — 네트워크 아바타 로딩 잠금
+        root.then(NetlockCommand.getCommand());
+
+        // cem build — 로컬 아바타 폴더들을 몹(CEM) 아바타로 한 번에 컴파일 (2026-09-27, 엔티티 아바타 템플릿 변형용)
+        root.then(CemCommand.getCommand());
+
         // debug
         root.then(DebugCommand.getCommand());
 
         // export
         root.then(ExportCommand.getCommand());
+
+        // badge
+        root.then(BadgeCommand.getCommand());
 
         if (FiguraMod.debugModeEnabled()) {
             // backend debug

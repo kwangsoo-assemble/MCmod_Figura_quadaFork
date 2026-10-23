@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.gui.ActionWheel;
@@ -37,11 +38,25 @@ public abstract class MinecraftMixin {
     @Shadow @Final public Options options;
     @Shadow public LocalPlayer player;
     @Shadow public Entity cameraEntity;
+    @Shadow @Nullable public net.minecraft.world.phys.HitResult hitResult;
 
     @Shadow public abstract void setScreen(@Nullable Screen screen);
 
     @Unique
     private boolean scriptMouseUnlock = false;
+
+    // 디버그 막대기로 다른 플레이어를 우클릭하면 남 세팅용 옷장 (2026-10-23 M42) — 리플레이(Replay Viewer) · 싱글 · 멀티 · FSB 멀티.
+    // 상호작용 패킷은 보내지 않는다. 블록 · 공중 · 플레이어 아닌 엔티티 우클릭은 바닐라 그대로(디버그 막대기 원래 기능)
+    @Inject(at = @At("HEAD"), method = "startUseItem", cancellable = true)
+    private void figura$debugStickNonhostWardrobe(CallbackInfo ci) {
+        if (this.player == null || !this.player.getMainHandItem().is(net.minecraft.world.item.Items.DEBUG_STICK))
+            return;
+        if (!(this.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit) || !(hit.getEntity() instanceof Player target) || target == this.player)
+            return;
+
+        ci.cancel();
+        setScreen(new org.figuramc.figura.gui.screens.NonhostWardrobeScreen(null, target));
+    }
 
     @Inject(at = @At("RETURN"), method = "handleKeybinds")
     private void handleKeybinds(CallbackInfo ci) {
@@ -127,9 +142,16 @@ public abstract class MinecraftMixin {
 
     @Inject(at = @At("RETURN"), method = "clearClientLevel")
     private void clearLevel(Screen screen, CallbackInfo ci) {
+        AvatarManager.resetPinsAndLock(); // 월드(리플레이 포함)를 나가면 nonhost_load pin · netlock 이 풀린다
         AvatarManager.clearAllAvatars();
         FiguraLuaPrinter.clearPrintQueue();
         NetworkStuff.unsubscribeAll();
+        org.figuramc.figura.serverdata.ServerDataStore.clear(); // server_data — 월드(리플레이 포함)를 나가면 비운다
+    }
+
+    @Inject(at = @At("HEAD"), method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V")
+    private void onDisconnect(Screen screen, boolean keepResourcePacks, CallbackInfo ci) {
+        FSB.instance().onDisconnect();
     }
 
     @Inject(at = @At("RETURN"), method = "setLevel")

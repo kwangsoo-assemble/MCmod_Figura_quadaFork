@@ -35,10 +35,46 @@ public class AvatarList extends AbstractList {
 
     public static Path selectedEntry;
 
-    // -- Constructors -- // 
+    /**
+     * 줄을 누르면 할 일 · 지금 고른 것 · 선택 해제 (2026-10-23 M42). 옷장은 {@link #HOST}(나 자신 — 예전 그대로),
+     * 남 세팅용 옷장은 대상 플레이어에게 입히고 고정하는 것을 넘긴다
+     */
+    public interface Picker {
+        boolean isSelected(LocalAvatarFetcher.AvatarPath avatar);
+        void pick(LocalAvatarFetcher.AvatarPath avatar);
+        void unselect();
+    }
+
+    public static final Picker HOST = new Picker() {
+        @Override
+        public boolean isSelected(LocalAvatarFetcher.AvatarPath avatar) {
+            return avatar.getTheActualPathForThis().equals(selectedEntry);
+        }
+
+        @Override
+        public void pick(LocalAvatarFetcher.AvatarPath avatar) {
+            AvatarManager.loadLocalAvatar(avatar.getPath());
+            selectedEntry = avatar.getTheActualPathForThis();
+        }
+
+        @Override
+        public void unselect() {
+            AvatarManager.loadLocalAvatar(null);
+            selectedEntry = null;
+        }
+    };
+
+    public final Picker picker;
+
+    // -- Constructors -- //
 
     public AvatarList(int x, int y, int width, int height, AbstractPanelScreen parentScreen) {
+        this(x, y, width, height, parentScreen, HOST);
+    }
+
+    public AvatarList(int x, int y, int width, int height, AbstractPanelScreen parentScreen, Picker picker) {
         super(x, y, width, height);
+        this.picker = picker;
 
         // search bar
         children.add(new SearchBar(x + 4, y + 4, width - 8, 20, s -> {
@@ -64,10 +100,7 @@ public class AvatarList extends AbstractList {
                 new FiguraIdentifier("textures/gui/unselect.png"),
                 60, 20,
                 FiguraText.of("gui.wardrobe.unselect.tooltip"),
-                button -> {
-                    AvatarManager.loadLocalAvatar(null);
-                    selectedEntry = null;
-                })
+                button -> picker.unselect())
         );
 
         // root folder
@@ -217,7 +250,7 @@ public class AvatarList extends AbstractList {
         // get height
         totalHeight = 0;
         for (AbstractAvatarWidget avatar : avatarList) {
-            if (avatar.isOf(selectedEntry))
+            if (avatar.isSelectedEntry())
                 y = totalHeight;
             else
                 totalHeight += avatar.getHeight() + 2;

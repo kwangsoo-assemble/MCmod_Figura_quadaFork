@@ -163,7 +163,7 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
                         renderedPivot = figura$avatar.pivotPartRender(parentType, stack -> {
                             stack.pushPose();
                             figura$prepareArmorRender(stack);
-                            renderer.renderArmorPart(stack, vertexConsumers, light, armorModel, itemStack, slot, parentType);
+                            renderer.renderArmorPart(stack, RenderUtils.pivotGlowBuffer(figura$avatar, vertexConsumers), light, armorModel, itemStack, slot, parentType);
                             stack.popPose();
                         });
                     }
@@ -175,7 +175,12 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
             // As a fallback, render armor the vanilla way
             if (allFailed) {
                 figura$renderingVanillaArmor = true;
-                renderArmorPiece(vanillaPoseStack, vertexConsumers, itemStack, slot, light, armorModel);
+                // ★ 피벗이 없어 조각 통짜로 그리는 경로다. 이 조각이 덮는 부위 중 하나라도 발광 중이면
+                //   **조각 전체**가 발광한다 — 여기서는 부위 분리가 원리적으로 불가능하다.
+                //   부위별로 나누려면 모델에 피벗 그룹을 넣어 위 pivotPartRender 경로를 타게 하면 된다.
+                renderArmorPiece(vanillaPoseStack,
+                        RenderUtils.vanillaPartGlowBuffer(figura$avatar, vertexConsumers, parentTypes),
+                        itemStack, slot, light, armorModel);
                 figura$renderingVanillaArmor = false;
             }
         }

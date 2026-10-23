@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -161,6 +162,8 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             VERTEX_BUFFER.consume(true, bufferSource);
             FiguraMod.popPushProfiler("secondary");
             VERTEX_BUFFER.consume(false, bufferSource);
+            FiguraMod.popPushProfiler("glowOutline");
+            VERTEX_BUFFER.consumeOutline(bufferSource);
             FiguraMod.popProfiler(2);
 
             // finish rendering
@@ -309,7 +312,21 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             boolean renderTasks = !part.renderTasks.isEmpty();
             boolean renderPivotParts = part.parentType.isPivot && allowPivotParts;
 
+            // ★ 부위 파츠의 발광을 기록해 둔다. 이 뒤에 도는 바닐라 갑옷·아이템 레이어가 읽는다.
+            //   피벗 파츠가 없는 아바타에서도 "왼팔 발광 → 왼팔 갑옷·아이템 발광" 이 되게 하는 통로다.
+            if (VANILLA_GLOW_PARTS.contains(part.parentType)) {
+                PartCustomization own = customizationStack.peek();
+                if (Boolean.TRUE.equals(own.glow))
+                    vanillaPartGlow.putIfAbsent(part.parentType,
+                            own.glowColor != null ? own.glowColor.copy() : FiguraVec3.of(1, 1, 1));
+            }
+
             if (renderPivot || renderTasks || renderPivotParts) {
+                // fix light and overlay
+                PartCustomization parent = customizationStack.peek();
+                int light = parent.light != null ? parent.light : LightTexture.FULL_BRIGHT;
+                int overlay = parent.overlay != null ? parent.overlay : OverlayTexture.NO_OVERLAY;
+
                 // fix pivots
                 FiguraMod.pushProfiler("fixMatricesPivot");
 
@@ -329,8 +346,6 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
                 // render tasks
                 if (renderTasks) {
                     FiguraMod.popPushProfiler("renderTasks");
-                    int light = peek.light;
-                    int overlay = peek.overlay;
                     interceptRendersIntoFigura = false;
                     for (RenderTask task : part.renderTasks.values()) {
                         if (!task.shouldRender())
@@ -400,8 +415,13 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
     protected void savePivotTransform(ParentType parentType, PartCustomization customization) {
         FiguraMat4 currentPosMat = customization.getPositionMatrix();
         FiguraMat3 currentNormalMat = customization.getNormalMatrix();
-        ConcurrentLinkedQueue<Pair<FiguraMat4, FiguraMat3>> queue = pivotCustomizations.computeIfAbsent(parentType, p -> new ConcurrentLinkedQueue<>());
-        queue.add(new Pair<>(currentPosMat, currentNormalMat)); // These are COPIES, so ok to add
+        ConcurrentLinkedQueue<PivotTransform> queue = pivotCustomizations.computeIfAbsent(parentType, p -> new ConcurrentLinkedQueue<>());
+        // ★ 발광 상태를 변환과 **같은 원소에** 실어 보낸다. 큐가 여러 개 쌓일 수 있으므로
+        //   별도 필드로 빼면 어느 변환의 색인지 짝이 어긋난다.
+        FiguraVec3 glow = Boolean.TRUE.equals(customization.glow)
+                ? (customization.glowColor != null ? customization.glowColor.copy() : FiguraVec3.of(1, 1, 1))
+                : null;
+        queue.add(new PivotTransform(currentPosMat, currentNormalMat, glow)); // These are COPIES, so ok to add
     }
 
     protected FiguraMat4 partToWorldMatrices(PartCustomization cust) {
@@ -426,6 +446,25 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
         FiguraMod.pushProfiler("predicate");
         Boolean thisPassedPredicate = currentFilterScheme.test(part.parentType, true);
         if (thisPassedPredicate == null) {
+            FiguraMod.popProfiler(2);
+            return;
+        }
+
+        // FPS (2026-09-10, R&D fork): skip hidden subtrees, mirroring renderPart().
+        //
+        // This method only runs for the LOCAL player's avatar in first person
+        // (LivingEntityRendererMixin.preRender -> Avatar.firstPerson), and it was the ONLY
+        // place that still walked invisible parts: renderPart() has bailed on !custom.visible
+        // since forever, so a hidden part's savedPartToWorldMat was already frozen in every
+        // other path. Doing the same here makes first person consistent with third person
+        // and skips whole hidden subtrees (a ragdoll shell alone is 121 nodes).
+        //
+        // WARNING: a hidden part's savedPartToWorldMat now stops updating in first person too.
+        // Lua that reads partToWorldMatrix()/getPositionMatrix() on a HIDDEN part gets the last
+        // rendered value. That was already true outside first person, so no script can have
+        // depended on it being fresh -- but if a first-person-only consumer ever appears,
+        // this is the line to look at.
+        if (!custom.visible) {
             FiguraMod.popProfiler(2);
             return;
         }
@@ -483,6 +522,52 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             pushToBuffer(faceCount, primary, customization, textureSet, vertices);
         if (secondary.renderType != null)
             pushToBuffer(faceCount, secondary, customization, textureSet, vertices);
+
+        // ★ 파츠별 발광 — 같은 면을 아웃라인 타겟에도 한 번 더 그린다.
+        //   primary/secondary 2패스가 이미 있으므로 대칭 확장이다.
+        if (Boolean.TRUE.equals(customization.glow) && glowOutlineAllowed()) {
+            VertexData outline = getGlowOutline(customization, textureSet);
+            if (outline.renderType != null)
+                pushToBuffer(faceCount, outline, customization, textureSet, vertices);
+        }
+    }
+
+    /**
+     * 아웃라인 타겟에 그려도 되는 렌더 패스인가.
+     *
+     * <p>⚠⚠ 이 가드를 빼면 <b>크래시한다.</b> {@code RenderType.outline(...)} 은 출력 타겟으로
+     * {@code levelRenderer.entityOutlineTarget()} 을 들고 있는데, 레벨 프레임그래프가 끝나면
+     * 그 핸들이 null 이 된다. HUD·GUI·페이퍼돌·워드로브에서 그리면 NPE 다.
+     *
+     * <p>{@code FIRST_PERSON_WORLD} 는 허용한다 — 그 패스는 {@code method_62214}(메인 패스 람다)
+     * 안에서 돌아 {@code endOutlineBatch} 보다 앞이다. 반면 1인칭 <b>손</b> 렌더는
+     * {@code renderLevel} 이 반환된 뒤라 여기 못 들어온다.
+     */
+    private boolean glowOutlineAllowed() {
+        return org.figuramc.figura.utils.RenderUtils.outlineTargetAvailable(avatar);
+    }
+
+    private static final FiguraVec3 GLOW_DEFAULT_COLOR = FiguraVec3.of(1, 1, 1);
+
+    /** 바닐라 갑옷·아이템이 따라갈 수 있는 부위들. 피벗이 아니라 <b>바닐라 모델 부위</b>다. */
+    private static final java.util.EnumSet<ParentType> VANILLA_GLOW_PARTS = java.util.EnumSet.of(
+            ParentType.Head, ParentType.Body,
+            ParentType.LeftArm, ParentType.RightArm,
+            ParentType.LeftLeg, ParentType.RightLeg);
+
+    /**
+     * ★ {@code customization.color} 를 쓰지 않는다. 그래야 setColor 의 계층 곱셈과 완전히 분리되어
+     * 사용자가 요구한 "간섭 없는 덮어쓰기" 가 성립한다.
+     */
+    private VertexData getGlowOutline(PartCustomization customization, FiguraTextureSet textureSet) {
+        VertexData ret = new VertexData();
+        ResourceLocation id = textureSet.getOverrideTexture(avatar.owner, customization.primaryTexture);
+        if (id == null)
+            return ret;
+        ret.outline = true;
+        ret.renderType = RenderType.outline(id);
+        ret.color = customization.glowColor != null ? customization.glowColor : GLOW_DEFAULT_COLOR;
+        return ret;
     }
 
     private VertexData getTexture(PartCustomization customization, FiguraTextureSet textureSet, boolean primary) {
@@ -525,7 +610,13 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             ret.fullBright = true;
             ret.renderType = RenderTypes.TRANSLUCENT_CULL.get(id);
         } else {
-            ret.renderType = types.get(id);
+            // ★ 앞렌더 마커(#FFFFFB 계열)가 칠해진 파츠의 글린트는 깊이 테스트를 끈다 (2026-09-14).
+            //   이유는 RenderTypes#frontLayerGlint 주석 — 요약하면 셰이더가 **본체의** 깊이만
+            //   앞으로 당겨 버려서 글린트의 EQUAL_DEPTH_TEST 가 영원히 불일치한다.
+            //   ⚠ 본체의 정점색은 **primary 슬롯**이므로 언제나 customization.color 를 본다.
+            //   ret.color(secondary 면 color2)를 쓰면 상관없는 색을 재는 것이다.
+            RenderType frontGlint = RenderTypes.frontLayerGlint(types, customization.color, id);
+            ret.renderType = frontGlint != null ? frontGlint : types.get(id);
         }
 
         return ret;
@@ -543,7 +634,7 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
         int overlay = customization.overlay;
         int light = vertexData.fullBright ? LightTexture.FULL_BRIGHT : customization.light;
 
-        VERTEX_BUFFER.getBufferFor(vertexData.renderType, vertexData.primary, vertexConsumer -> {
+        Consumer<VertexConsumer> writer = vertexConsumer -> {
             for (int i = 0; i < vertCount; i++) {
                 Vertex vertex = vertices.get(i);
 
@@ -564,7 +655,12 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
                         .setLight(light)
                         .setNormal((float) normal.x, (float) normal.y, (float) normal.z);
             }
-        });
+        };
+
+        if (vertexData.outline)
+            VERTEX_BUFFER.getOutlineBufferFor(vertexData.renderType, writer);
+        else
+            VERTEX_BUFFER.getBufferFor(vertexData.renderType, vertexData.primary, writer);
     }
 
     private static class VertexData {
@@ -573,11 +669,14 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
         public float vertexOffset;
         public FiguraVec3 color;
         public boolean primary;
+        /** true 면 아웃라인 타겟용 3번째 패스다 (파츠별 발광). */
+        public boolean outline;
     }
 
     private static class VertexBuffer {
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> primaryBuffers = new LinkedHashMap<>();
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> secondaryBuffers = new LinkedHashMap<>();
+        private final HashMap<RenderType, List<Consumer<VertexConsumer>>> outlineBuffers = new LinkedHashMap<>();
 
         public void getBufferFor(RenderType renderType, boolean primary, Consumer<VertexConsumer> consumer) {
             HashMap<RenderType, List<Consumer<VertexConsumer>>> buffer = primary ? primaryBuffers : secondaryBuffers;
@@ -585,8 +684,19 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             list.add(consumer);
         }
 
+        public void getOutlineBufferFor(RenderType renderType, Consumer<VertexConsumer> consumer) {
+            outlineBuffers.computeIfAbsent(renderType, r -> new ArrayList<>()).add(consumer);
+        }
+
+        public void consumeOutline(MultiBufferSource bufferSource) {
+            drain(outlineBuffers, bufferSource);
+        }
+
         public void consume(boolean primary, MultiBufferSource bufferSource) {
-            HashMap<RenderType, List<Consumer<VertexConsumer>>> map = primary ? primaryBuffers : secondaryBuffers;
+            drain(primary ? primaryBuffers : secondaryBuffers, bufferSource);
+        }
+
+        private static void drain(HashMap<RenderType, List<Consumer<VertexConsumer>>> map, MultiBufferSource bufferSource) {
             for (Map.Entry<RenderType, List<Consumer<VertexConsumer>>> entry : map.entrySet()) {
                 VertexConsumer vertexConsumer = bufferSource.getBuffer(entry.getKey());
                 List<Consumer<VertexConsumer>> consumers = entry.getValue();

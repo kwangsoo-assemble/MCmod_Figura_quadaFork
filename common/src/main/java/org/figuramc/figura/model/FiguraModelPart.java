@@ -33,6 +33,8 @@ import org.luaj.vm2.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.figuramc.figura.parsers.BlockbenchCommonTypes.FORMATLESS;
+
 @LuaWhitelist
 @LuaTypeDoc(
         name = "ModelPart",
@@ -52,6 +54,7 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
 
     private final Map<String, FiguraModelPart> childCache = new HashMap<>();
     public final List<FiguraModelPart> children;
+    public final byte formatVersion;
 
     public List<Integer> facesByTexture;
 
@@ -78,12 +81,30 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     @LuaFieldDoc("model_part.post_render")
     public LuaFunction postRender; // after children
 
-    public FiguraModelPart(Avatar owner, String name, PartCustomization customization, Map<Integer, List<Vertex>> vertices, List<FiguraModelPart> children) {
+    public FiguraModelPart(
+            Avatar owner,
+            String name,
+            PartCustomization customization,
+            Map<Integer, List<Vertex>> vertices,
+            List<FiguraModelPart> children
+    ) {
+        this(owner, name, customization, vertices, children, FORMATLESS);
+    }
+
+    public FiguraModelPart(
+            Avatar owner,
+            String name,
+            PartCustomization customization,
+            Map<Integer, List<Vertex>> vertices,
+            List<FiguraModelPart> children,
+            byte formatVersion
+    ) {
         this.owner = owner;
         this.name = name;
         this.customization = customization;
         this.vertices = vertices;
         this.children = children;
+        this.formatVersion = formatVersion;
     }
 
     public boolean pushVerticesImmediate(ImmediateAvatarRenderer avatarRenderer, int[] remainingComplexity) {
@@ -1128,6 +1149,47 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
         return this.customization.alpha;
     }
 
+    // ── 파츠별 바닐라 발광 ────────────────────────────────────────────────
+    // ⚠ 파라미터는 반드시 박싱 Boolean 이어야 한다. 원시 boolean 으로 두면 LuaTypeManager 가
+    //   nil 을 false 로 떨궈 "nil = 상속" 이 죽는다.
+
+    @LuaWhitelist
+    public FiguraModelPart setGlow(Boolean glow) {
+        boolean was = Boolean.TRUE.equals(this.customization.glow);
+        boolean now = Boolean.TRUE.equals(glow);
+        this.customization.glow = glow;
+        // 전이일 때만 센다. 같은 값을 여러 번 넣어도 어긋나지 않는다.
+        if (was != now && owner != null)
+            owner.partGlowCount = Math.max(0, owner.partGlowCount + (now ? 1 : -1));
+        return this;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart glow(Boolean glow) {
+        return setGlow(glow);
+    }
+
+    @LuaWhitelist
+    public Boolean getGlow() {
+        return this.customization.glow;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart setGlowColor(Object r, Double g, Double b) {
+        this.customization.glowColor = LuaUtils.nullableVec3("setGlowColor", r, g, b);
+        return this;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart glowColor(Object r, Double g, Double b) {
+        return setGlowColor(r, g, b);
+    }
+
+    @LuaWhitelist
+    public FiguraVec3 getGlowColor() {
+        return this.customization.glowColor;
+    }
+
     @LuaWhitelist
     @LuaMethodDoc(
             overloads = {
@@ -1495,7 +1557,7 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
 		if (name == null) name = this.name;
         PartCustomization customization = new PartCustomization();
         this.customization.copyTo(customization);
-        FiguraModelPart result = new FiguraModelPart(owner, name, customization, copyVertices(), new ArrayList<>(children));
+        FiguraModelPart result = new FiguraModelPart(owner, name, customization, copyVertices(), new ArrayList<>(children), formatVersion);
         result.facesByTexture = new ArrayList<>(facesByTexture);
         result.textures = new ArrayList<>(textures);
         result.parentType = parentType;

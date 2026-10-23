@@ -66,8 +66,9 @@ public abstract class PlayerItemInHandLayerMixin <S extends PlayerRenderState, M
             stack.scale(s, s, s);
             stack.translate(0, 0, 7 / 16f);
             ItemTransform transform = ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemTransform();
-            if (!avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) itemStackRenderState).figura$isLeftHanded(), stack, vertexConsumers, light, OverlayTexture.NO_OVERLAY))
-                itemStackRenderState.render(stack, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
+            MultiBufferSource glassBuf = RenderUtils.pivotGlowBuffer(avatar, vertexConsumers);
+            if (!avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackRenderState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) itemStackRenderState).figura$isLeftHanded(), stack, glassBuf, light, OverlayTexture.NO_OVERLAY))
+                itemStackRenderState.render(stack, glassBuf, light, OverlayTexture.NO_OVERLAY);
         })) {
             ci.cancel();
         }

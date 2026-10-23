@@ -94,7 +94,7 @@ public abstract class CustomHeadLayerMixin<S extends LivingEntityRenderState, M 
                 if (id != null)
                     SkullBlockRendererAccessor.setEntity(Minecraft.getInstance().level.getEntity(id));
                 SkullBlockRendererAccessor.setRenderMode(SkullBlockRendererAccessor.SkullRenderMode.HEAD);
-                SkullBlockRenderer.renderSkull(null, 0f, f, stack, multiBufferSource, light, skullModelBase, renderType);
+                SkullBlockRenderer.renderSkull(null, 0f, f, stack, RenderUtils.pivotGlowBuffer(avatar, multiBufferSource), light, skullModelBase, renderType);
             })) {
                 ci.cancel();
             }
@@ -103,8 +103,9 @@ public abstract class CustomHeadLayerMixin<S extends LivingEntityRenderState, M 
             stack.translate(0d, 4d, 0d);
             stack.scale(s, s, s);
             ItemTransform transform = ((FiguraItemStackRenderStateExtension) itemStackState).figura$getItemTransform();
-            if (!avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) itemStackState).figura$isLeftHanded(), stack, multiBufferSource, light, OverlayTexture.NO_OVERLAY))
-                itemStackState.render(stack, multiBufferSource, light, OverlayTexture.NO_OVERLAY);
+            MultiBufferSource headBuf = RenderUtils.pivotGlowBuffer(avatar, multiBufferSource);
+            if (!avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) itemStackState).figura$isLeftHanded(), stack, headBuf, light, OverlayTexture.NO_OVERLAY))
+                itemStackState.render(stack, headBuf, light, OverlayTexture.NO_OVERLAY);
         })) {
             ci.cancel();
         }

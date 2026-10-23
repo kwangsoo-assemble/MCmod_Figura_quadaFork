@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.avatar.local.CacheAvatarLoader;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.entries.EntryPointManager;
@@ -250,11 +251,11 @@ public class Configs {
             LOG_PINGS = new ConfigType.EnumConfig("log_pings", DEV, 0, 3);
     public static final ConfigType.BoolConfig
             SYNC_PINGS = new ConfigType.BoolConfig("sync_pings", DEV, false) {{
-        String tooltip = "config.sync_pings.tooltip.";
-        this.tooltip = FiguraText.of(tooltip + "1")
-                .append("\n")
-                .append(FiguraText.of(tooltip + "2").withStyle(ChatFormatting.RED));
-    }},
+                String tooltip = "config.sync_pings.tooltip.";
+                this.tooltip = FiguraText.of(tooltip + "1")
+                        .append("\n")
+                        .append(FiguraText.of(tooltip + "2").withStyle(ChatFormatting.RED));
+            }},
             CHAT_MESSAGES = new ConfigType.BoolConfig("chat_messages", DEV, false) {{
                 this.name = this.name.copy().withStyle(ChatFormatting.RED);
                 String tooltip = "config.chat_messages.tooltip.";
@@ -263,7 +264,9 @@ public class Configs {
                         .append(FiguraText.of(tooltip + "2").withStyle(ChatFormatting.RED))
                         .append("\n\n")
                         .append(FiguraText.of(tooltip + "3").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-            }};
+            }},
+            ALLOW_UPLOADING_ERRORED_AVATARS = new ConfigType.BoolConfig("allow_uploading_errored_avatars", DEV, false);
+
     public static final ConfigType.FolderConfig
             MAIN_DIR = new ConfigType.FolderConfig("main_dir", DEV, "") {
         @Override
@@ -302,6 +305,9 @@ public class Configs {
     public static final ConfigType.BoolConfig
             FORCE_SMOOTH_AVATAR = new ConfigType.BoolConfig("force_smooth_avatar", DEV, false),
             GUI_FPS = new ConfigType.BoolConfig("gui_fps", DEV, false);
+
+    public static final ConfigType.ButtonConfig REGENERATE_KEY =
+            new ConfigType.ButtonConfig("regen_key", DEV, () -> FSB.instance().regenerateKey());
 
     // -- NETWORKING -- //
     public static final ConfigType.BoolConfig ALLOW_NETWORKING =

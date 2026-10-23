@@ -87,6 +87,14 @@ public abstract class ItemInHandRendererMixin {
             matrices.popPose();
         }
 
+        // ★ 아이템 피벗이 이번 프레임 월드 패스에서 이미 그렸으면 바닐라는 그리지 않는다.
+        //   3인칭 레이어의 `if (pivotPartRender(...)) ci.cancel()` 규약을 1인칭에 맞춘 것이다.
+        //   이게 없으면 같은 아이템이 **피벗 자리와 바닐라 자리에 두 번** 보인다.
+        if (willRenderItem && (arm == HumanoidArm.LEFT ? avatar.fpPivotItemLeft : avatar.fpPivotItemRight)) {
+            ci.cancel();
+            return;
+        }
+
         // hide item
         VanillaModelPart part = arm == HumanoidArm.LEFT ? avatar.luaRuntime.vanilla_model.LEFT_ITEM : avatar.luaRuntime.vanilla_model.RIGHT_ITEM;
         if (willRenderItem && !part.checkVisible()) {

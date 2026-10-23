@@ -7,6 +7,7 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.lua.api.AvatarAPI;
 import org.figuramc.figura.lua.api.HostAPI;
+import org.figuramc.figura.lua.api.ServerPacketsAPI;
 import org.figuramc.figura.lua.api.RendererAPI;
 import org.figuramc.figura.lua.api.TextureAPI;
 import org.figuramc.figura.lua.api.action_wheel.ActionWheelAPI;
@@ -54,6 +55,8 @@ public class FiguraLuaRuntime {
     public ActionWheelAPI action_wheel;
     public AvatarAPI avatar_meta;
     public PingAPI ping;
+    public ServerPacketsAPI serverPackets;
+    public org.figuramc.figura.lua.api.ServerDataAPI serverData;
     public TextureAPI texture;
 
     //---------------------------------
@@ -300,10 +303,19 @@ public class FiguraLuaRuntime {
 
                 // get environment in which will be used to get global values from, does not make extra lookups outside this table
                 val = args.arg(3);
-                LuaTable environment = val.istable() ? val.checktable() : runtime.userGlobals;
+                LuaTable environment = val.istable() ? val.checktable() : null;
 
                 // create the function from arguments
-                return runtime.userGlobals.load(ld, chunkName, "t", environment);
+                LuaValue chunk = runtime.userGlobals.load(ld, chunkName, "t", runtime.userGlobals);
+                // adjust the globals so that the debug hooks function correctly *and* the environment also works
+                if (environment != null && chunk instanceof LuaClosure) {
+                    UpValue[] upvalues = ((LuaClosure) chunk).upValues;
+                    if (upvalues.length > 0 && upvalues[0].getValue() == runtime.userGlobals) {
+                        upvalues[0].setValue(environment);
+                    }
+                }
+
+                return chunk;
             } catch (LuaError e) {
                 return varargsOf(NIL, e.getMessageObject());
             }

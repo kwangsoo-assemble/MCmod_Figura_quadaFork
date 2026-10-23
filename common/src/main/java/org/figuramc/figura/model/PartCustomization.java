@@ -51,6 +51,17 @@ public class PartCustomization {
     public Integer light = null;
     public Integer overlay = null;
 
+    /**
+     * 파츠별 바닐라 발광(아웃라인). {@code null} = 부모에게서 상속.
+     *
+     * <p>⚠ {@code visible} 을 흉내내면 안 된다 — 이 포크의 {@code visible} 은 원시 boolean 이고
+     * "부모가 끄면 자식이 못 되살리는" 흡수형이다. 여기서는 {@code light}/{@code overlay} 와 같은
+     * <b>nil=상속 · 값=덮어쓰기</b> 라서 발광 부모 밑에서 자식이 {@code false} 로 자기만 끌 수 있다.
+     */
+    public Boolean glow = null;
+    /** 발광 색. {@code null} = 부모 상속, 끝까지 없으면 흰색. ⚠ {@code color} 와 <b>섞이지 않는다.</b> */
+    public FiguraVec3 glowColor = null;
+
     private RenderTypes primaryRenderType, secondaryRenderType;
     public TextureCustomization primaryTexture, secondaryTexture;
 
@@ -331,6 +342,8 @@ public class PartCustomization {
         target.alpha = alpha;
         target.light = light;
         target.overlay = overlay;
+        target.glow = glow;
+        target.glowColor = glowColor;
         target.needsMatrixRecalculation = needsMatrixRecalculation;
         target.visible = visible;
         target.vanillaVisible = vanillaVisible;
@@ -362,6 +375,14 @@ public class PartCustomization {
 
         if (other.overlay != null)
             overlay = other.overlay;
+
+        // ★ light/overlay 와 같은 자리, 같은 방식이다 (nil=상속, 값=덮어쓰기).
+        //   아래 color.multiply(...) 옆에 두면 안 된다 — 그러면 계층에서 색이 섞인다.
+        if (other.glow != null)
+            glow = other.glow;
+
+        if (other.glowColor != null)
+            glowColor = other.glowColor;
 
         if (other.alpha != null) {
             if (alpha != null)

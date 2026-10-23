@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.math.matrix.FiguraMat3;
 import org.figuramc.figura.math.matrix.FiguraMat4;
+import org.figuramc.figura.math.vector.FiguraVec3;
 import org.figuramc.figura.model.FiguraModelPart;
 import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.VanillaModelData;
@@ -62,7 +63,33 @@ public abstract class AvatarRenderer {
     public VanillaModelData vanillaModelData = new VanillaModelData();
 
     public PartFilterScheme currentFilterScheme;
-    public final HashMap<ParentType, ConcurrentLinkedQueue<Pair<FiguraMat4, FiguraMat3>>> pivotCustomizations = new HashMap<>(ParentType.values().length);
+    /**
+     * 피벗 파츠가 저장한 변환. 바닐라 갑옷·아이템 레이어가 이걸 빼서 그 자리에 그린다.
+     *
+     * @param glowColor {@code null} 이 아니면 그 자리에 그려지는 <b>바닐라 요소도</b> 이 색으로 발광한다
+     *                  (피벗 파츠에 {@code setGlow(true)} 가 걸린 경우).
+     */
+    public record PivotTransform(FiguraMat4 position, FiguraMat3 normal, FiguraVec3 glowColor) {}
+
+    public final HashMap<ParentType, ConcurrentLinkedQueue<PivotTransform>> pivotCustomizations = new HashMap<>(ParentType.values().length);
+
+    /**
+     * 이번 프레임에 <b>부위 파츠</b>(머리·몸통·팔·다리)가 요청한 발광 색.
+     *
+     * <p>모델 렌더 패스에서 채우고, 그 뒤에 도는 바닐라 갑옷·아이템 레이어가 읽는다.
+     * 피벗이 없는 아바타에서도 "왼팔에 발광을 걸면 왼팔 갑옷·아이템도 발광" 이 되게 하는 통로다.
+     */
+    public final HashMap<ParentType, FiguraVec3> vanillaPartGlow = new HashMap<>();
+
+    /** 주어진 부위들 중 <b>하나라도</b> 발광 중이면 그 색. 없으면 null. */
+    public FiguraVec3 findVanillaPartGlow(ParentType... types) {
+        for (ParentType type : types) {
+            FiguraVec3 color = vanillaPartGlow.get(type);
+            if (color != null)
+                return color;
+        }
+        return null;
+    }
     protected final List<FiguraTextureSet> textureSets = new ArrayList<>();
     public final HashMap<String, FiguraTexture> textures = new HashMap<>();
     public final HashMap<String, FiguraTexture> customTextures = new HashMap<>();

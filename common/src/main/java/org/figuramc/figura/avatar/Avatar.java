@@ -72,6 +72,7 @@ import org.figuramc.figura.utils.ColorUtils;
 import org.figuramc.figura.utils.EntityUtils;
 import org.figuramc.figura.utils.PathUtils;
 import org.figuramc.figura.utils.RefilledNumber;
+import org.figuramc.figura.utils.RenderUtils;
 import org.figuramc.figura.utils.Version;
 import org.figuramc.figura.utils.ui.UIHelper;
 import org.jetbrains.annotations.Nullable;
@@ -98,6 +99,15 @@ public class Avatar {
 
     private static CompletableFuture<Void> tasks;
     public static boolean firstPerson;
+
+    /**
+     * 이 아바타에서 {@code setGlow(true)} 가 걸린 파츠 수.
+     *
+     * <p>★ 렌더 중 관측이 아니라 <b>Lua 상태</b> 여야 한다 — 바닐라는 아웃라인 후처리를 넣을지를
+     * 아바타를 그리기 <b>전에</b> 정한다. 지난 프레임 관측으로 판단하면 발광이 켜지는 첫 프레임에
+     * 후처리 없는 <b>불투명 실루엣</b>이 한 번 번쩍인다.
+     */
+    public int partGlowCount;
 
     // properties
     public final UUID owner;
@@ -260,6 +270,8 @@ public class Avatar {
             if (entity != null) {
                 luaRuntime.setUser(entity);
                 run("ENTITY_INIT", init.post());
+                // server_data — 지금 값을 «처음»(initial = true) 으로 한 번씩 (다음 run 에서 돈다)
+                org.figuramc.figura.serverdata.ServerDataStore.onAvatarInit(this);
             }
         }
 
@@ -324,6 +336,20 @@ public class Avatar {
 
             FiguraLuaPrinter.sendPingMessage(this, name, data.length, args);
             luaRuntime.run(function.func, tick, (Object[]) args);
+        });
+    }
+
+    /**
+     * 다음 {@code run} 에서 이 아바타의 Lua 이벤트를 부른다 — 핑과 같은 대기열 · 같은 틱 예산(server_data 가 쓴다).
+     * 아바타가 안 실렸거나 오류로 멈췄으면 버린다. {@code target} 이 null 을 주면 안 부른다.
+     */
+    public void queueLuaCall(java.util.function.Function<FiguraLuaRuntime, Object> target, Object... args) {
+        events.offer(() -> {
+            if (scriptError || luaRuntime == null || !loaded)
+                return;
+            Object t = target.apply(luaRuntime);
+            if (t != null)
+                luaRuntime.run(t, tick, args);
         });
     }
 
@@ -551,6 +577,8 @@ public class Avatar {
         boolean update = prevRenderMode != EntityRenderMode.OTHER || renderMode == EntityRenderMode.FIRST_PERSON_WORLD;
 
         renderer.pivotCustomizations.values().clear();
+        // ⚠ 부위 발광 기록도 여기서 지운다. 이 뒤 모델 패스가 다시 채우고, 그 뒤 갑옷·아이템 레이어가 읽는다.
+        renderer.vanillaPartGlow.clear();
         renderer.allowMatrixUpdate = renderer.updateLight = update;
         renderer.entity = entity;
 
@@ -715,6 +743,28 @@ public class Avatar {
 
         renderer.allowPivotParts = false;
 
+        // ★ 1인칭에서도 Skull 파츠의 partToWorldMatrix() 가 갱신되게 한다 (2026-09-11, R&D 포크).
+        //
+        // allowMatrixUpdate 는 "지금 이 패스의 포즈스택이 월드(카메라 상대) 좌표인가" 를 뜻하는데,
+        // skullRender 는 그걸 스스로 정하지 않고 **직전 패스가 남긴 값을 그대로 물려받고 있었다.**
+        // 3인칭은 엔티티 루프가 내 플레이어를 그리면서 worldRender() 가 true 로 켜 두기 때문에
+        // 우연히 맞았다. 그러나 1인칭은 내 엔티티가 렌더되지 않아 그 지점이 없고,
+        // 값은 지난 프레임 postWorldRenderEvent 가 끔 false 로 남는다.
+        // ⇒ renderEntities 안에서 그려지는 스컬(아이템 디스플레이·아이템 프레임·드롭 아이템)은
+        //   savedPartToWorldMat 이 통째로 멈춰 직전 3인칭 값에 박제된다.
+        //
+        // ★★ 같은 1인칭이어도 스컬 '블럭' 은 멀짹하게 동작했다 — renderBlockEntities 가
+        //   firstPersonWorldRender(= allowMatrixUpdate 를 true 로 켜는 곳) **뒤**라서다.
+        //   증상이 "어떤 스컬은 되고 어떤 스컬은 안 된다" 로 보이는 이유가 이것이다.
+        //
+        // 이제 판정을 물려받지 않고 **레벨 메인 패스 안인가**로 직접 한다.
+        // 그 구간의 포즈스택만 카메라 상대 월드 좌표이고, partToWorldMatrices() 가
+        // 곱하는 CAMERA_POS_TO_WORLD_MATRIX 역시 그 전제로 만들어졌다.
+        // ⚠ GUI·인벤토리·워드로브·1인칭 손 아이템의 스컬은 이 밖이라 예전처럼 갱신하지 않는다 —
+        //   그 포즈스택을 써 버리면 월드 위치가 화면 좌표로 오염된다.
+        boolean prevAllowMatrixUpdate = renderer.allowMatrixUpdate;
+        renderer.allowMatrixUpdate = prevAllowMatrixUpdate || RenderUtils.figura$inLevelPass;
+
         renderer.setupRenderer(
                 PartFilterScheme.SKULL, bufferSource, stack,
                 1f, light, 1f, OverlayTexture.NO_OVERLAY,
@@ -727,6 +777,7 @@ public class Avatar {
         // head
         boolean bool = comp > 0 || headRender(stack, bufferSource, light, true);
 
+        renderer.allowMatrixUpdate = prevAllowMatrixUpdate;
         renderer.allowPivotParts = true;
         stack.popPose();
         return bool;
@@ -897,24 +948,45 @@ public class Avatar {
         return ret > 0;
     }
 
+    /**
+     * {@link #pivotPartRender} 가 콜백을 부르는 <b>동안만</b> 유효한, 이번 피벗의 발광 색.
+     * {@code null} = 발광 없음. 레이어 믹스인이 {@code RenderUtils.pivotGlowBuffer} 로 읽는다.
+     */
+    public FiguraVec3 currentPivotGlowColor;
+
+    /**
+     * 이번 프레임 1인칭 월드 패스에서 <b>아이템 피벗이 손 아이템을 그렸는가</b> (손별).
+     *
+     * <p>3인칭 레이어의 규약과 같다 — 피벗이 그렸으면 바닐라는 안 그린다
+     * ({@code ItemInHandLayerMixin} 의 {@code if (pivotPartRender(...)) ci.cancel()}).
+     * 1인칭은 월드 패스와 손 렌더가 서로 다른 시점이라 플래그로 건넨다.
+     */
+    public boolean fpPivotItemLeft, fpPivotItemRight;
+
     private static final PartCustomization PIVOT_PART_RENDERING_CUSTOMIZATION = new PartCustomization();
     public synchronized boolean pivotPartRender(ParentType parent, Consumer<PoseStack> consumer) {
         if (renderer == null || !loaded || !parent.isPivot)
             return false;
 
-        Queue<Pair<FiguraMat4, FiguraMat3>> queue = renderer.pivotCustomizations.computeIfAbsent(parent, p -> new ConcurrentLinkedQueue<>());
+        Queue<AvatarRenderer.PivotTransform> queue = renderer.pivotCustomizations.computeIfAbsent(parent, p -> new ConcurrentLinkedQueue<>());
 
         if (queue.isEmpty())
             return false;
 
         int i = 0;
         while (!queue.isEmpty() && i++ < 1000) { // limit of 1000 pivot part renders, just in case something goes infinitely somehow
-            Pair<FiguraMat4, FiguraMat3> matrixPair = queue.poll();
-            PIVOT_PART_RENDERING_CUSTOMIZATION.setPositionMatrix(matrixPair.getFirst());
-            PIVOT_PART_RENDERING_CUSTOMIZATION.setNormalMatrix(matrixPair.getSecond());
+            AvatarRenderer.PivotTransform transform = queue.poll();
+            PIVOT_PART_RENDERING_CUSTOMIZATION.setPositionMatrix(transform.position());
+            PIVOT_PART_RENDERING_CUSTOMIZATION.setNormalMatrix(transform.normal());
             PIVOT_PART_RENDERING_CUSTOMIZATION.needsMatrixRecalculation = false;
             PoseStack stack = PIVOT_PART_RENDERING_CUSTOMIZATION.copyIntoGlobalPoseStack();
-            consumer.accept(stack);
+            // ⚠ finally 로 반드시 비운다. 안 그러면 다음 피벗·다음 레이어가 남의 색을 물려받는다.
+            currentPivotGlowColor = transform.glowColor();
+            try {
+                consumer.accept(stack);
+            } finally {
+                currentPivotGlowColor = null;
+            }
         }
 
         queue.clear();
@@ -1047,7 +1119,7 @@ public class Avatar {
     private int getVersionStatus() {
         if (version == null || (NetworkStuff.latestVersion != null && version.compareTo(NetworkStuff.latestVersion) > 0))
             return 0;
-        return version.compareTo(FiguraMod.VERSION);
+        return version.compareTo(FiguraMod.COMPARE_VERSION);
     }
 
     // -- loading -- // 

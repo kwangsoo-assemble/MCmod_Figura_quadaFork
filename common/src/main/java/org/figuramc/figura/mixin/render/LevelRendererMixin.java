@@ -39,6 +39,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.List;
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
@@ -46,6 +49,26 @@ public abstract class LevelRendererMixin {
     @Shadow @Final private EntityRenderDispatcher entityRenderDispatcher;
     @Shadow @Final private RenderBuffers renderBuffers;
     @Shadow @Final private Minecraft minecraft;
+
+    /**
+     * 파츠 발광이 켜져 있으면 아웃라인 후처리 패스를 강제로 켠다.
+     *
+     * <p>{@code renderLevel} 은 이 메서드의 반환값으로 {@code entity_outline} PostChain 을
+     * 프레임그래프에 넣을지 정한다(그 값은 {@code addMainPass} 에도 넘어가 아웃라인 타겟의
+     * read/write 선언까지 좌우한다). 발광 버프를 받은 엔티티가 하나도 없으면 false 라서,
+     * 아웃라인 타겟에 그려도 <b>테두리가 아니라 불투명 실루엣</b>이 화면을 덮는다.
+     *
+     * <p>⚠⚠ {@code Minecraft.shouldEntityAppearGlowing} / {@code Entity.isCurrentlyGlowing} 은
+     * <b>절대 건드리지 마라.</b> 그러면 그 엔티티가 {@code OutlineBufferSource} 로 감싸이고,
+     * {@code EntityOutlineGenerator} 가 정점 색을 팀 색으로 덮어써 파츠별 색이 전부 하나로 뭉개진다.
+     * 그 경로의 {@code setColor} 는 레코드 단위 no-op 이라 우회할 수 없다.
+     * 여기서는 <b>프레임 단위 게이트만</b> 열고 엔티티 발광 플래그는 그대로 둔다.
+     */
+    @Inject(method = "collectVisibleEntities", at = @At("RETURN"), cancellable = true)
+    private void figura$forcePartGlowOutlinePass(Camera camera, Frustum frustum, List<Entity> output, CallbackInfoReturnable<Boolean> cir) {
+        if (!cir.getReturnValueZ() && AvatarManager.anyLoadedAvatarHasPartGlow())
+            cir.setReturnValue(true);
+    }
 
     @ModifyArg(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"))
     private Entity renderLevelRenderEntity(Entity entity) {
@@ -101,6 +124,8 @@ public abstract class LevelRendererMixin {
         if (avatar == null || avatar.luaRuntime == null || (color = avatar.luaRuntime.renderer.blockOutlineColor) == null)
             return colorInt;
 
+        // colorFromFloat 는 (alpha, red, green, blue) 순서다 — blockOutlineColor 는 (r, g, b, a) 라 w 가 먼저 온다.
+        // 원본 1.21.8 브랜치도 이 순서다. 0.1.6-dev(1.21.4) 판을 이식하면서 (x, y, z, w) 가 되살아났던 것을 2026-09-25 되돌림.
         return ARGB.colorFromFloat((float) color.w, (float) color.x, (float) color.y, (float) color.z);
     }
 }
