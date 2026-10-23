@@ -678,9 +678,10 @@ public class Avatar {
 
         stack.pushPose();
         if (!config) {
-            stack.rotateDegrees(Axis.ZP, arm.zRot);
-            stack.rotateDegrees(Axis.YP, arm.yRot);
-            stack.rotateDegrees(Axis.XP, arm.xRot);
+            // ⚠ ModelPart 회전은 라디안 — rotateDegrees 로 넘기면 팔 회전이 거의 사라진다(1.21.8 은 Axis.rotation(라디안))
+            stack.rotate(Axis.ZP, arm.zRot);
+            stack.rotate(Axis.YP, arm.yRot);
+            stack.rotate(Axis.XP, arm.xRot);
         }
         render(player, 0f, tickDelta, 1f, stack, collector, light, OverlayTexture.NO_OVERLAY, playerModel, filter, false, false, 0);
         stack.popPose();
