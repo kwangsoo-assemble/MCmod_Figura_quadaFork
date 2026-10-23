@@ -278,6 +278,8 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
       `fetchBackend` · `reloadAvatar` 가 데이터로도 되살린다 · `unpinAvatar` · `resetPinsAndLock` 은 둘 다 푼다
     - 로드 알림: `UserData.loadAvatar` 끝 → 대기열 → `tickLoadedAvatars` 첫머리(클라 스레드 · panic 이어도)에서 듣는 쪽 호출
     - `LocalAvatarLoader.compileAvatarFolder` — 폴더 지문(상대 경로 · 수정 시각 · 크기 · 순서 무관 합)이 같으면 사본 + `metadata.uuid` 만 바꿈 · 16개 넘으면 비움
+    - ★ `ServerDataStore.flushEvents` — **ENTITY_INIT 전인 아바타는 STATE_CHANGED · SIGNAL 분배에서 뺀다**. 리플레이 시작 때 애드온이 엔티티보다 아바타를 먼저 입히면
+      변경 이벤트가 엔티티 없이 먼저 돌아 템플릿 `nickName.lua:18`(엔티티 API) 오류로 아바타가 멈췄다(🙋 🎬 3 «처음 아바타가 바뀌기까지 고장» · 로그 실측). 지금 값은 ENTITY_INIT 때 `onAvatarInit` 이 다시 준다
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

@@ -95,6 +95,9 @@ public final class ServerDataStore {
         if (d.isEmpty()) return;
         List<Avatar> avatars = new ArrayList<>(AvatarManager.getLoadedAvatars());
         avatars.addAll(AvatarManager.getLoadedCEMAvatars());
+        // ⚠ ENTITY_INIT 전인 아바타는 뺀다 — 엔티티 없이 STATE_CHANGED 가 먼저 돌면 엔티티 API 를 부르는 스크립트가 오류로 멈춘다
+        //   (리플레이 애드온이 플레이어 엔티티보다 아바타를 먼저 입힐 때 실측 · M42). 지금 값은 ENTITY_INIT 때 onAvatarInit 이 «처음» 으로 다시 준다
+        avatars.removeIf(a -> a.luaRuntime == null || a.luaRuntime.getUser() == null);
 
         for (ServerDataModel.Change c : d.own()) {
             LuaValue subj = LuaValue.valueOf(c.subject().toString());
