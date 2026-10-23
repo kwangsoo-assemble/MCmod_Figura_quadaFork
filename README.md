@@ -37,6 +37,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
+| Minecraft 26.3 | A separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/MCmod_Figura_quadaFork/tree/26.3) (see "26.3 branch" below) |
 
 ## Changes from upstream
 
@@ -325,6 +326,33 @@ Code: `gui/screens/NonhostWardrobeScreen.java` (new) · `gui/widgets/lists/Avata
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
+## 26.3 branch (test build)
+
+There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/MCmod_Figura_quadaFork/tree/26.3), for Minecraft **26.3**.
+`main` (1.21.8) is unchanged, and this README is kept identical on both branches.
+
+| Item | Value |
+|---|---|
+| Minecraft | 26.3 (Fabric) |
+| Java | 25 |
+| Mod version | `0.1.6.1+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
+| Based on | The `26.3` branch of [NoFigura](https://github.com/Stranik2504/NoFigura) (a 26.x port of Figura), with this fork's changes applied on top |
+| Companion plugins | The `26.3` branches of both plugin repositories (Paper / Purpur 26.3) |
+| Release | `v0.1.6.1+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
+
+- **Included** — the FSB client (connect, upload, download, pings) · server packets for other players' avatars · `server_data` · single-player local mode ·
+  the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12).
+- **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
+  Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
+  the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17).
+- **Fixed on 26.3** — HUD parts not being drawn · text task backgrounds and outlines now drawn with vanilla's text feature ·
+  the game crashing on render types such as `CUTOUT` when Improved Transparency (OIT) is on · a crash with the `LINES` render type ·
+  `GLINT2` and `SOLID` now look the way they do on 1.21.8 · `SOLID` under Iris shader packs · a crash when quitting the game.
+- **Known issues** — text task backgrounds do not show on the HUD ·
+  with OIT on, the blending render types Figura defines itself (`BLURRY`, `CUTOUT_EMISSIVE_SOLID`, `TEXTURED_GLINT`) lose translucency sorting ·
+  `END_PORTAL`, `END_GATEWAY` and `TEXTURED_PORTAL` come out black under Iris shader packs · there is no 26.3 build of SillyPlugin yet.
+- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.1+26.3-fabric-mc.jar`.
+
 ## Building
 
 JDK 21 is required (newer JDKs do not work with this Gradle version).
@@ -392,6 +420,7 @@ ex)
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
+| Minecraft 26.3 | 시험 가지 [`26.3`](https://github.com/kwangsoo-assemble/MCmod_Figura_quadaFork/tree/26.3) 이 따로 있다 (아래 «26.3 가지») |
 
 ## 원본 대비 변경 사항
 
@@ -661,6 +690,33 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
+
+## 26.3 가지 (시험판)
+
+Minecraft **26.3** 용 시험 가지 [`26.3`](https://github.com/kwangsoo-assemble/MCmod_Figura_quadaFork/tree/26.3) 이 따로 있다.
+main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔다.
+
+| 항목 | 값 |
+|---|---|
+| 게임 버전 | Minecraft 26.3 (Fabric) |
+| Java | 25 |
+| 모드 버전 | `0.1.6.1+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
+| 바탕 | [NoFigura](https://github.com/Stranik2504/NoFigura) 의 `26.3` 가지 (Figura 의 26.x 이식) 위에 이 포크의 변경을 얹었다 |
+| 짝 플러그인 | 두 플러그인 저장소의 `26.3` 가지 (Paper · Purpur 26.3) |
+| 릴리스 | `v0.1.6.1+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
+
+- **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
+  버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12).
+- **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
+  파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
+  남 세팅용 옷장 화면(17).
+- **26.3 에서 고친 것** — HUD 파츠가 안 그려지던 것 · 글 태스크 배경 · 바깥선을 바닐라 글 기능으로 그리기 ·
+  Improved Transparency(OIT)를 켜면 `CUTOUT` 같은 렌더 타입에서 게임이 멈추던 것 · `LINES` 렌더 타입 크래시 ·
+  `GLINT2` · `SOLID` 를 1.21.8 모습으로 · Iris 셰이더팩에서 `SOLID` · 게임을 끌 때 나던 크래시.
+- **알려진 문제** — HUD 에서 글 태스크 배경이 안 보인다 ·
+  OIT 를 켜면 Figura 가 만든 섞기 렌더 타입(`BLURRY` · `CUTOUT_EMISSIVE_SOLID` · `TEXTURED_GLINT`)이 반투명 정렬을 잃는다 ·
+  Iris 셰이더팩에서 `END_PORTAL` · `END_GATEWAY` · `TEXTURED_PORTAL` 이 검게 나온다 · SillyPlugin 의 26.3 판은 아직 없다.
+- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.1+26.3-fabric-mc.jar`.
 
 ## 빌드
 
