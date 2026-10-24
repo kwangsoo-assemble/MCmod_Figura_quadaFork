@@ -4,12 +4,16 @@ import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.api.device.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.renderpearl.api.pipeline.ShaderType;
 import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.feature.ItemFeatureRenderer;
+import net.minecraft.client.renderer.oit.OitPipelineSet;
 import net.minecraft.client.renderer.rendertype.*;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
@@ -37,7 +41,7 @@ public enum FiguraRenderTypes {
     END_GATEWAY(t -> RenderTypes.endGateway(), false),
     TEXTURED_PORTAL(FiguraRenderType.TEXTURED_PORTAL),
 
-    GLINT(t -> RenderTypes.patternedShieldGlint(), false, false),
+    GLINT(t -> FiguraRenderType.SHIELD_GLINT, false, false),
     GLINT2(t -> FiguraRenderType.GLINT, false, false),
     TEXTURED_GLINT(FiguraRenderType.TEXTURED_GLINT, true, false),
 
@@ -130,6 +134,7 @@ public enum FiguraRenderTypes {
         public static final RenderType GLINT = FiguraRenderTypeFactory.create(
                 "figura_glint",
                 RenderSetup.builder(RenderPipelines.GLINT)
+                        .setOitPipelines(FiguraRenderPipelines.GLINT_OIT)
                         .withTexture("Sampler0", ItemFeatureRenderer.ENCHANTED_GLINT_ITEM)
                         .setTextureTransform(TextureTransform.GLINT_TEXTURING)
                         .withForcedSolidModelPhase()
@@ -144,12 +149,24 @@ public enum FiguraRenderTypes {
                         .createRenderSetup()
         );
 
-        // OIT 짝 없음 — 바닐라 GLINT 반짝임(patterned_shield_glint · trimmed_armor_glint)도 없다(다른 파이프라인의 짝은 안 맞는다).
-        // 더하기 섞기라 순서와 무관 · OIT 를 켜면 FiguraSubmitUtils 가 solid 단계로 보낸다
+        // 바닐라 patternedShieldGlint 사본 — 바닐라 렌더 타입에는 OIT 짝을 못 붙인다
+        public static final RenderType SHIELD_GLINT = FiguraRenderTypeFactory.create(
+                "figura_shield_glint",
+                RenderSetup.builder(RenderPipelines.GLINT)
+                        .setOitPipelines(FiguraRenderPipelines.GLINT_OIT)
+                        .withTexture("Sampler0", ItemFeatureRenderer.ENCHANTED_GLINT_ITEM)
+                        .setTextureTransform(TextureTransform.ENTITY_GLINT_TEXTURING)
+                        .withForcedSolidModelPhase()
+                        .createRenderSetup()
+        );
+
+        // 반짝임 셋은 GLINT_OIT 짝을 쓴다 — 짝이 없으면 OIT 를 켤 때 FiguraSubmitUtils 가 solid 로 보내,
+        // «깊이 같음» 으로 찾을 반투명 바탕 깊이가 없어 안 보였다(반투명 바탕은 OIT 단계라 메인 깊이를 안 쓴다)
         public static final Function<Identifier, RenderType> TEXTURED_GLINT = Util.memoize(
                 texture -> FiguraRenderTypeFactory.create(
                         "figura_textured_glint_direct",
                         RenderSetup.builder(RenderPipelines.GLINT)
+                                .setOitPipelines(FiguraRenderPipelines.GLINT_OIT)
                                 .withTexture("Sampler0", texture)
                                 .setTextureTransform(TextureTransform.ENTITY_GLINT_TEXTURING)
                                 .createRenderSetup()
@@ -167,6 +184,24 @@ public enum FiguraRenderTypes {
                 .withDepthStencilState(DepthStencilState.DEFAULT)
                 .withCull(false)
                 .build();
+
+        // 반짝임 셋의 OIT 짝 — 바닐라 GLINT 파이프라인과 같은 조각 · 묶음 · 꼭짓점(POSITION_TEX)에 «빛만 더하는 표면»(OIT_ADDITIVE · 바닐라 OIT_ENERGY_SWIRL 과 같은 꼴).
+        // 깊이 · 섞기는 넣지 않는다 — OIT 단계 조각이 정한다. 조각 셰이더만 Figura 것(assets/figura/shaders/core/glint_oit.fsh)
+        // ⚠ OitPipelineSet 은 꼭짓점 꼴을 재지 않는다 — 렌더 타입의 주 파이프라인(GLINT)과 꼴을 맞춰 둔다
+        public static final OitPipelineSet GLINT_OIT = OitPipelineSet.builder("figura_glint",
+                RenderPipeline.builder()
+                        .withBindGroupLayout(BindGroupLayouts.GLOBALS)  // = 바닐라 GLOBALS_SNIPPET(비공개)
+                        .withBindGroupLayout(BindGroupLayouts.PROJECTION)
+                        .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                        .withBindGroupLayout(BindGroupLayouts.FOG)
+                        .withVertexShader("core/glint")
+                        .withFragmentShader(FiguraIdentifier.of("core/glint_oit"))
+                        .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+                        .withCull(false)
+                        .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+                        .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                        .withShaderDefine("OIT_ADDITIVE")
+        ).build();
 
         private static RenderPipeline buildFiguraSolid() {
             RenderPipeline base = RenderPipelines.ENTITY_SOLID;
