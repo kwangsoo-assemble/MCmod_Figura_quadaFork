@@ -355,10 +355,10 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
 |---|---|
 | Minecraft | 26.3 (Fabric) |
 | Java | 25 |
-| Mod version | `0.1.6.6+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
+| Mod version | `0.1.6.7+26.3` — the fourth number is this branch's own release number (counted separately from `main`) |
 | Based on | The `26.3` branch of [NoFigura](https://github.com/Stranik2504/NoFigura) (a 26.x port of Figura), with this fork's changes applied on top |
 | Companion plugins | The `26.3` branches of both plugin repositories (Paper / Purpur 26.3) |
-| Release | `v0.1.6.6+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
+| Release | `v0.1.6.7+26.3` — not marked as "Latest", so it does not get mixed up with the 1.21.8 releases |
 
 - **Included** — the FSB client (connect, upload, download, pings) · server packets for other players' avatars · `server_data` · single-player local mode ·
   the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12) · the `FirstPerson` parent type (18).
@@ -373,11 +373,13 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
   first-person arm parts barely rotating (radians passed as degrees) ·
   translucency sorting being off in the first-person hand pass with OIT on (vanilla translucent held items included) ·
   the first-person hand pass now uses OIT too — translucent parts that cut into each other, or into a held stained glass, blend correctly
-  (vanilla's hand pass has no OIT · only without a shader pack · runs only when translucent hand parts are present — measured about 0.08 ms per frame).
-- **Known issues** — with OIT on, the blending render types Figura defines itself (`BLURRY`, `CUTOUT_EMISSIVE_SOLID`, `TEXTURED_GLINT`) lose translucency sorting ·
+  (vanilla's hand pass has no OIT · only without a shader pack · runs only when translucent hand parts are present — measured about 0.08 ms per frame) ·
+  the blending render types Figura defines itself (`BLURRY`, `CUTOUT_EMISSIVE_SOLID`) losing translucency sorting with OIT on (they now have vanilla OIT counterparts).
+- **Known issues** — with OIT on, a `TEXTURED_GLINT` (glint) secondary layer over a translucent base does not show
+  (like vanilla's glint it has no OIT counterpart, so it is drawn in the solid phase, and a translucent base leaves no depth to draw on) ·
   `END_PORTAL`, `END_GATEWAY` and `TEXTURED_PORTAL` come out black under Iris shader packs ·
   there is no 26.3 build of SillyPlugin yet.
-- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.6+26.3-fabric-mc.jar`.
+- **Building** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.7+26.3-fabric-mc.jar`.
 
 ## Building
 
@@ -746,10 +748,10 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 |---|---|
 | 게임 버전 | Minecraft 26.3 (Fabric) |
 | Java | 25 |
-| 모드 버전 | `0.1.6.6+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
+| 모드 버전 | `0.1.6.7+26.3` — 넷째 자리는 이 가지의 판 번호다 (main 과 따로 센다) |
 | 바탕 | [NoFigura](https://github.com/Stranik2504/NoFigura) 의 `26.3` 가지 (Figura 의 26.x 이식) 위에 이 포크의 변경을 얹었다 |
 | 짝 플러그인 | 두 플러그인 저장소의 `26.3` 가지 (Paper · Purpur 26.3) |
-| 릴리스 | `v0.1.6.6+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
+| 릴리스 | `v0.1.6.7+26.3` — 1.21.8 판과 섞이지 않게 «Latest» 로 표시하지 않는다 |
 
 - **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
   버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12) · `FirstPerson` 부모 타입(18).
@@ -764,11 +766,13 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
   1인칭 팔 파츠의 회전이 거의 사라지던 것(라디안을 도로 넘김) ·
   OIT 를 켜면 1인칭 손 패스의 반투명 정렬이 꺼지던 것(바닐라 반투명 손 아이템 포함) ·
   1인칭 손 패스도 OIT 로 — 서로 파고든 반투명 파츠 · 손에 든 색유리와 겹친 부피가 맞게 섞인다
-  (바닐라 손 패스에는 OIT 가 없다 · 셰이더팩이 없을 때 · 반투명 손 파츠가 있을 때만 돈다 — 실측 약 0.08 ms/프레임).
-- **알려진 문제** — OIT 를 켜면 Figura 가 만든 섞기 렌더 타입(`BLURRY` · `CUTOUT_EMISSIVE_SOLID` · `TEXTURED_GLINT`)이 반투명 정렬을 잃는다 ·
+  (바닐라 손 패스에는 OIT 가 없다 · 셰이더팩이 없을 때 · 반투명 손 파츠가 있을 때만 돈다 — 실측 약 0.08 ms/프레임) ·
+  OIT 를 켜면 Figura 가 만든 섞기 렌더 타입 `BLURRY` · `CUTOUT_EMISSIVE_SOLID` 가 반투명 정렬을 잃던 것(바닐라 OIT 짝을 붙였다).
+- **알려진 문제** — OIT 를 켜면 반투명 바탕 위의 보조 레이어 `TEXTURED_GLINT`(반짝임)가 안 보인다
+  (바닐라 반짝임처럼 OIT 짝이 없어 불투명 단계에서 그려지는데, 반투명 바탕은 깊이를 남기지 않는다) ·
   Iris 셰이더팩에서 `END_PORTAL` · `END_GATEWAY` · `TEXTURED_PORTAL` 이 검게 나온다 ·
   SillyPlugin 의 26.3 판은 아직 없다.
-- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.6+26.3-fabric-mc.jar`.
+- **빌드** — JDK 25 · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.7+26.3-fabric-mc.jar`.
 
 ## 빌드
 
