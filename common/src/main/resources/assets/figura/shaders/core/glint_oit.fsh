@@ -27,7 +27,9 @@ void main() {
     }
 
     #ifdef OIT_ALPHA_ONLY
-    executeAlphaOnlyPhase(gl_FragCoord.z, color.a);
+    // 바닐라 entity.fsh 의 OIT_ADDITIVE 와 같다 — 깊이 범위 단계는 알파 0.99 초과를 «불투명» 으로 보고(OIT_FULLY_OPAQUE_ALPHA)
+    // 그 뒤를 컬링 깊이로 잘라 낸다. 반짝임 텍스처는 알파가 1 이라 이 상한이 없으면 반짝임 뒤의 반투명이 통째로 사라진다
+    executeAlphaOnlyPhase(gl_FragCoord.z, min(0.99, color.a));
     #else
     float fade = (1.0f - total_fog_value(sphericalVertexDistance, cylindricalVertexDistance, FogEnvironmentalStart, FogEnvironmentalEnd, FogRenderDistanceStart, FogRenderDistanceEnd)) * GlintAlpha;
     vec3 glint = color.rgb * fade;
