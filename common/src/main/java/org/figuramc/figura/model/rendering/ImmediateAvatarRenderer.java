@@ -610,13 +610,7 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             ret.fullBright = true;
             ret.renderType = RenderTypes.TRANSLUCENT_CULL.get(id);
         } else {
-            // ★ 앞렌더 마커(#FFFFFB 계열)가 칠해진 파츠의 글린트는 깊이 테스트를 끈다 (2026-09-14).
-            //   이유는 RenderTypes#frontLayerGlint 주석 — 요약하면 셰이더가 **본체의** 깊이만
-            //   앞으로 당겨 버려서 글린트의 EQUAL_DEPTH_TEST 가 영원히 불일치한다.
-            //   ⚠ 본체의 정점색은 **primary 슬롯**이므로 언제나 customization.color 를 본다.
-            //   ret.color(secondary 면 color2)를 쓰면 상관없는 색을 재는 것이다.
-            RenderType frontGlint = RenderTypes.frontLayerGlint(types, customization.color, id);
-            ret.renderType = frontGlint != null ? frontGlint : types.get(id);
+            ret.renderType = types.get(id);
         }
 
         return ret;
