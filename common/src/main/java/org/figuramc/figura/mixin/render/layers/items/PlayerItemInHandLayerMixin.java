@@ -79,7 +79,7 @@ public abstract class PlayerItemInHandLayerMixin <S extends AvatarRenderState, M
             );
 
             if (!handled)
-                itemStackRenderState.submit(stack, submitNodeCollector, light, OverlayTexture.NO_OVERLAY, avatarRenderState.outlineColor);
+                itemStackRenderState.submit(stack, submitNodeCollector, light, OverlayTexture.NO_OVERLAY, av.pivotOutlineOr(avatarRenderState.outlineColor));
         })) {
             ci.cancel();
         }

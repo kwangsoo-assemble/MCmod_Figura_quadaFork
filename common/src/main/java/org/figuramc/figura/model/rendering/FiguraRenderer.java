@@ -66,7 +66,23 @@ public abstract class FiguraRenderer {
     public VanillaModelData vanillaModelData = new VanillaModelData();
 
     public PartFilterScheme currentFilterScheme;
-    public final HashMap<ParentType, ConcurrentLinkedQueue<Pair<FiguraMat4, FiguraMat3>>> pivotCustomizations = new HashMap<>(ParentType.values().length);
+    public final HashMap<ParentType, ConcurrentLinkedQueue<PivotTransform>> pivotCustomizations = new HashMap<>(ParentType.values().length);
+
+    // 피벗 변환 + 그 피벗 파츠의 발광색(ARGB · 0 = 없음) — 피벗에 붙는 바닐라 갑옷 · 아이템이 같은 색으로 빛난다
+    public record PivotTransform(FiguraMat4 pos, FiguraMat3 normal, int glowColor) {}
+
+    // 부위 파츠(머리 · 몸 · 팔 · 다리) 발광색 — 모델 렌더에서 채우고, 그 뒤 도는 바닐라 갑옷 · 아이템 레이어가 읽는다(피벗이 없어도)
+    public final HashMap<ParentType, Integer> vanillaPartGlow = new HashMap<>();
+
+    /** 주어진 부위 중 하나라도 발광 중이면 그 색(ARGB) · 없으면 0 */
+    public int findVanillaPartGlow(ParentType... types) {
+        for (ParentType type : types) {
+            Integer color = vanillaPartGlow.get(type);
+            if (color != null)
+                return color;
+        }
+        return 0;
+    }
     protected final List<FiguraTextureSet> textureSets = new ArrayList<>();
     public final HashMap<String, FiguraTexture> textures = new HashMap<>();
     public final HashMap<String, FiguraTexture> customTextures = new HashMap<>();

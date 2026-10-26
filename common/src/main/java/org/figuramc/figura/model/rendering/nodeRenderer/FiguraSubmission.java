@@ -18,16 +18,10 @@ public record FiguraSubmission(
     Map<RenderType, List<Consumer<VertexConsumer>>> secondaryBuffers,
     List<QueuedRenderTask> renderTasks,
     List<QueuedPivotBox> pivotBoxes,
-    int outlineColor,
-    boolean outlineOnly  // outline 단계용 — 바깥선만 그린다(본 조각은 solid · translucent 단계가 그린다)
+    // 바깥선(발광) — 키는 바닐라 바깥선 렌더 타입 · 동작은 이미 파츠 발광색으로 덮는다(outline 단계가 그린다)
+    Map<RenderType, List<Consumer<VertexConsumer>>> outlineBuffers
 ) implements SubmitNode, BatchableSubmit {
     public static final FeatureRendererType<FiguraSubmission> TYPE = FeatureRendererType.create("figura:avatar_submission");
-
-    public FiguraSubmission(Map<RenderType, List<Consumer<VertexConsumer>>> primaryBuffers,
-                            Map<RenderType, List<Consumer<VertexConsumer>>> secondaryBuffers,
-                            List<QueuedRenderTask> renderTasks, List<QueuedPivotBox> pivotBoxes, int outlineColor) {
-        this(primaryBuffers, secondaryBuffers, renderTasks, pivotBoxes, outlineColor, false);
-    }
 
     @Override
     public Object batchKey() {

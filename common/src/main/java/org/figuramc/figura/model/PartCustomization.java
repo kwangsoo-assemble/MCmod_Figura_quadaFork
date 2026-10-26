@@ -50,7 +50,7 @@ public class PartCustomization {
     public Integer overlay = null;
     /**
      * 파츠별 바닐라 발광(아웃라인). {@code null} = 부모에게서 상속.
-     * 26.3 가지 첫 판은 값만 받는다 — 발광 패스는 아직 옮기지 않았다(main 에 있다 · M43). 아바타의 {@code setGlow} 호출이 오류 없이 돌게 하려고 둔다
+     * 그리기는 ImmediateFiguraRenderer — 같은 정점을 바닐라 바깥선 렌더 타입으로 outline 단계에 한 번 더 제출한다
      */
     public Boolean glow = null;
     /** 발광 색. {@code null} = 부모 상속 */

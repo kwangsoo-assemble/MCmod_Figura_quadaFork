@@ -556,6 +556,7 @@ public class Avatar {
         renderer.vanillaModelData.update(entityModel);
         renderer.yaw = yaw;
         renderer.entity = entity;
+        renderer.vanillaPartGlow.clear();
 
         renderer.setupRenderer(
             filter, collector, stack,
@@ -1033,23 +1034,36 @@ public class Avatar {
         if (renderer == null || !loaded || !parent.isPivot)
             return false;
 
-        Queue<Pair<FiguraMat4, FiguraMat3>> queue = renderer.pivotCustomizations.computeIfAbsent(parent, p -> new ConcurrentLinkedQueue<>());
+        Queue<FiguraRenderer.PivotTransform> queue = renderer.pivotCustomizations.computeIfAbsent(parent, p -> new ConcurrentLinkedQueue<>());
 
         if (queue.isEmpty())
             return false;
 
         int i = 0;
         while (!queue.isEmpty() && i++ < 1000) { // limit of 1000 pivot part renders, just in case something goes infinitely somehow
-            Pair<FiguraMat4, FiguraMat3> matrixPair = queue.poll();
-            PIVOT_PART_RENDERING_CUSTOMIZATION.setPositionMatrix(matrixPair.getFirst());
-            PIVOT_PART_RENDERING_CUSTOMIZATION.setNormalMatrix(matrixPair.getSecond());
+            FiguraRenderer.PivotTransform pivot = queue.poll();
+            PIVOT_PART_RENDERING_CUSTOMIZATION.setPositionMatrix(pivot.pos());
+            PIVOT_PART_RENDERING_CUSTOMIZATION.setNormalMatrix(pivot.normal());
             PIVOT_PART_RENDERING_CUSTOMIZATION.needsMatrixRecalculation = false;
             PoseStack stack = PIVOT_PART_RENDERING_CUSTOMIZATION.copyIntoGlobalPoseStack();
-            consumer.accept(stack);
+            currentPivotGlowColor = pivot.glowColor();
+            try {
+                consumer.accept(stack);
+            } finally {
+                currentPivotGlowColor = 0;
+            }
         }
 
         queue.clear();
         return true;
+    }
+
+    // 지금 그리는 피벗의 발광색(ARGB · 0 = 없음) — pivotPartRender 가 콜백을 부르는 동안만 값이 있다(레이어 믹스인이 바깥선 색으로 쓴다)
+    public int currentPivotGlowColor = 0;
+
+    /** 바깥선 색 — 피벗 발광이 있으면 그 색, 없으면 원래 값(엔티티 바깥선 색) */
+    public int pivotOutlineOr(int fallback) {
+        return currentPivotGlowColor != 0 ? currentPivotGlowColor : fallback;
     }
 
     public void updateMatrices(EntityModel<?> entityModel, PoseStack stack) {

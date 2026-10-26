@@ -22,6 +22,7 @@ import org.figuramc.figura.math.matrix.FiguraMat4;
 import org.figuramc.figura.math.vector.FiguraVec3;
 import org.figuramc.figura.math.vector.FiguraVec4;
 import org.figuramc.figura.model.*;
+import org.figuramc.figura.model.rendering.nodeRenderer.ConstantColorVertexConsumer;
 import org.figuramc.figura.model.rendering.nodeRenderer.FiguraSubmission;
 import org.figuramc.figura.model.rendering.texture.FiguraRenderTypes;
 import org.figuramc.figura.model.rendering.texture.FiguraTexture;
@@ -199,7 +200,7 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
             if (currentSubmitNodeCollector != null) {
                 FiguraSubmission submission = new FiguraSubmission(
                         Map.copyOf(vertexBuffer.primaryBuffers), Map.copyOf(vertexBuffer.secondaryBuffers),
-                        List.copyOf(queuedRenderTasks), List.copyOf(queuedPivotBoxes), outlineColor
+                        List.copyOf(queuedRenderTasks), List.copyOf(queuedPivotBoxes), Map.copyOf(vertexBuffer.outlineBuffers)
                 );
                 this.lastSubmission = submission;
                 FiguraSubmitUtils.submit(currentSubmitNodeCollector, submission);
@@ -358,6 +359,14 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
             boolean renderPivot = shouldRenderPivots > 0;
             boolean renderTasks = !part.renderTasks.isEmpty();
             boolean renderPivotParts = part.parentType.isPivot && allowPivotParts;
+
+            // 부위 파츠의 발광을 기록한다 — 이 뒤 도는 바닐라 갑옷 · 아이템 레이어가 읽는다(피벗 파츠가 없는 아바타에서도
+            // «왼팔 발광 → 왼팔 갑옷 · 아이템 발광» 이 되게)
+            if (VANILLA_GLOW_PARTS.contains(part.parentType)) {
+                int partGlow = explicitGlowOf(customizationStack.peek());
+                if (partGlow != 0)
+                    vanillaPartGlow.putIfAbsent(part.parentType, partGlow);
+            }
 
             if (renderPivot || renderTasks || renderPivotParts) {
                 // fix light and overlay
@@ -542,8 +551,22 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
     protected void savePivotTransform(ParentType parentType, PartCustomization customization) {
         FiguraMat4 currentPosMat = customization.getPositionMatrix();
         FiguraMat3 currentNormalMat = customization.getNormalMatrix();
-        ConcurrentLinkedQueue<Pair<FiguraMat4, FiguraMat3>> queue = pivotCustomizations.computeIfAbsent(parentType, p -> new ConcurrentLinkedQueue<>());
-        queue.add(new Pair<>(currentPosMat, currentNormalMat)); // These are COPIES, so ok to add
+        ConcurrentLinkedQueue<PivotTransform> queue = pivotCustomizations.computeIfAbsent(parentType, p -> new ConcurrentLinkedQueue<>());
+        queue.add(new PivotTransform(currentPosMat, currentNormalMat, explicitGlowOf(customization))); // These are COPIES, so ok to add
+    }
+
+    private static final java.util.EnumSet<ParentType> VANILLA_GLOW_PARTS = java.util.EnumSet.of(
+            ParentType.Head, ParentType.Body,
+            ParentType.LeftArm, ParentType.RightArm,
+            ParentType.LeftLeg, ParentType.RightLeg);
+
+    // setGlow 가 켜진 파츠만의 발광색(ARGB · 0 = 없음) — 바닐라 갑옷 · 아이템은 이 색이 없으면 엔티티 자신의 바깥선 색을 쓴다
+    private int explicitGlowOf(PartCustomization customization) {
+        if (!Boolean.TRUE.equals(customization.glow))
+            return 0;
+        if (customization.glowColor != null)
+            return ColorUtils.rgbToInt(customization.glowColor) | 0xFF000000;
+        return outlineColor != 0 ? outlineColor | 0xFF000000 : 0xFFFFFFFF;
     }
 
     protected FiguraMat4 partToWorldMatrices(PartCustomization cust) {
@@ -628,10 +651,21 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
             return;
         }
 
+        // 바깥선은 주 렌더 타입만 — 보조 레이어(반짝임 등 덧칠)는 바깥선 모양을 바꾸지 않는다(바닐라 submitModel 도 주 모델만)
+        int glowColor = currentSubmitNodeCollector != null ? glowColorOf(customization) : 0;
         if (primary.renderType != null)
-            pushToBuffer(faceCount, primary, customization, textureSet, vertices);
+            pushToBuffer(faceCount, primary, customization, textureSet, vertices, glowColor);
         if (secondary.renderType != null)
-            pushToBuffer(faceCount, secondary, customization, textureSet, vertices);
+            pushToBuffer(faceCount, secondary, customization, textureSet, vertices, 0);
+    }
+
+    // 파츠 발광색(ARGB · 0 = 없음) — setGlow 가 켜진 파츠는 그 색(색이 없으면 아바타 바깥선 색 · 그것도 없으면 흰색) ·
+    // 아니면 아바타 바깥선 색(엔티티 발광의 팀 색 · renderer:setOutlineColor)
+    private int glowColorOf(PartCustomization customization) {
+        int explicit = explicitGlowOf(customization);
+        if (explicit != 0)
+            return explicit;
+        return outlineColor == 0 ? 0 : outlineColor | 0xFF000000;
     }
 
     private VertexData getTexture(PartCustomization customization, FiguraTextureSet textureSet, boolean primary) {
@@ -683,7 +717,7 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
     private static final FiguraVec4 pos = FiguraVec4.of();
     private static final FiguraVec3 normal = FiguraVec3.of();
     private static final FiguraVec3 uv = FiguraVec3.of(0, 0, 1);
-    private void pushToBuffer(int faceCount, VertexData vertexData, PartCustomization customization, FiguraTextureSet textureSet, List<Vertex> vertices) {
+    private void pushToBuffer(int faceCount, VertexData vertexData, PartCustomization customization, FiguraTextureSet textureSet, List<Vertex> vertices, int glowColor) {
         int vertCount = faceCount * 4;
 
         FiguraVec3 uvFixer = FiguraVec3.of();
@@ -692,7 +726,7 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
         int overlay = customization.overlay;
         int light = vertexData.fullBright ? LightCoordsUtil.FULL_BRIGHT : customization.light;
 
-        vertexBuffer.getBufferFor(vertexData.renderType, vertexData.primary, vertexConsumer -> {
+        Consumer<VertexConsumer> writer = vertexConsumer -> {
             // 26.3 선 형식(POSITION_COLOR_NORMAL_LINE_WIDTH)은 정점마다 굵기를 받는다 — 빠지면 «Missing elements in vertex» 크래시.
             // 1.21.8 lines() 의 기본 굵기(창 크기에 맞춘 값)와 같게 · 선 형식이 아니면 BufferBuilder 가 무시한다
             float lineWidth = Minecraft.getInstance().getWindow().getAppropriateLineWidth();
@@ -717,7 +751,21 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
                         .setLineWidth(lineWidth)
                         .setNormal((float) normal.x, (float) normal.y, (float) normal.z);
             }
-        });
+        };
+
+        RenderType renderType = vertexData.renderType;
+        // 투명 + 발광은 본 렌더 타입이 바깥선 타입이다 — 주 화면(solid)에 그리지 말고 outline 단계로만
+        if (renderType.isOutline() && currentSubmitNodeCollector != null) {
+            if (glowColor != 0)
+                vertexBuffer.addOutline(renderType, vc -> writer.accept(new ConstantColorVertexConsumer(vc, glowColor)));
+            return;
+        }
+
+        vertexBuffer.getBufferFor(renderType, vertexData.primary, writer);
+        // 발광 — 같은 정점을 바닐라 바깥선 렌더 타입에 파츠 발광색으로 한 번 더(색은 정점 색 · 바깥선 짝이 없는 타입은 바깥선이 없다)
+        if (glowColor != 0)
+            renderType.outline().ifPresent(outline ->
+                    vertexBuffer.addOutline(outline, vc -> writer.accept(new ConstantColorVertexConsumer(vc, glowColor))));
     }
 
     private static class VertexData {
@@ -731,11 +779,16 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
     private static class VertexBuffer {
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> primaryBuffers = new LinkedHashMap<>();
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> secondaryBuffers = new LinkedHashMap<>();
+        private final HashMap<RenderType, List<Consumer<VertexConsumer>>> outlineBuffers = new LinkedHashMap<>();
 
         public void getBufferFor(RenderType renderType, boolean primary, Consumer<VertexConsumer> consumer) {
             HashMap<RenderType, List<Consumer<VertexConsumer>>> buffer = primary ? primaryBuffers : secondaryBuffers;
             List<Consumer<VertexConsumer>> list = buffer.computeIfAbsent(renderType, renderType1 -> new ArrayList<>());
             list.add(consumer);
+        }
+
+        public void addOutline(RenderType outlineType, Consumer<VertexConsumer> consumer) {
+            outlineBuffers.computeIfAbsent(outlineType, t -> new ArrayList<>()).add(consumer);
         }
     }
 }

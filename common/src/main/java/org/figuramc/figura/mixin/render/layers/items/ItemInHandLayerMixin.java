@@ -76,7 +76,7 @@ public abstract class ItemInHandLayerMixin<S extends ArmedEntityRenderState, M e
             }
 
             // sorta have to do this manually otherwise itemRenderEvent isn't called
-            itemStackRenderState.submit(stack, submitNodeCollector, light, OverlayTexture.NO_OVERLAY, state.outlineColor);
+            itemStackRenderState.submit(stack, submitNodeCollector, light, OverlayTexture.NO_OVERLAY, av.pivotOutlineOr(state.outlineColor));
         })) {
             ci.cancel();
         }
@@ -103,7 +103,17 @@ public abstract class ItemInHandLayerMixin<S extends ArmedEntityRenderState, M e
                 FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()),
                 FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) instance).figura$isLeftHanded(),
                 poseStack, submitNodeCollector, lightCoords, overlayCoords)
-        )
-            original.call(instance, poseStack, submitNodeCollector, lightCoords, overlayCoords, outlineColor);
+        ) {
+            // 그 팔 파츠가 발광 중이면 손 아이템도 그 색으로(피벗이 없을 때)
+            int armGlow = 0;
+            if (av != null && av.renderer != null) {
+                boolean leftHand = switch (((FiguraItemStackRenderStateExtension) instance).figura$getDisplayContext()) {
+                    case THIRD_PERSON_LEFT_HAND, FIRST_PERSON_LEFT_HAND -> true;
+                    default -> false;
+                };
+                armGlow = av.renderer.findVanillaPartGlow(leftHand ? ParentType.LeftArm : ParentType.RightArm);
+            }
+            original.call(instance, poseStack, submitNodeCollector, lightCoords, overlayCoords, armGlow != 0 ? armGlow : outlineColor);
+        }
     }
 }

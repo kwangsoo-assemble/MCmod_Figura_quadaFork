@@ -38,11 +38,12 @@ public class FiguraSubmitUtils {
 
         // 고정 상자(디버그 선)는 solid — 선 파이프라인의 OIT 짝을 믿지 않는다
         if (!solidPrimary.isEmpty() || !solidSecondary.isEmpty() || !solidTasks.isEmpty() || !submission.pivotBoxes().isEmpty())
-            c.solid.submit(new FiguraSubmission(solidPrimary, solidSecondary, solidTasks, submission.pivotBoxes(), 0));
+            c.solid.submit(new FiguraSubmission(solidPrimary, solidSecondary, solidTasks, submission.pivotBoxes(), Map.of()));
         if (!blendPrimary.isEmpty() || !blendSecondary.isEmpty() || !blendTasks.isEmpty())
-            c.translucentCustomGeometry.submit(new FiguraSubmission(blendPrimary, blendSecondary, blendTasks, List.of(), 0));
-        if (submission.outlineColor() != 0)
-            c.outline.submit(new FiguraSubmission(submission.primaryBuffers(), submission.secondaryBuffers(), List.of(), List.of(), submission.outlineColor(), true));
+            c.translucentCustomGeometry.submit(new FiguraSubmission(blendPrimary, blendSecondary, blendTasks, List.of(), Map.of()));
+        // 바깥선 — outline 단계에 제출이 하나라도 있으면 바닐라가 바깥선 후처리를 스스로 켠다
+        if (!submission.outlineBuffers().isEmpty())
+            c.outline.submit(new FiguraSubmission(Map.of(), Map.of(), List.of(), List.of(), submission.outlineBuffers()));
     }
 
     private static void split(Map<RenderType, List<Consumer<VertexConsumer>>> from,

@@ -268,8 +268,9 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         FiguraMod.popPushProfiler("renderEvent");
         localAvatar.renderEvent(tickDelta, poseMatrix);
 
+        // 아바타 전체 바깥선 색 — 보이는 몸이어도 발광이면 넘긴다(glowing 은 «투명 + 발광» 의 렌더 타입 바꾸기 전용)
         int outlineColor = 0;
-        if (glowing) {
+        if (livingEntityRenderState.appearsGlowing()) {
             outlineColor = (RenderUtils.vanillaModelAndScript(localAvatar) && localAvatar.luaRuntime.renderer.outlineColor != null)
                     ? ColorUtils.rgbToInt(localAvatar.luaRuntime.renderer.outlineColor)
                     : livingEntityRenderState.outlineColor;

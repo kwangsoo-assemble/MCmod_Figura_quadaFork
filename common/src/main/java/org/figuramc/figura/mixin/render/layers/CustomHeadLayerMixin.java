@@ -93,7 +93,7 @@ public abstract class CustomHeadLayerMixin<S extends LivingEntityRenderState, M 
                     SkullBlockRendererAccessor.setEntity(Minecraft.getInstance().level.getEntity(id));
                 SkullBlockRendererAccessor.setRenderMode(SkullBlockRendererAccessor.SkullRenderMode.HEAD);
                 SkullBlockRenderer.submitSkull(f, stack, submitNodeCollector, i, skullModelBase,
-                        renderType, entityState.outlineColor, null);
+                        renderType, avatar.pivotOutlineOr(entityState.outlineColor), null);
             })) {
                 ci.cancel();
             }
@@ -105,7 +105,7 @@ public abstract class CustomHeadLayerMixin<S extends LivingEntityRenderState, M 
 
             boolean shouldSubmitVanilla = avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)itemStackState).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)itemStackState).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) itemStackState).figura$isLeftHanded(), stack, submitNodeCollector, entityState.lightCoords, OverlayTexture.NO_OVERLAY);
             if (shouldSubmitVanilla)
-                entityState.headItem.submit(poseStack, submitNodeCollector, i, OverlayTexture.NO_OVERLAY, entityState.outlineColor);
+                entityState.headItem.submit(poseStack, submitNodeCollector, i, OverlayTexture.NO_OVERLAY, avatar.pivotOutlineOr(entityState.outlineColor));
         })) {
             ci.cancel();
         }
@@ -115,8 +115,11 @@ public abstract class CustomHeadLayerMixin<S extends LivingEntityRenderState, M 
     private void figuraItemEvent(ItemStackRenderState instance, PoseStack matrices, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, int outlineColor, Operation<Void> original) {
         ItemTransform transform =  ((FiguraItemStackRenderStateExtension) instance).figura$getItemTransform();
         boolean callOriginal = avatar == null || !avatar.itemRenderEvent(ItemStackAPI.verify(((FiguraItemStackRenderStateExtension)instance).figura$getItemStack()), ((FiguraItemStackRenderStateExtension)instance).figura$getDisplayContext().name(), FiguraVec3.fromVec3f(transform.translation()), FiguraVec3.of(transform.rotation().z(), transform.rotation().y(), transform.rotation().x()), FiguraVec3.fromVec3f(transform.scale()), ((FiguraItemStackRenderStateExtension) instance).figura$isLeftHanded(), matrices, submitNodeCollector, lightCoords, overlayCoords);
-        if (callOriginal)
-            original.call(instance, matrices, submitNodeCollector, lightCoords, overlayCoords, outlineColor);
+        if (callOriginal) {
+            // 머리 파츠가 발광 중이면 머리 아이템도 그 색으로(피벗이 없을 때)
+            int headGlow = avatar != null && avatar.renderer != null ? avatar.renderer.findVanillaPartGlow(ParentType.Head) : 0;
+            original.call(instance, matrices, submitNodeCollector, lightCoords, overlayCoords, headGlow != 0 ? headGlow : outlineColor);
+        }
     }
 
     @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/blockentity/SkullBlockRenderer;submitSkull(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/model/object/skull/SkullModelBase;Lnet/minecraft/client/renderer/rendertype/RenderType;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"), method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;FF)V")

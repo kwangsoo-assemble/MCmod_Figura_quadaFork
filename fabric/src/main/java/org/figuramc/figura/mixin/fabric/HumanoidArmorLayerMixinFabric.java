@@ -67,6 +67,10 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
     @Unique
     private Avatar figura$avatar;
 
+    // 피벗 갑옷 조각의 바깥선 색(ARGB · 0 = 없음) — 피벗 파츠 발광 › 엔티티 바깥선 색 · figura$renderArmorPart 가 읽는다
+    @Unique
+    private int figura$armorOutline;
+
     public HumanoidArmorLayerMixinFabric(RenderLayerParent<S, M> context) {
         super(context);
     }
@@ -176,7 +180,9 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
                         renderedPivot = figura$avatar.pivotPartRender(parentType, stack -> {
                             stack.pushPose();
                             figura$prepareArmorRender(stack);
+                            figura$armorOutline = figura$avatar.pivotOutlineOr(state.outlineColor);
                             renderer.renderArmorPart(stack, submitNodeCollector, light, armorModel, itemStack, slot, parentType);
+                            figura$armorOutline = 0;
                             stack.popPose();
                         });
                     }
@@ -187,9 +193,16 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
             }
             // As a fallback, render armor the vanilla way
             if (allFailed) {
+                // 피벗이 없어 조각 통째로 그린다 — 이 조각이 덮는 부위 중 하나라도 발광 중이면 조각 전체가 그 색으로.
+                // 바닐라는 state.outlineColor 를 그 자리에서 정수로 읽어 제출하므로 잠깐 바꿨다 되돌린다
+                int prevOutline = state.outlineColor;
+                int partGlow = figura$avatar.renderer != null ? figura$avatar.renderer.findVanillaPartGlow(parentTypes) : 0;
+                if (partGlow != 0)
+                    state.outlineColor = partGlow;
                 figura$renderingVanillaArmor = true;
                 renderArmorPiece(vanillaPoseStack, submitNodeCollector, itemStack, slot, light, state);
                 figura$renderingVanillaArmor = false;
+                state.outlineColor = prevOutline;
             }
         }
 
@@ -304,7 +317,7 @@ public abstract class HumanoidArmorLayerMixinFabric<S extends HumanoidRenderStat
 
             if (k != 0) {
                 Identifier normalArmorResource = ((EquipmentLayerRendererAccessor)this.equipmentRenderer).layerTextureLookup().apply(new EquipmentLayerRenderer.LayerTextureKey(layerType, layer));
-                nodeCollector.order(order++).submitModelPart(modelPart, poseStack, RenderTypes.armorCutoutNoCull(normalArmorResource), light, OverlayTexture.NO_OVERLAY, null, k, 0);
+                nodeCollector.order(order++).submitModelPart(modelPart, poseStack, RenderTypes.armorCutoutNoCull(normalArmorResource), light, OverlayTexture.NO_OVERLAY, null, k, figura$armorOutline);
                 if (hasGlint)
                     nodeCollector.order(order++).submitModelPart(modelPart, poseStack, RenderTypes.trimmedArmorGlint(), light, OverlayTexture.NO_OVERLAY, null, k, 0);
                 hasGlint = false;

@@ -9,6 +9,8 @@ import org.joml.Matrix4fc;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.NonNull;
 
+// 바깥선 — 모든 정점 색을 한 색(ARGB)으로 덮는다.
+// ⚠ 이어 쓰는 메서드는 delegate 가 아니라 this 를 돌려준다 — delegate 를 돌려주면 다음 setColor 가 감싸기를 건너뛰어 원래 색이 박힌다
 public class ConstantColorVertexConsumer implements VertexConsumer {
     private final VertexConsumer delegate;
     private final int color;
@@ -17,73 +19,84 @@ public class ConstantColorVertexConsumer implements VertexConsumer {
         this.delegate = delegate;
         this.color = color;
     }
+
+    private VertexConsumer writeColor() {
+        delegate.setColor((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, (color >> 24) & 0xFF);
+        return this;
+    }
+
     @Override
     public @NonNull VertexConsumer addVertex(float x, float y, float z) {
-        return delegate.addVertex(x, y, z);
+        delegate.addVertex(x, y, z);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer setColor(int r, int g, int b, int a) {
-        return delegate.setColor(
-                (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, (color >> 24) & 0xFF
-        );
+        return writeColor();
     }
 
     @Override
     public @NonNull VertexConsumer setColor(int color) {
-        return delegate.setColor(
-            (this.color >> 16) & 0xFF, (this.color >> 8) & 0xFF, this.color & 0xFF, (this.color >> 24) & 0xFF
-        );
-    }
-
-    @Override
-    public @NonNull VertexConsumer setUv(float u, float v) {
-        return delegate.setUv(u, v);
-    }
-
-    @Override
-    public @NonNull VertexConsumer setUv1(int u, int v) {
-        return delegate.setUv1(u, v);
-    }
-
-    @Override
-    public @NonNull VertexConsumer setUv2(int u, int v) {
-        return delegate.setUv2(u, v);
-    }
-
-    @Override
-    public @NonNull VertexConsumer setUv3(float u, float v) {
-        return delegate.setUv3(u, v);
-    }
-
-    @Override
-    public @NonNull VertexConsumer setNormal(float x, float y, float z) {
-        return delegate.setNormal(x, y, z);
-    }
-
-    @Override
-    public @NonNull VertexConsumer setLineWidth(float width) {
-        return delegate.setLineWidth(width);
-    }
-
-    @Override
-    public void addVertex(float x, float y, float z, int color, float u, float v, int overlayCoords, int lightCoords, float nx, float ny, float nz) {
-        delegate.addVertex(x, y, z, color, u, v, overlayCoords, lightCoords, nx, ny, nz);
+        return writeColor();
     }
 
     @Override
     public @NonNull VertexConsumer setColor(float r, float g, float b, float a) {
-        return delegate.setColor(r, g, b, a);
+        return writeColor();
+    }
+
+    @Override
+    public @NonNull VertexConsumer setUv(float u, float v) {
+        delegate.setUv(u, v);
+        return this;
+    }
+
+    @Override
+    public @NonNull VertexConsumer setUv1(int u, int v) {
+        delegate.setUv1(u, v);
+        return this;
+    }
+
+    @Override
+    public @NonNull VertexConsumer setUv2(int u, int v) {
+        delegate.setUv2(u, v);
+        return this;
+    }
+
+    @Override
+    public @NonNull VertexConsumer setUv3(float u, float v) {
+        delegate.setUv3(u, v);
+        return this;
+    }
+
+    @Override
+    public @NonNull VertexConsumer setNormal(float x, float y, float z) {
+        delegate.setNormal(x, y, z);
+        return this;
+    }
+
+    @Override
+    public @NonNull VertexConsumer setLineWidth(float width) {
+        delegate.setLineWidth(width);
+        return this;
+    }
+
+    @Override
+    public void addVertex(float x, float y, float z, int color, float u, float v, int overlayCoords, int lightCoords, float nx, float ny, float nz) {
+        delegate.addVertex(x, y, z, this.color, u, v, overlayCoords, lightCoords, nx, ny, nz);
     }
 
     @Override
     public @NonNull VertexConsumer setLight(int packedLightCoords) {
-        return delegate.setLight(packedLightCoords);
+        delegate.setLight(packedLightCoords);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer setOverlay(int packedOverlayCoords) {
-        return delegate.setOverlay(packedOverlayCoords);
+        delegate.setOverlay(packedOverlayCoords);
+        return this;
     }
 
     @Override
@@ -103,36 +116,43 @@ public class ConstantColorVertexConsumer implements VertexConsumer {
 
     @Override
     public @NonNull VertexConsumer addVertex(Vector3fc position) {
-        return delegate.addVertex(position);
+        delegate.addVertex(position);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer addVertex(PoseStack.Pose pose, Vector3fc position) {
-        return delegate.addVertex(pose, position);
+        delegate.addVertex(pose, position);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) {
-        return delegate.addVertex(pose, x, y, z);
+        delegate.addVertex(pose, x, y, z);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer addVertex(Matrix4fc pose, float x, float y, float z) {
-        return delegate.addVertex(pose, x, y, z);
+        delegate.addVertex(pose, x, y, z);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer addVertexWith2DPose(Matrix3x2fc pose, float x, float y) {
-        return delegate.addVertexWith2DPose(pose, x, y);
+        delegate.addVertexWith2DPose(pose, x, y);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer setNormal(PoseStack.Pose pose, float x, float y, float z) {
-        return delegate.setNormal(pose, x, y, z);
+        delegate.setNormal(pose, x, y, z);
+        return this;
     }
 
     @Override
     public @NonNull VertexConsumer setNormal(PoseStack.Pose pose, Vector3fc normal) {
-        return delegate.setNormal(pose, normal);
+        delegate.setNormal(pose, normal);
+        return this;
     }
 }
