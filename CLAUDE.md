@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.8+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-26 지금 `0.1.6.7` · 26.3 가지 `0.1.6.9+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -97,7 +97,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
    (`LevelRenderer` 에 `renderItemInHand` 호출이 없음을 바이트코드로 확인 — 손은 `GameRenderer` 쪽)
    ⚠ 공개 API 변경 없음 → 애드온 재빌드 불필요.
 
-9. **1인칭 프롭의 글린트가 안 보이던 문제 수정** (2026-09-14, ✅ 인게임 검증 완료):
+9. **1인칭 프롭의 글린트가 안 보이던 문제 수정** (2026-09-14, ✅ 인게임 검증 완료 · ⓘ 0.1.6.7 에서 걷어 냄 — 26):
    글린트 3종은 전부 `RenderPipelines.GLINT` 을 쓰고, 그 파이프라인은
    **`EQUAL_DEPTH_TEST` + `POSITION_TEX`(색 속성 없음)** 이다. 그런데 템플릿이 1인칭 프롭
    큰브에 앞렌더 마커 `#FFFFFB` 를 칠하고, 사내 BSL 포크가 `gbuffers_entities.vsh` 에서
@@ -313,6 +313,11 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - `GLINT` 는 바닐라 `patternedShieldGlint()` 사본(`SHIELD_GLINT`) — 바닐라 렌더 타입에는 짝을 못 붙인다 · 바닐라 `GLOBALS_SNIPPET` 은 비공개라 `BindGroupLayouts.GLOBALS` 를 직접
     - OIT 켬에서 반짝임은 겹친 반투명 면마다 얹힌다(OIT 끔은 맨 앞 면만) · 바탕 없는 반짝임(주 렌더 타입)은 OIT 켬에서만 보인다 — README 알려진 문제
     - 26.x 바닐라는 아이템 · 엔티티 반짝임을 바탕 셰이더 안 `GLINT` 정의로 옮겼다(`item_translucent_glint` + `OIT_ITEM_GLINT`) — 따로 덧칠하는 `GLINT` 파이프라인은 방패 · 갑옷 장식만 남았다
+
+26. **셰이더팩 반짝임 당김 걷어 냄** (2026-10-26, 하네스 `projects/mc_repositories` M48 · 0.1.6.7 · ✅ 인게임 확인 — BSL 에서 반짝임 3인칭 · 1인칭 그대로):
+    - 이력 9 의 `frontLayerOf` · `frontLayerGlint` · `GLINT_FRONT` · `ENTITY_GLINT_FRONT` · `TEXTURED_GLINT_FRONT` 를 없앴다 — 1인칭 소품은 `FirstPerson` 부모 타입(22)이 손 패스에서 그려, 셰이더에서 월드 파츠를 앞으로 당길 일이 없다(🙋)
+    - 반짝임은 바닐라 렌더 타입 그대로 · 셰이더팩 `gbuffers_armor_glint.vsh` 의 순위 읽기는 그 칸이 0 이라 무해하다
+    - 1인칭 월드 렌더의 «아이템 피벗 자리 손 아이템»(포크 #1)은 남긴다 — 옛 소품 콘텐츠가 쓴다
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
