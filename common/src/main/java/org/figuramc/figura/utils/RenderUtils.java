@@ -44,6 +44,10 @@ public class RenderUtils {
     // RenderTypeFeatureRendererGroupMixin 이 이 동안 반투명 정렬을 살린다(FiguraHudRenderer · GameRendererMixin 이 켠다)
     public static boolean preparingNonOitPass = false;
 
+    // 레벨 렌더(LevelRenderer.render) 안인가 — 렌더 스레드에서만. 이 구간의 포즈스택만 카메라 상대 월드 좌표라
+    // 스컬 파츠(아이템 디스플레이 · 액자 · 떨어진 아이템)가 1인칭에서도 partToWorldMatrix 를 갱신해도 된다(LevelRendererMixin 이 켠다)
+    public static boolean inLevelPass = false;
+
     public static boolean vanillaModel(Avatar avatar) {
         return avatar != null && avatar.permissions.get(Permissions.VANILLA_MODEL_EDIT) >= 1;
     }

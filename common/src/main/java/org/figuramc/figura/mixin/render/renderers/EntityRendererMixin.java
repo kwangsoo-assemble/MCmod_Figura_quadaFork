@@ -76,8 +76,15 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 
     @Inject(method = FIGURA$SUBMIT_NAME_DISPLAY, at = @At("HEAD"), cancellable = true)
     private void renderNameTag(EntityRenderState stateRaw, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera, int offset, CallbackInfo ci) {
-        if (!(stateRaw instanceof AvatarRenderState playerRenderState))
+        if (!(stateRaw instanceof AvatarRenderState playerRenderState)) {
+            // 몹(CEM) 아바타의 nameplate.ENTITY:setVisible(false) — 조건은 플레이어 쪽과 같다(설정 entity_nameplate > 0 · panic 아님 · 이름표 편집 권한)
+            Avatar mobAvatar = AvatarManager.getAvatar(stateRaw);
+            EntityNameplateCustomization mobCustom = mobAvatar == null || mobAvatar.luaRuntime == null ? null : mobAvatar.luaRuntime.nameplate.ENTITY;
+            if (Configs.ENTITY_NAMEPLATE.value > 0 && !AvatarManager.panic && mobCustom != null
+                    && mobAvatar.permissions.get(Permissions.NAMEPLATE_EDIT) == 1 && !mobCustom.visible)
+                ci.cancel();
             return;
+        }
 
         int config = Configs.ENTITY_NAMEPLATE.value;
         Entity entity = Minecraft.getInstance().level.getEntity(playerRenderState.id);

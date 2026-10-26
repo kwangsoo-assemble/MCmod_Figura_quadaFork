@@ -1,8 +1,11 @@
 package org.figuramc.figura.mixin.render.renderers;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.player.PlayerModel;
@@ -15,7 +18,9 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.UvMapping;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -77,31 +82,56 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     private Avatar currentAvatar;
     @Unique
     private Matrix4f lastPose;
+    // 몹(CEM) 아바타가 vanilla_model.ALL 을 숨겼나 — 이번 submit 한 번 동안만.
+    // 파츠 숨기기는 사람형 모델의 파츠만 알아서, 비사람형 몹(주민 등)의 몸과 자기 모델을 가진 레이어(드라운드 · 스트레이 겉옷)가 남는다
+    // ⇒ 참이면 바닐라 몸(submitModel)과 모든 레이어(shouldRenderLayers)를 건너뛴다. 그림자 · 이름표 · 아바타 파츠는 그대로 · 플레이어는 안 바꾼다
+    @Unique
+    private boolean figura$hideVanilla;
 
     @Inject(at = @At("HEAD"), method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V")
     private void onRender(S livingEntityRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState, CallbackInfo ci) {
+        figura$hideVanilla = false;
         currentAvatar = AvatarManager.getAvatar(livingEntityRenderState);
         if (currentAvatar == null)
             return;
 
+        figura$hideVanilla = !(livingEntityRenderState instanceof AvatarRenderState)
+                && currentAvatar.luaRuntime != null
+                && Boolean.FALSE.equals(currentAvatar.luaRuntime.vanilla_model.ALL.getVisible());
         lastPose = poseStack.last().pose();
     }
 
-    @ModifyArg(
+    // 바닐라 몸 — 몹 아바타가 바닐라를 숨겼으면 건너뛴다 · 아니면 오버레이 덮어쓰기(customOverlay)를 얹어 그대로
+    @WrapOperation(
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V"
             ),
-            method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
-            index = 5
+            method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V"
     )
-    private int customOverlay(int thing) {
-        return LivingEntityRendererAccessor.overrideOverlay.orElse(thing);
+    private void figura$submitVanillaBody(SubmitNodeCollector collector, Model<?> model, Object state, PoseStack poseStack, RenderType renderType,
+                                          int light, int overlay, int tint, UvMapping uvMapping, int outlineColor, Operation<Void> original) {
+        if (figura$hideVanilla)
+            return;
+        original.call(collector, model, state, poseStack, renderType, light, LivingEntityRendererAccessor.overrideOverlay.orElse(overlay), tint, uvMapping, outlineColor);
+    }
+
+    // 바닐라 레이어(갑옷 · 손에 든 것 · 겉옷 · 머리 위 블록 · 직업 옷 …) — 몹 아바타가 바닐라를 숨겼으면 전부 건너뛴다
+    @WrapOperation(
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;shouldRenderLayers(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;)Z"
+            ),
+            method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V"
+    )
+    private boolean figura$submitVanillaLayers(LivingEntityRenderer<?, ?, ?> renderer, LivingEntityRenderState state, Operation<Boolean> original) {
+        return !figura$hideVanilla && original.call(renderer, state);
     }
 
     @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V", shift = At.Shift.BEFORE), method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V", cancellable = true)
     private void setFiguraCallbacks(S livingEntityRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState, CallbackInfo ci) {
-        if (currentAvatar == null)
+        // ⚠ 몸을 건너뛸 때는 콜백도 붙이지 않는다 — 그려지지 않은 모델에 붙은 콜백은 소비되지 않고 남는다
+        if (currentAvatar == null || figura$hideVanilla)
             return;
 
         Avatar localAvatar = currentAvatar;
@@ -259,6 +289,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
 
     @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V"), method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V")
     private void nullifyAvatar(S livingEntityRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState, CallbackInfo ci) {
+        figura$hideVanilla = false;
         if (currentAvatar == null)
             return;
 

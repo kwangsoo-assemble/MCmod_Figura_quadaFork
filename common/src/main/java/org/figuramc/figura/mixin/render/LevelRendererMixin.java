@@ -80,6 +80,7 @@ public abstract class LevelRendererMixin {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onRender(GraphicsResourceAllocator resourceAllocator, boolean renderOutline, CameraRenderState cameraState, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky, boolean consistentDepthRequired, CallbackInfo ci) {
+        RenderUtils.inLevelPass = true;
         float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         AvatarManager.executeAll("worldRender", avatar -> avatar.render(partialTick));
     }
@@ -88,6 +89,7 @@ public abstract class LevelRendererMixin {
     private void afterRender(GraphicsResourceAllocator resourceAllocator, boolean renderOutline, CameraRenderState cameraState, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky, boolean consistentDepthRequired, CallbackInfo ci) {
         float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         AvatarManager.executeAll("postWorldRender", avatar -> avatar.postWorldRenderEvent(partialTick));
+        RenderUtils.inLevelPass = false;
     }
 
     @ModifyArg(method = "submitHitOutline", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitShapeOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/shapes/VoxelShape;Lnet/minecraft/client/renderer/rendertype/RenderType;IFZ)V"), index = 3)

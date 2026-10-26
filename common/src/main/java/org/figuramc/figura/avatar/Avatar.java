@@ -800,6 +800,12 @@ public class Avatar {
 
         renderer.allowPivotParts = false;
 
+        // 행렬 갱신 허락을 직전 패스에서 물려받지 않고 «레벨 렌더 안인가» 로 정한다 — 물려받으면 1인칭에서
+        // 엔티티 속 스컬(아이템 디스플레이 · 액자 · 떨어진 아이템)의 partToWorldMatrix 가 지난 3인칭 값에 멈춘다
+        // ⚠ GUI · 인벤토리 · 1인칭 손 아이템의 스컬은 이 밖이라 갱신하지 않는다 — 화면 좌표가 월드 위치를 오염시킨다
+        boolean prevAllowMatrixUpdate = renderer.allowMatrixUpdate;
+        renderer.allowMatrixUpdate = prevAllowMatrixUpdate || RenderUtils.inLevelPass;
+
         renderer.setupRenderer(
                 PartFilterScheme.SKULL, submitNodeCollector, stack,
                 1f, light, 1f, OverlayTexture.NO_OVERLAY,
@@ -811,6 +817,7 @@ public class Avatar {
 
         boolean bool = comp > 0 || headRender(stack, submitNodeCollector, light, true);
 
+        renderer.allowMatrixUpdate = prevAllowMatrixUpdate;
         renderer.allowPivotParts = true;
         stack.popPose();
         return bool;

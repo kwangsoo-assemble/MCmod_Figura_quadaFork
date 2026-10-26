@@ -572,6 +572,13 @@ public class ImmediateFiguraRenderer extends FiguraRenderer {
             return;
         }
 
+        // 숨긴 하위 트리는 건너뛴다 — renderPart 와 같다(1인칭에서만 숨긴 파츠까지 돌던 유일한 자리)
+        // ⚠ 숨긴 파츠의 partToWorldMatrix 는 1인칭에서도 마지막으로 그린 값에 멈춘다(다른 경로는 원래 그랬다)
+        if (!custom.visible) {
+            FiguraMod.popProfiler(2);
+            return;
+        }
+
         // calculate part transforms
 
         // calculate vanilla parent
