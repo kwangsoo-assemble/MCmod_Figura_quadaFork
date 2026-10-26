@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.7+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-24 지금 `0.1.6.6` · 26.3 가지 `0.1.6.8+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -303,8 +303,16 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - OIT 를 켜면 `FiguraSubmitUtils` 가 OIT 짝 없는 섞기 렌더 타입을 solid 로 보내 섞는 순서를 잃었다
     - `FiguraRenderTypes` — `BLURRY` 에 `.setOitPipelines(RenderPipelines.OIT_ENTITY)`(바닐라 entity_translucent 와 같은 설정 · 흐린 샘플러만 다름) ·
       `CUTOUT_EMISSIVE_SOLID` 에 `.setOitPipelines(RenderPipelines.OIT_BEACON_BEAM)`(반투명 beacon_beam 과 같은 파이프라인)
-    - ⚠ `TEXTURED_GLINT` 는 짝 없음(바닐라 GLINT 반짝임도 없다 · 더하기 섞기) — OIT 켬이면 불투명 단계라 반투명 바탕 위에서는 «깊이 같음» 으로 얹을 깊이가 없어 안 보인다(README 알려진 문제)
+    - ⚠ `TEXTURED_GLINT` 는 짝 없음(바닐라 GLINT 반짝임도 없다 · 더하기 섞기) — OIT 켬이면 불투명 단계라 반투명 바탕 위에서는 «깊이 같음» 으로 얹을 깊이가 없어 안 보였다 → 25 에서 풀림
     - 반짝임은 주 렌더 타입으로 두면 바탕이 없어 OIT 와 무관하게 안 보인다 — 보조 레이어 + 보조 텍스처로 시험한다
+
+25. **26.3 가지 — 반짝임 렌더 타입 OIT 짝** (2026-10-26, 하네스 `projects/mc_repositories` M47 · 0.1.6.8+26.3 · ✅ 인게임 확인 — `GLINT` · `GLINT2` · `TEXTURED_GLINT` · 색유리 가림 · 파고든 배치 · 불투명 바탕 · OIT 끔 · BSL · OpenGL · Vulkan · 비용 측정 오차 안):
+    - 반짝임 셋(`GLINT` · `GLINT2` · `TEXTURED_GLINT`)에 `FiguraRenderPipelines.GLINT_OIT` — 바닐라 `GLINT` 와 같은 묶음(GLOBALS · PROJECTION · DYNAMIC_TRANSFORMS · FOG · SAMPLER0) · 꼭짓점 `core/glint`(`POSITION_TEX`) · 정의 `OIT_ADDITIVE`(빛만 더하는 표면 — 바닐라 `OIT_ENERGY_SWIRL` 과 같은 꼴) · 깊이 · 섞기는 OIT 단계 조각 몫
+    - 조각 셰이더 `assets/figura/shaders/core/glint_oit.fsh` — 바닐라 `glint.fsh` 색 · 안개 + `oit.glsl` · 누적은 `c * c`(`BlendFunction.GLINT` 세기)
+    - ⚠ 알파 단계는 `min(0.99, a)` — 깊이 범위가 알파 0.99 초과(`OIT_FULLY_OPAQUE_ALPHA`)를 불투명으로 보고 그 뒤 OIT 면을 컬링 깊이로 잘라 낸다 · 반짝임 텍스처 알파 1 → 뒤 반투명이 통째로 사라졌다(바닐라 `entity.fsh` `OIT_ADDITIVE` 와 같은 상한)
+    - `GLINT` 는 바닐라 `patternedShieldGlint()` 사본(`SHIELD_GLINT`) — 바닐라 렌더 타입에는 짝을 못 붙인다 · 바닐라 `GLOBALS_SNIPPET` 은 비공개라 `BindGroupLayouts.GLOBALS` 를 직접
+    - OIT 켬에서 반짝임은 겹친 반투명 면마다 얹힌다(OIT 끔은 맨 앞 면만) · 바탕 없는 반짝임(주 렌더 타입)은 OIT 켬에서만 보인다 — README 알려진 문제
+    - 26.x 바닐라는 아이템 · 엔티티 반짝임을 바탕 셰이더 안 `GLINT` 정의로 옮겼다(`item_translucent_glint` + `OIT_ITEM_GLINT`) — 따로 덧칠하는 `GLINT` 파이프라인은 방패 · 갑옷 장식만 남았다
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
@@ -349,7 +357,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 
 - Minecraft 26.3 용 시험 가지 `26.3` 은 **별도 작업 폴더** `../figura_core_internal_26.3`(git worktree)에 있다 — main(1.21.8) 폴더 · 배포 · 촬영과 따로 논다
 - 바탕은 NoFigura(원격 `nofigura` · Stranik2504/NoFigura) `26.3` 가지 위에 이 포크의 변경을 얹은 것 · 렌더는 NoFigura 쪽이고 우리 렌더 기능 일부는 아직 안 옮겼다(README «26.3 가지»)
-- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.7+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
+- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.8+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
 - 배포 `projects/mc_repositories/tools/deploy_263.py`(26.3 프로필 · 시험 서버 — 게임 · 서버가 켜져 있으면 안 쓴다) · 푸시 `repos.py publish core_263` · 릴리스 `repos.py release core_263`(태그 `v<버전>+26.3` · «Latest» 아님)
 - README 는 main 과 **같은 바이트**로 둔다(한글 원본의 «26.3 가지» 절) — main 에서 README 를 고치면 이 가지에도 복사한다
-- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass` · 손 회차는 OIT 를 켜면 `HandOitRenderer`(23) · Figura 자체 섞기 렌더 타입은 `setOitPipelines` 로 바닐라 OIT 짝을 붙인다(24 — 짝이 없으면 OIT 켬에서 solid 로 간다)
+- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass` · 손 회차는 OIT 를 켜면 `HandOitRenderer`(23) · Figura 자체 섞기 렌더 타입은 `setOitPipelines` 로 바닐라 OIT 짝을 붙인다(24 — 짝이 없으면 OIT 켬에서 solid 로 간다) · 빛만 더하는 덧칠(반짝임)은 `OIT_ADDITIVE` 짝 + 알파 단계 `min(0.99, a)`(25)
