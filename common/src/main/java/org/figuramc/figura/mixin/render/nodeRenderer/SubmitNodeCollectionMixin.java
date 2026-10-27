@@ -19,6 +19,8 @@ import org.figuramc.figura.ducks.FiguraSubmitCallBackExtension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SubmitNodeCollection.class)
 public class SubmitNodeCollectionMixin {
@@ -35,6 +37,8 @@ public class SubmitNodeCollectionMixin {
         original.call(instance, submit);
     }
 
+    // ⚠ 여기서 모델의 콜백을 비우지 마라 — 발광이면 바닐라가 같은 호출 안에서 outline 제출을 하나 더 만든다.
+    // 첫 제출에서 비우면 바깥선 사본에는 숨김 · 자세 콜백이 없어 숨긴 바닐라 몸이 바깥선에 통째로 그려진다
     @Unique
     private void figura$transfer(Model<?> model, Object submitObj) {
         FiguraSubmitCallBackExtension modelExt = (FiguraSubmitCallBackExtension) model;
@@ -46,6 +50,12 @@ public class SubmitNodeCollectionMixin {
             submitExt.figura$addPostRenderingCallback(cb);
 
         submitExt.figura$setPreventAnimSetup(modelExt.figura$getPreventAnimSetup());
+    }
+
+    // 제출이 다 끝난 뒤에 비운다 — 본 제출 · 바깥선 제출 모두 같은 콜백을 받았다
+    @Inject(method = "submitModel", at = @At("RETURN"))
+    private void figura$clearModelCallbacks(CallbackInfo ci, @Local(argsOnly = true) Model<?> model) {
+        FiguraSubmitCallBackExtension modelExt = (FiguraSubmitCallBackExtension) model;
         modelExt.figura$setPreventAnimSetup(false);
         modelExt.figura$getPreRenderingCallbacks().clear();
         modelExt.figura$getPostRenderingCallbacks().clear();
@@ -77,6 +87,12 @@ public class SubmitNodeCollectionMixin {
             submitExt.figura$addPostRenderingCallback(cb);
 
         submitExt.figura$setPreventAnimSetup(displayExt.figura$getPreventAnimSetup());
+    }
+
+    // 아이템도 모델과 같다 — 본 제출 뒤 outline 제출이 따로 나간다
+    @Inject(method = "submitItem", at = @At("RETURN"))
+    private void figura$clearItemCallbacks(CallbackInfo ci, @Local(argsOnly = true) ItemDisplayContext displayContext) {
+        FiguraSubmitCallBackExtension displayExt = (FiguraSubmitCallBackExtension) (Object) displayContext;
         displayExt.figura$setPreventAnimSetup(false);
         displayExt.figura$getPreRenderingCallbacks().clear();
         displayExt.figura$getPostRenderingCallbacks().clear();

@@ -58,10 +58,13 @@ public abstract class LevelRendererMixin {
         if (av == null)
             return;
 
+        // 아바타 전체 바깥선 색 — 몸(LivingEntityRendererMixin)과 같은 규칙: 엔티티가 발광 중일 때만 · renderer:setOutlineColor › 팀 색
         var outlineColor = 0;
 
-        if (RenderUtils.vanillaModelAndScript(av) && av.luaRuntime.renderer.outlineColor != null) {
-            outlineColor = ColorUtils.rgbToInt(av.luaRuntime.renderer.outlineColor);
+        if (entityRenderState.appearsGlowing()) {
+            outlineColor = (RenderUtils.vanillaModelAndScript(av) && av.luaRuntime.renderer.outlineColor != null)
+                    ? ColorUtils.rgbToInt(av.luaRuntime.renderer.outlineColor)
+                    : entityRenderState.outlineColor;
         }
 
         FiguraMod.pushProfiler(FiguraMod.MOD_ID);
