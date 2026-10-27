@@ -658,7 +658,15 @@ public class Avatar {
         int light = Minecraft.getInstance().getEntityRenderDispatcher().getPackedLightCoords(watcher, tickDelta);
         Vec3 camPos = camera.position();
 
-        worldRender(watcher, camPos.x, camPos.y, camPos.z, matrices, collector, light, tickDelta, EntityRenderMode.FIRST_PERSON_WORLD, 0);
+        // 아바타 전체 바깥선 색 — 3인칭(LevelRendererMixin)과 같은 규칙: 발광 중일 때만 · renderer:setOutlineColor › 팀 색 · 1.21.8 은 여기서 안 빛났다
+        int outlineColor = 0;
+        if (Minecraft.getInstance().shouldEntityAppearGlowing(watcher)) {
+            outlineColor = (RenderUtils.vanillaModelAndScript(this) && luaRuntime.renderer.outlineColor != null)
+                    ? ColorUtils.rgbToInt(luaRuntime.renderer.outlineColor)
+                    : watcher.getTeamColor();
+        }
+
+        worldRender(watcher, camPos.x, camPos.y, camPos.z, matrices, collector, light, tickDelta, EntityRenderMode.FIRST_PERSON_WORLD, outlineColor);
 
         FiguraMod.popProfiler(3);
     }
