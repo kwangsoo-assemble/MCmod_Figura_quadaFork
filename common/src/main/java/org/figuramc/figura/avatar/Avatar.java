@@ -17,7 +17,12 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.client.sounds.JOrbisAudioStream;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -658,17 +663,18 @@ public class Avatar {
         int light = Minecraft.getInstance().getEntityRenderDispatcher().getPackedLightCoords(watcher, tickDelta);
         Vec3 camPos = camera.position();
 
-        // 아바타 전체 바깥선 색 — 3인칭(LevelRendererMixin)과 같은 규칙: 발광 중일 때만 · renderer:setOutlineColor › 팀 색 · 1.21.8 은 여기서 안 빛났다
-        int outlineColor = 0;
-        if (Minecraft.getInstance().shouldEntityAppearGlowing(watcher)) {
-            outlineColor = (RenderUtils.vanillaModelAndScript(this) && luaRuntime.renderer.outlineColor != null)
-                    ? ColorUtils.rgbToInt(luaRuntime.renderer.outlineColor)
-                    : watcher.getTeamColor();
-        }
-
-        worldRender(watcher, camPos.x, camPos.y, camPos.z, matrices, collector, light, tickDelta, EntityRenderMode.FIRST_PERSON_WORLD, outlineColor);
+        worldRender(watcher, camPos.x, camPos.y, camPos.z, matrices, collector, light, tickDelta, EntityRenderMode.FIRST_PERSON_WORLD, firstPersonOutlineColor(watcher));
 
         FiguraMod.popProfiler(3);
+    }
+
+    // 아바타 전체 바깥선 색(1인칭 월드) — 3인칭(LevelRendererMixin)과 같은 규칙: 발광 중일 때만 · renderer:setOutlineColor › 팀 색 · 1.21.8 은 여기서 안 빛났다
+    public int firstPersonOutlineColor(Entity watcher) {
+        if (!Minecraft.getInstance().shouldEntityAppearGlowing(watcher))
+            return 0;
+        return (RenderUtils.vanillaModelAndScript(this) && luaRuntime.renderer.outlineColor != null)
+                ? ColorUtils.rgbToInt(luaRuntime.renderer.outlineColor)
+                : watcher.getTeamColor();
     }
 
     public void firstPersonRender(PoseStack stack, SubmitNodeCollector collector, Player player, PlayerModel playerModel, ModelPart arm, int light, float tickDelta) {
@@ -759,12 +765,58 @@ public class Avatar {
         );
 
         renderer.renderSpecialParts();
+        collectHudPivotItems(entity);
 
         /*GlStateManager._enableDepthTest();*/
         Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
         stack.popPose();
 
         FiguraMod.popProfiler(2);
+    }
+
+    // HUD 손 아이템 피벗 — 자리와 GUI 표시 아이템을 모아 두기만 한다 · FiguraHudRenderer 가 파츠 뒤에 조명별로 그린다
+    public record HudPivotItem(PoseStack.Pose pose, ItemStackRenderState item) {}
+    public final List<HudPivotItem> hudPivotItems = new ArrayList<>();
+
+    private void collectHudPivotItems(Entity entity) {
+        hudPivotItems.clear();
+        if (!(entity instanceof LivingEntity living))
+            return;
+
+        boolean rightMain = living.getMainArm() == HumanoidArm.RIGHT;
+        collectHudPivotItem(ParentType.RightItemPivot, rightMain ? living.getMainHandItem() : living.getOffhandItem(), living);
+        collectHudPivotItem(ParentType.LeftItemPivot, rightMain ? living.getOffhandItem() : living.getMainHandItem(), living);
+    }
+
+    private void collectHudPivotItem(ParentType pivot, ItemStack stack, LivingEntity owner) {
+        if (stack.isEmpty())
+            return;
+
+        ItemStackRenderState item = new ItemStackRenderState();
+        Minecraft.getInstance().getItemModelResolver().updateForTopItem(item, stack, ItemDisplayContext.GUI, owner.level(), owner, 0);
+        if (item.isEmpty())
+            return;
+
+        pivotPartRender(pivot, poseStack -> {
+            poseStack.scale(16f, 16f, 16f);
+            hudPivotItems.add(new HudPivotItem(poseStack.last().copy(), item));
+        });
+    }
+
+    // 1인칭 손 아이템 피벗 — 이번 프레임에 피벗이 그 손 아이템을 그렸나(바닐라 1인칭 손 아이템을 끈다 · ItemInHandRendererMixin)
+    // ⚠ 1인칭 월드 패스(LevelRendererMixinFabric)가 매 프레임 먼저 끈다 — 손 패스보다 앞이라 같은 프레임에 맞는다
+    public boolean fpPivotItemLeft, fpPivotItemRight;
+
+    /** 손 아이템을 그 손 피벗 자리에 제출한다(3인칭 ItemInHandLayerMixin 과 같은 자세) — 그렸으면 참 */
+    public boolean submitPivotHandItem(ParentType pivot, ItemStackRenderState item, SubmitNodeCollector collector, int light, int outlineColor) {
+        if (item == null || item.isEmpty())
+            return false;
+
+        return pivotPartRender(pivot, poseStack -> {
+            poseStack.scale(16f, 16f, 16f);
+            poseStack.rotateDegrees(Axis.XP, -90f);
+            item.submit(poseStack, collector, light, OverlayTexture.NO_OVERLAY, pivotOutlineOr(outlineColor));
+        });
     }
 
     public boolean skullRender(PoseStack stack, FiguraVertexConsumerProvider bufferProvider, int light, Direction direction, float yaw) {

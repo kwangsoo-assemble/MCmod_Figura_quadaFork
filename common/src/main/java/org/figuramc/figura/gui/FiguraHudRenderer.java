@@ -2,6 +2,7 @@ package org.figuramc.figura.gui;
 
 import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.renderpearl.api.device.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.textures.*;
@@ -19,6 +20,8 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.LightCoordsUtil;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.utils.RenderUtils;
 import org.jspecify.annotations.NonNull;
@@ -82,7 +85,47 @@ public class FiguraHudRenderer extends PictureInPictureRenderer<FiguraHudRenderS
             RenderUtils.preparingNonOitPass = false;
         }
 
+        renderPivotItems(state.avatar(), featureRenderDispatcher);
+
         this.blitTexture(state, guiRenderState);
+    }
+
+    // HUD 손 아이템 피벗 — 파츠 뒤에 같은 텍스처 · 깊이로 조명별 한 번씩(인벤토리처럼 블록 = ITEMS_3D · 평면 = ITEMS_FLAT)
+    // ⚠ 한 번 그리기 안에서는 조명이 하나다(그릴 때 걸린 값) — 아이템을 파츠와 같은 제출에 섞지 마라
+    private void renderPivotItems(Avatar avatar, FeatureRenderDispatcher featureRenderDispatcher) {
+        if (avatar.hudPivotItems.isEmpty())
+            return;
+
+        for (boolean blockLight : new boolean[] {true, false}) {
+            boolean any = false;
+            for (Avatar.HudPivotItem pivotItem : avatar.hudPivotItems) {
+                if (pivotItem.item().usesBlockLight() != blockLight)
+                    continue;
+                PoseStack poseStack = new PoseStack();
+                poseStack.last().set(pivotItem.pose());
+                pivotItem.item().submit(poseStack, this.submitNodeStorage, LightCoordsUtil.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0);
+                any = true;
+            }
+            if (!any)
+                continue;
+
+            Minecraft.getInstance().gameRenderer.lighting().setupFor(blockLight ? Lighting.Entry.ITEMS_3D : Lighting.Entry.ITEMS_FLAT);
+            RenderUtils.preparingNonOitPass = true;
+            try (
+                    FeatureRenderDispatcher.PreparedFrame frame = featureRenderDispatcher.prepareFrame(this.submitNodeStorage);
+                    RenderPass pass = RenderSystem.getDevice()
+                            .createCommandEncoder()
+                            .createRenderPass(() -> "FiguraHudItems", textureView, Optional.empty(), depthTextureView, OptionalDouble.empty())
+            ) {
+                RenderSystem.bindDefaultUniforms(pass);
+                FeatureRenderDispatcher.renderAllFeatures(pass, frame);
+            } finally {
+                RenderUtils.preparingNonOitPass = false;
+            }
+        }
+
+        Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
+        avatar.hudPivotItems.clear();
     }
 
     private void prepareTexturesAndProjection(int width, int height) {

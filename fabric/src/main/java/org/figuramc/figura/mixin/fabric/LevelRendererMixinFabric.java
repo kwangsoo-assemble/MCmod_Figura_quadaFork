@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.util.Mth;
@@ -18,6 +19,7 @@ import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.math.matrix.FiguraMat3;
 import org.figuramc.figura.mixin.render.PoseStackAccessor;
+import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.utils.RenderUtils;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -64,7 +66,18 @@ public class LevelRendererMixinFabric {
         LivingEntityRenderState state = entityRenderer.createRenderState(livingEntity,
                 dt.getGameTimeDeltaPartialTick(minecraft.level.tickRateManager().isEntityFrozen(e)));
 
+        // ⚠ 매 프레임 여기서 먼저 끈다 — 손 패스(나중)가 이번 프레임 값만 보게(ItemInHandRendererMixin 이 FirstPerson 피벗으로 더 켠다)
+        avatar.fpPivotItemLeft = avatar.fpPivotItemRight = false;
+
         avatar.firstPersonWorldRender(e, stack, this.submitNodeStorage, camera, tickDelta);
+
+        // 1인칭 월드 파츠 안 손 아이템 피벗 — 1인칭은 몸 레이어가 안 도니 같은 패스(레벨 프레임)에서 바로 꺼낸다
+        if (state instanceof ArmedEntityRenderState armed) {
+            int itemLight = this.entityRenderDispatcher.getPackedLightCoords(e, tickDelta);
+            int outline = avatar.firstPersonOutlineColor(e);
+            avatar.fpPivotItemRight = avatar.submitPivotHandItem(ParentType.RightItemPivot, armed.rightHandItemState, this.submitNodeStorage, itemLight, outline);
+            avatar.fpPivotItemLeft = avatar.submitPivotHandItem(ParentType.LeftItemPivot, armed.leftHandItemState, this.submitNodeStorage, itemLight, outline);
+        }
 
         if (!Configs.FIRST_PERSON_MATRICES.value)
             return;

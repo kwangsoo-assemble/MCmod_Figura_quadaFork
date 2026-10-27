@@ -16,6 +16,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.lua.api.vanilla_model.VanillaModelPart;
 import org.figuramc.figura.math.matrix.FiguraMat4;
+import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.rendering.EntityRenderMode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -54,7 +55,15 @@ public abstract class ItemInHandRendererMixin {
         if (avatar == null || playerState.avatarRenderState == null)
             return;
 
-        avatar.firstPersonPartsRender(poseStack, submitNodeCollector, Minecraft.getInstance().player, playerState.avatarRenderState.lightCoords, partialTicks);
+        AvatarRenderState armed = playerState.avatarRenderState;
+        avatar.firstPersonPartsRender(poseStack, submitNodeCollector, Minecraft.getInstance().player, armed.lightCoords, partialTicks);
+
+        // FirstPerson 파츠 안 손 아이템 피벗 — 같은 손 패스에서 바로 꺼낸다(바깥선 0 — 손 패스엔 outline 단계가 없다)
+        // 이 자리는 팔 호출(submitArmWithItem)보다 앞이라 같은 프레임에 바닐라 손 아이템을 끌 수 있다
+        if (avatar.submitPivotHandItem(ParentType.RightItemPivot, armed.rightHandItemState, submitNodeCollector, armed.lightCoords, 0))
+            avatar.fpPivotItemRight = true;
+        if (avatar.submitPivotHandItem(ParentType.LeftItemPivot, armed.leftHandItemState, submitNodeCollector, armed.lightCoords, 0))
+            avatar.fpPivotItemLeft = true;
     }
 
     @Inject(method = "submitHandsWithItems", at = @At("RETURN"))
@@ -96,6 +105,12 @@ public abstract class ItemInHandRendererMixin {
             poseStack.pushPose();
             this.renderPlayerArm(poseStack, submitNodeCollector, lightCoords, inverseArmHeight, attack, arm, playerState);
             poseStack.popPose();
+        }
+
+        // 손 아이템 피벗(1인칭 월드 · FirstPerson)이 이번 프레임에 이 손 아이템을 그렸으면 바닐라는 그리지 않는다 — 두 번 보이지 않게
+        if (willRenderItem && (arm == HumanoidArm.LEFT ? avatar.fpPivotItemLeft : avatar.fpPivotItemRight)) {
+            ci.cancel();
+            return;
         }
 
         // hide item
