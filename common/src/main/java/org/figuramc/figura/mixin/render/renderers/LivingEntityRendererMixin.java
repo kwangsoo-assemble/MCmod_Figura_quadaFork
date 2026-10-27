@@ -88,10 +88,14 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     // ⇒ 참이면 바닐라 몸(submitModel)과 모든 레이어(RenderLayer.submit)를 건너뛴다. 그림자 · 이름표 · 아바타 파츠는 그대로 · 플레이어는 안 바꾼다
     @Unique
     private boolean figura$hideVanilla;
+    // 이번 submit 에서 Figura 를 그렸나 — 26.3 은 setupAnim 이 레이어 블록 안이라 그 뒤 주입이 안 불릴 수 있다(nullifyAvatar 가 대신 그린다)
+    @Unique
+    private boolean figura$figuraRendered;
 
     @Inject(at = @At("HEAD"), method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V")
     private void onRender(S livingEntityRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState, CallbackInfo ci) {
         figura$hideVanilla = false;
+        figura$figuraRendered = false;
         currentAvatar = AvatarManager.getAvatar(livingEntityRenderState);
         if (currentAvatar == null)
             return;
@@ -220,18 +224,24 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         if (currentAvatar == null)
             return;
 
-        Avatar localAvatar = currentAvatar;
+        figura$figuraRendered = true;
 
-        M model = getModel();
-        
         if (Avatar.firstPerson) {
-            localAvatar.updateMatrices(model, poseStack);
+            currentAvatar.updateMatrices(getModel(), poseStack);
             currentAvatar = null;
             lastPose = null;
             poseStack.popPose();
             ci.cancel();
             return;
         }
+
+        figura$renderAvatar(livingEntityRenderState, poseStack, submitNodeCollector);
+    }
+
+    @Unique
+    private void figura$renderAvatar(S livingEntityRenderState, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
+        Avatar localAvatar = currentAvatar;
+        M model = getModel();
 
         boolean showBody = isBodyVisible(livingEntityRenderState);
         boolean translucent = !showBody && !livingEntityRenderState.isInvisibleToPlayer;
@@ -298,6 +308,13 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         figura$hideVanilla = false;
         if (currentAvatar == null)
             return;
+
+        // 바닐라가 레이어 블록을 건너뛰었다(레이어가 없는 몹 · shouldRenderLayers 거짓) — 그 안의 setupAnim 도 안 불려
+        // Figura 를 못 그렸다. 자세를 직접 잡고 여기서 그린다(1.21.8 은 setupAnim 이 늘 불렸다)
+        if (!figura$figuraRendered && !Avatar.firstPerson) {
+            getModel().setupAnim(livingEntityRenderState);
+            figura$renderAvatar(livingEntityRenderState, poseStack, submitNodeCollector);
+        }
 
         currentAvatar = null;
         lastPose = null;
