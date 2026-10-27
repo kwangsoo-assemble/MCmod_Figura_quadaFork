@@ -243,7 +243,10 @@ public class Avatar {
             }
 
             loaded = true;
-            Minecraft.getInstance().execute(() -> Minecraft.getInstance().levelExtractor.allChanged());
+            // 설치된 플레이어 머리를 새 아바타로 다시 그리려고 청크를 다시 짓는다 — 몹(CEM) 아바타는 머리와 무관하고,
+            // 소환 · 로드 때마다 월드 전체가 깜빡이므로 플레이어 아바타만
+            if (entityType == EntityTypes.PLAYER)
+                Minecraft.getInstance().execute(() -> Minecraft.getInstance().levelExtractor.allChanged());
         });
     }
 
