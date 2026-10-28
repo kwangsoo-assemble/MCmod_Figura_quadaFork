@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-26 지금 `0.1.6.7` · 26.3 가지 `0.1.6.9+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-28 지금 `0.1.6.8` · 26.3 가지 `0.1.6.11+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -73,7 +73,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
      ⚠⚠ **`shouldEntityAppearGlowing` 은 절대 건드리지 마라** — `OutlineBufferSource` 로 감싸이면
      `setColor` 가 no-op 이라 **파츠별 색이 팀 색 하나로 뭉개진다.**
    - 바닐라 갑옷·아이템은 `RenderUtils.pivotGlowBuffer`/`vanillaPartGlowBuffer` 로 감싸 아웃라인에 흘린다.
-   - 1인칭: `LevelRendererMixinFabric` 이 월드 패스 뒤 아이템 피벗 큐를 소비해 손 아이템을 그 자리에 그린다.
+   - 1인칭: `LevelRendererMixinFabric` 이 월드 패스 뒤 아이템 피벗 큐를 소비해 손 아이템을 그 자리에 그린다(27 에서 `FirstPerson` · HUD 로 넓힘).
      (**갑옷은 미구현** — 1인칭은 `LivingEntityRendererMixin.preRender` 가 `ci.cancel()` 로
       레이어 루프를 통째로 막고, `calculatePartMatrices` 에는 `savePivotTransform` 이 없다)
 
@@ -319,6 +319,13 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 반짝임은 바닐라 렌더 타입 그대로 · 셰이더팩 `gbuffers_armor_glint.vsh` 의 순위 읽기는 그 칸이 0 이라 무해하다
     - 1인칭 월드 렌더의 «아이템 피벗 자리 손 아이템»(포크 #1)은 남긴다 — 옛 소품 콘텐츠가 쓴다
 
+27. **아이템 피벗 손 아이템 — 1인칭 월드 · `FirstPerson` · HUD** (2026-10-28, 하네스 `projects/mc_repositories` M49 · 0.1.6.8 / 26.3 가지 0.1.6.11+26.3 · ✅ 인게임 확인 — 두 판 세 곳 · 한 손 · 빈손 · 지도 · 방패 · 활 · 1.21.8 F5 · 26.3 F5 · 발광 · OIT · BSL 은 아직):
+    - 피벗 큐는 그리는 패스마다 모이지만 꺼내는 곳은 3인칭 레이어뿐이었다 → 패스마다 **그 패스 바로 뒤에서** 꺼낸다(1인칭 월드 `LevelRendererMixinFabric` · 손 패스 `ItemInHandRendererMixin` 의 `FirstPerson` 파츠 뒤 · HUD `Avatar.hudRender` 뒤) — 큐는 꺼낼 때 통째로 비우므로 패스 순서대로 붙으면 섞이지 않는다
+    - 1인칭 두 곳에서 그렸으면 `fpPivotItemLeft/Right` 를 켜 바닐라 1인칭 손 아이템을 끈다(끄기는 1인칭 월드 패스가 매 프레임 먼저) · HUD 피벗은 바닐라를 그대로 둔다
+    - 자세는 3인칭 레이어와 같다(16 배 · X −90° · THIRD_PERSON 표시) · HUD 는 GUI 표시 · 아이템마다 조명(`usesBlockLight` → `ITEMS_3D` · 아니면 `ITEMS_FLAT`)
+    - 1.21.8 은 손 패스에 몸 상태가 없어 손 스택으로 아이템 상태를 만든다(`renderPivotHandItem`) · 즉시 그리기라 HUD 아이템마다 `setupFor` → `endBatch` · ⚠ HUD 아이템은 깊이 검사를 켠 채 그린다(파츠는 끈 채)
+    - 26.3 은 몸 상태 `ArmedEntityRenderState` 의 손 아이템을 쓴다(`submitPivotHandItem`) · HUD 는 `hudRender` 뒤 `renderAllFeatures` 한 번이라 `FiguraHudRenderer.renderPivotItems` 가 조명별로 한 번씩 더 그리고 `ITEMS_3D` 로 되돌린다
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴
@@ -362,7 +369,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 
 - Minecraft 26.3 용 시험 가지 `26.3` 은 **별도 작업 폴더** `../figura_core_internal_26.3`(git worktree)에 있다 — main(1.21.8) 폴더 · 배포 · 촬영과 따로 논다
 - 바탕은 NoFigura(원격 `nofigura` · Stranik2504/NoFigura) `26.3` 가지 위에 이 포크의 변경을 얹은 것 · 렌더는 NoFigura 쪽이고 우리 렌더 기능 일부는 아직 안 옮겼다(README «26.3 가지»)
-- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.8+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
+- 빌드: **JDK 25**(`C:\Program Files\Java\jdk-25.0.4.1+1`) · `./gradlew :fabric:build` → `fabric/build/libs/figura-0.1.6.11+26.3-fabric-mc.jar` · ⚠ 판 꼬리 해시는 **빌드 때 HEAD** 다 — 커밋한 뒤 빌드한다
 - 배포 `projects/mc_repositories/tools/deploy_263.py`(26.3 프로필 · 시험 서버 — 게임 · 서버가 켜져 있으면 안 쓴다) · 푸시 `repos.py publish core_263` · 릴리스 `repos.py release core_263`(태그 `v<버전>+26.3` · «Latest» 아님)
 - README 는 main 과 **같은 바이트**로 둔다(한글 원본의 «26.3 가지» 절) — main 에서 README 를 고치면 이 가지에도 복사한다
-- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass` · 손 회차는 OIT 를 켜면 `HandOitRenderer`(23) · Figura 자체 섞기 렌더 타입은 `setOitPipelines` 로 바닐라 OIT 짝을 붙인다(24 — 짝이 없으면 OIT 켬에서 solid 로 간다) · 빛만 더하는 덧칠(반짝임)은 `OIT_ADDITIVE` 짝 + 알파 단계 `min(0.99, a)`(25)
+- 26.x 렌더 규칙: OpenGL 직접 호출을 새로 쓰지 않는다 · 자체 기하는 렌더 타입별로 단계를 나눠 제출한다(OIT 를 켜면 반투명 단계가 하나로 묶인다 — `FiguraSubmitUtils`) · 새 렌더 파이프라인은 `IrisCompat` 에 연결한다 · OIT 없는 저장소(HUD · 1인칭 손)의 반투명 정렬은 준비 동안 `RenderUtils.preparingNonOitPass` · 손 회차는 OIT 를 켜면 `HandOitRenderer`(23) · Figura 자체 섞기 렌더 타입은 `setOitPipelines` 로 바닐라 OIT 짝을 붙인다(24 — 짝이 없으면 OIT 켬에서 solid 로 간다) · 빛만 더하는 덧칠(반짝임)은 `OIT_ADDITIVE` 짝 + 알파 단계 `min(0.99, a)`(25) · 바닐라 `submitModel` · `submitItem` 은 발광이면 **같은 호출 안에서** outline 제출을 하나 더 만든다 — 제출에 콜백을 옮기는 믹스인은 호출 RETURN 에서 비운다(첫 제출에서 비우면 바깥선 사본이 자세 없이 그려진다) · `LivingEntityRenderer.submit` 은 `setupAnim` 을 레이어 블록(`shouldRenderLayers && !layers.isEmpty()`) 안에서만 부른다 — 거기 거는 주입은 블록이 건너뛰어질 때의 대체 길이 있어야 하고(`figura$figuraRendered`) 레이어를 끌 땐 `RenderLayer.submit` 호출마다 · 바깥선 색은 제출마다 정점 색이다 — 색을 덮는 감싸기 소비자의 이어 쓰기 메서드는 자기 자신을 돌려준다 · 피벗 큐는 그 패스 바로 뒤에서 꺼낸다(27)
