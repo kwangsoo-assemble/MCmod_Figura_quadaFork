@@ -19,6 +19,7 @@ import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.ducks.SkullBlockRendererAccessor;
 import org.figuramc.figura.lua.api.vanilla_model.VanillaModelPart;
 import org.figuramc.figura.math.matrix.FiguraMat4;
+import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.rendering.EntityRenderMode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -54,8 +55,18 @@ public abstract class ItemInHandRendererMixin {
     //   팔 호출(renderArmWithItem)은 조건부라 빠지는 프레임이 있어 거기에 걸지 않는다.
     @Inject(method = "renderHandsWithItems", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionfc;)V", ordinal = 1, shift = At.Shift.AFTER))
     private void renderFirstPersonParts(float tickDelta, PoseStack matrices, MultiBufferSource.BufferSource vertexConsumers, LocalPlayer player, int light, CallbackInfo ci) {
-        if (avatar != null)
-            avatar.firstPersonPartsRender(matrices, vertexConsumers, player, light, tickDelta);
+        if (avatar == null)
+            return;
+
+        avatar.firstPersonPartsRender(matrices, vertexConsumers, player, light, tickDelta);
+
+        // FirstPerson 파츠 안 손 아이템 피벗 — 같은 손 패스에서 바로 그린다 · 이 자리는 팔 호출보다 앞이라 같은 프레임에 바닐라 손 아이템을 끈다
+        // ⚠ 플래그는 1인칭 월드 패스(LevelRendererMixinFabric)가 매 프레임 먼저 끈다 — 여기서는 켜기만
+        boolean rightMain = player.getMainArm() == HumanoidArm.RIGHT;
+        if (avatar.renderPivotHandItem(ParentType.RightItemPivot, rightMain ? player.getMainHandItem() : player.getOffhandItem(), ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, player, vertexConsumers, light))
+            avatar.fpPivotItemRight = true;
+        if (avatar.renderPivotHandItem(ParentType.LeftItemPivot, rightMain ? player.getOffhandItem() : player.getMainHandItem(), ItemDisplayContext.THIRD_PERSON_LEFT_HAND, player, vertexConsumers, light))
+            avatar.fpPivotItemLeft = true;
     }
 
     @Inject(method = "renderHandsWithItems", at = @At("RETURN"))

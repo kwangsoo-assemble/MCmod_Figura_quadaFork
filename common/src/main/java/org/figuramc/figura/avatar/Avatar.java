@@ -13,6 +13,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
@@ -753,6 +758,7 @@ public class Avatar {
             ((MultiBufferSource.BufferSource) renderer.bufferSource).endBatch();
 
         GlStateManager._enableDepthTest();
+        renderHudPivotItems(bufferSource, entity);
         Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
         stack.popPose();
 
@@ -994,6 +1000,51 @@ public class Avatar {
      * 1인칭은 월드 패스와 손 렌더가 서로 다른 시점이라 플래그로 건넨다.
      */
     public boolean fpPivotItemLeft, fpPivotItemRight;
+
+    /** 손 아이템을 그 손 피벗 자리에 그린다(3인칭 ItemInHandLayerMixin 과 같은 자세 · 16 배 · X −90°) — 그렸으면 참 */
+    public boolean renderPivotHandItem(ParentType pivot, ItemStack stack, ItemDisplayContext context, LivingEntity owner, MultiBufferSource bufferSource, int light) {
+        if (stack.isEmpty())
+            return false;
+
+        ItemStackRenderState item = new ItemStackRenderState();
+        Minecraft.getInstance().getItemModelResolver().updateForLiving(item, stack, context, owner);
+        if (item.isEmpty())
+            return false;
+
+        return pivotPartRender(pivot, poseStack -> {
+            poseStack.scale(16f, 16f, 16f);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90f));
+            item.render(poseStack, bufferSource, light, OverlayTexture.NO_OVERLAY);
+        });
+    }
+
+    // HUD 손 아이템 피벗 — 인벤토리처럼 GUI 표시 · 화면 정면 · 아이템마다 조명(블록 = ITEMS_3D · 평면 = ITEMS_FLAT)
+    // ⚠ 즉시 그리기라 조명은 endBatch 때 걸린 값이다 — 아이템마다 조명을 걸고 바로 endBatch 한다
+    private void renderHudPivotItems(MultiBufferSource bufferSource, Entity entity) {
+        if (!(entity instanceof LivingEntity living) || !(bufferSource instanceof MultiBufferSource.BufferSource batch))
+            return;
+
+        boolean rightMain = living.getMainArm() == HumanoidArm.RIGHT;
+        renderHudPivotItem(ParentType.RightItemPivot, rightMain ? living.getMainHandItem() : living.getOffhandItem(), living, batch);
+        renderHudPivotItem(ParentType.LeftItemPivot, rightMain ? living.getOffhandItem() : living.getMainHandItem(), living, batch);
+    }
+
+    private void renderHudPivotItem(ParentType pivot, ItemStack stack, LivingEntity owner, MultiBufferSource.BufferSource batch) {
+        if (stack.isEmpty())
+            return;
+
+        ItemStackRenderState item = new ItemStackRenderState();
+        Minecraft.getInstance().getItemModelResolver().updateForTopItem(item, stack, ItemDisplayContext.GUI, owner.level(), owner, 0);
+        if (item.isEmpty())
+            return;
+
+        Minecraft.getInstance().gameRenderer.getLighting().setupFor(item.usesBlockLight() ? Lighting.Entry.ITEMS_3D : Lighting.Entry.ITEMS_FLAT);
+        pivotPartRender(pivot, poseStack -> {
+            poseStack.scale(16f, 16f, 16f);
+            item.render(poseStack, batch, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            batch.endBatch();
+        });
+    }
 
     private static final PartCustomization PIVOT_PART_RENDERING_CUSTOMIZATION = new PartCustomization();
     public synchronized boolean pivotPartRender(ParentType parent, Consumer<PoseStack> consumer) {
