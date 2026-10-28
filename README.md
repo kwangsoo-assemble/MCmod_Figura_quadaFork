@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.7` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.8` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -124,7 +124,9 @@ Code: `avatar/AvatarSource.java` (new) · `avatar/UserData.java` · `avatar/loca
 - Model part Lua methods `setGlow(bool)` and `setGlowColor(r, g, b)`, with getters `getGlow()` and `getGlowColor()` —
   `nil` follows the parent, a value overrides it (values are not multiplied together).
 - Vanilla armor and items attached to a glowing part glow with it.
-- In first person, the held item is drawn at the avatar's pivot (first-person armor is not supported yet).
+- The held item is drawn at the avatar's item pivot — not only on third-person body parts but also on first-person world-parent parts,
+  `FirstPerson` parts (18) and HUD parts (0.1.6.8). When drawn at a first-person pivot, the vanilla first-person held item is not drawn.
+  A HUD pivot draws the item like an inventory slot and leaves the vanilla first-person held item as is. First-person armor is not supported yet.
 
 ![Per-part glow example](docs/images/part_glow.webp)
 
@@ -180,15 +182,15 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.7`
-(jar: `figura-0.1.6.7+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.8`
+(jar: `figura-0.1.6.8+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
-- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.7` is higher than
+- **Comparisons** with upstream, backend and avatar versions use 0.1.6 without the fourth number — otherwise `0.1.6.8` is higher than
   `0.1.6` and official 0.1.6 avatars would look outdated.
 - `Version` reads, compares and prints the fourth number **only when it is present** — upstream-style versions (`0.1.5`) stay as they are.
-  Older forks and the official Figura read `0.1.6.7` as an invalid version and skip the comparison (avatars still show).
+  Older forks and the official Figura read `0.1.6.8` as an invalid version and skip the comparison (avatars still show).
 - Fabric Loader accepts a fourth number, so other mods' `figura >=0.1.6` requirements are met.
 
 Code: root `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -389,9 +391,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.7+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.8+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.7) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.8) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -444,7 +446,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.7` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.8` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -530,7 +532,9 @@ ex)
 - 모델 파츠 Lua 메서드 `setGlow(bool)` · `setGlowColor(r, g, b)` 와 게터 `getGlow()` · `getGlowColor()` —
   `nil` 이면 부모를 따르고, 값을 주면 덮어쓴다(곱해서 누적하지 않는다).
 - 발광을 켠 파츠에 붙은 바닐라 갑옷 · 아이템도 같이 빛난다.
-- 1인칭에서 손에 든 아이템을 아바타 피벗 자리에 그린다 (1인칭 갑옷은 아직 안 된다).
+- 손에 든 아이템을 아바타의 아이템 피벗 자리에 그린다 — 3인칭 몸 파츠뿐 아니라 1인칭의 월드 부모 파츠 · `FirstPerson` 파츠(18) ·
+  HUD 파츠 안 피벗에서도 (0.1.6.8). 1인칭 피벗에 그리면 바닐라 1인칭 손 아이템은 그리지 않는다.
+  HUD 피벗은 인벤토리 칸처럼 그리고 바닐라 1인칭 손 아이템은 그대로 둔다. 1인칭 갑옷은 아직 안 된다.
 
 ![파츠별 발광 예시](docs/images/part_glow.webp)
 
@@ -582,14 +586,14 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.7`
-(jar 는 `figura-0.1.6.7+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.8`
+(jar 는 `figura-0.1.6.8+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
-- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.7` 가 `0.1.6` 보다 높아
+- 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
   공식 0.1.6 아바타를 옛 버전으로 본다.
 - `Version` 은 넷째 자리가 **있을 때만** 읽고 · 비교하고 · 문자열로 되돌린다 — 업스트림 꼴(`0.1.5`)은 그대로다. 옛 포크 · 공식 Figura 는
-  `0.1.6.7` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
+  `0.1.6.8` 를 «잘못된 버전» 으로 읽어 비교를 건너뛴다(아바타는 그대로 보인다).
 - Fabric Loader 는 넷째 자리를 받는다 — 다른 모드의 `figura >=0.1.6` 조건도 채운다.
 
 코드: 루트 `gradle.properties` · `utils/Version.java` · `FiguraMod.java` (`COMPARE_VERSION`) · `avatar/Avatar.java` · `backend2/NetworkStuff.java` ·
@@ -782,9 +786,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.7+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.8+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.7) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.8) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
