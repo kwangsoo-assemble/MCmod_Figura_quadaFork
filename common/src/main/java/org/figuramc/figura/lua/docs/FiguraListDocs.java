@@ -21,6 +21,7 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.animation.Animation;
 import org.figuramc.figura.mixin.input.KeyMappingAccessor;
 import org.figuramc.figura.ducks.GameEffects;
+import org.figuramc.figura.model.HudLevel;
 import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.rendering.EntityRenderMode;
 import org.figuramc.figura.model.rendering.texture.FiguraTextureSet;
@@ -51,6 +52,11 @@ public class FiguraListDocs {
         put("utf16le", List.of("utf_16_le"));
         put("ascii", List.of());
         put("iso88591", List.of("iso_8859_1"));
+    }};
+    // 차례 = 아래에서 위(HudLevel 순서 그대로)
+    private static final LinkedHashSet<String> HUD_LEVELS = new LinkedHashSet<>() {{
+        for (HudLevel value : HudLevel.values())
+            add(value.name());
     }};
     private static final LinkedHashSet<String> RENDER_TYPES = new LinkedHashSet<>() {{
         for (RenderTypes value : RenderTypes.values())
@@ -121,6 +127,7 @@ public class FiguraListDocs {
     private enum ListDoc {
         KEYBINDS(() -> FiguraListDocs.KEYBINDS, "Keybinds", "keybinds", 2),
         PARENT_TYPES(() -> FiguraListDocs.PARENT_TYPES, "ParentTypes", "parent_types", 1),
+        HUD_LEVELS(() -> FiguraListDocs.HUD_LEVELS, "HudLevels", "hud_levels", 1),
         RENDER_TYPES(() -> FiguraListDocs.RENDER_TYPES, "RenderTypes", "render_types", 1),
         TEXTURE_TYPES(() -> FiguraListDocs.TEXTURE_TYPES, "TextureTypes", "texture_types", 1),
         KEY_IDS(() -> new LinkedHashSet<>() {{this.addAll(KeyMappingAccessor.getAll().keySet());}}, "KeyIDs", "key_ids", 2),

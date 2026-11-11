@@ -217,6 +217,19 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             return true;
         }
 
+        // HUD 층 거르기 — 이 층을 안 쓰는 묶음은 통째로 건너뛰고(파츠 Lua 함수도 안 부른다), 자손만 이 층이면 변환만 하고 자기 모양은 안 그린다
+        boolean hudSelf = true;
+        if (hudLevelFilter != null) {
+            Integer hudMask = hudLevelMasks.get(part);
+            if (hudMask != null && (hudMask & (1 << hudLevelFilter.ordinal())) == 0) {
+                FiguraMod.popProfiler(2);
+                return true;
+            }
+            HudLevel own = hudLevelOf.get(part);
+            hudSelf = (own != null ? own : part.getEffectiveHudLevel()) == hudLevelFilter;
+        }
+        boolean renderSelf = thisPassedPredicate && hudSelf;
+
         // calculate part transforms
 
         // calculate vanilla parent
@@ -303,11 +316,11 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
 
         // render this
         FiguraMod.popPushProfiler("pushVertices");
-        boolean breakRender = thisPassedPredicate && !part.pushVerticesImmediate(this, remainingComplexity);
+        boolean breakRender = renderSelf && !part.pushVerticesImmediate(this, remainingComplexity);
 
         // render extras
         FiguraMod.popPushProfiler("extras");
-        if (!breakRender && thisPassedPredicate) {
+        if (!breakRender && renderSelf) {
             boolean renderPivot = shouldRenderPivots > 0;
             boolean renderTasks = !part.renderTasks.isEmpty();
             boolean renderPivotParts = part.parentType.isPivot && allowPivotParts;

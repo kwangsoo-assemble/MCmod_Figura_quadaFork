@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.8` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.9` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -182,8 +182,8 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.8`
-(jar: `figura-0.1.6.8+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.9`
+(jar: `figura-0.1.6.9+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
@@ -343,6 +343,26 @@ Code: `gui/screens/NonhostWardrobeScreen.java` (new) · `gui/widgets/lists/Avata
 Code: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `avatar/Avatar.java` (`firstPersonPartsRender`) ·
 `mixin/render/renderers/ItemInHandRendererMixin.java`
 
+### 19. HUD part levels — `part:setHudLevel(level)` (0.1.6.9)
+
+- Give a HUD parent part a vanilla GUI group name, e.g. `part:setHudLevel("CHAT")`, and it is drawn **right above that group and below the next one**.
+  `part:getHudLevel()` returns the value set on that part (`nil` when unset). `nil` follows the parent; with no ancestor set it is `BOTTOM`
+  (where HUD parts always were — below every GUI element).
+- Levels (bottom to top) — `BOTTOM` · `CAMERA_OVERLAY` · `CROSSHAIR` · `HOTBAR` · `STATUS_BARS` (armor · hearts · food · air · mount health) · `EXPERIENCE` ·
+  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT` · `PLAYER_LIST` · `SUBTITLES` ·
+  `SCREEN_BACKGROUND` (screen blur · inventory panel) · `SCREEN` (screen contents) · `SCREEN_CARRIED` (item carried by the mouse) · `TOOLTIP` (tooltips of every screen) · `TOP` (above everything, toasts included).
+  The `HudLevels` list in the docs has the same order.
+- However many GUI layers a group stacks (hearts, armor and air bubbles add more), and even with chat text, the part stays **above it** — the vanilla 1.21.6+ GUI
+  places an element "one layer above the highest overlapping one" instead of using a z number, so the part goes in as one screen-sized picture right after that group is submitted.
+- Each level is drawn into its own screen-sized texture (only the levels used that frame). The visible z range of the parts is −10000 to +10000 (GUI pixels).
+- When vanilla skips a group (F1, spectator, no screen open), the parts are still drawn at the next point — they do not disappear.
+- ⚠ Lua render functions of parent parts (`preRender` · `midRender` · `postRender`) run once for every level used below them.
+- ⚠ Elements other mods insert between vanilla HUD groups sit above or below the parts depending on where those mods insert them.
+
+Code: `model/HudLevel.java` (new) · `model/FiguraModelPart.java` (`setHudLevel` · `getHudLevel`) · `model/rendering/AvatarRenderer.java` (`prepareHudLevels`) ·
+`model/rendering/ImmediateAvatarRenderer.java` (level filter) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (new) ·
+`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` (new) · `mixin/render/GameRendererMixin.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -391,9 +411,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.8+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.9+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.8) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.9) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -446,7 +466,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.8` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.9` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -586,8 +606,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.8`
-(jar 는 `figura-0.1.6.8+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.9`
+(jar 는 `figura-0.1.6.9+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
@@ -738,6 +758,25 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 코드: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `avatar/Avatar.java`(`firstPersonPartsRender`) ·
 `mixin/render/renderers/ItemInHandRendererMixin.java`
 
+### 19. HUD 파츠 층 — `part:setHudLevel(대상)` (0.1.6.9)
+
+- HUD 부모 파츠에 `part:setHudLevel("CHAT")` 처럼 바닐라 GUI 묶음 이름을 주면, 그 파츠는 **그 묶음 바로 위 · 다음 묶음 밑**에 그려진다.
+  `part:getHudLevel()` 은 그 파츠에 직접 준 값(없으면 `nil`). `nil` 이면 부모를 따르고, 맨 위 조상까지 없으면 `BOTTOM`(지금까지의 HUD 자리 — 모든 GUI 밑).
+- 대상(아래에서 위로) — `BOTTOM` · `CAMERA_OVERLAY` · `CROSSHAIR` · `HOTBAR` · `STATUS_BARS`(갑옷 · 하트 · 배고픔 · 공기 · 탈것 체력) · `EXPERIENCE` ·
+  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT` · `PLAYER_LIST` · `SUBTITLES` ·
+  `SCREEN_BACKGROUND`(화면 흐림 · 인벤토리 판) · `SCREEN`(화면 내용) · `SCREEN_CARRIED`(마우스로 든 아이템) · `TOOLTIP`(모든 화면의 툴팁) · `TOP`(토스트까지 모두 위).
+  목록 문서 `HudLevels` 에 같은 차례로 있다.
+- 묶음 안에서 하트 · 갑옷 · 공기 방울 개수에 따라 GUI 칸이 몇 단 쌓이든, 채팅 글이든 파츠가 **그 위**다 — 바닐라 1.21.6+ GUI 는 숫자 z 대신
+  «겹치는 것의 맨 위 칸 + 1» 로 자리를 정하므로, 묶음을 넣는 호출이 끝난 직후에 화면 크기 그림 하나로 넣는다.
+- 층마다 화면 크기 텍스처를 따로 그린다(그 프레임에 쓰인 층만). 파츠의 보이는 z 는 −10000 ~ +10000(GUI 픽셀)이다.
+- F1 · 관전 · 화면 없음처럼 바닐라가 그 묶음을 건너뛰어도 파츠는 다음 자리에서 그려진다(사라지지 않는다).
+- ⚠ 부모 파츠의 Lua 렌더 함수(`preRender` · `midRender` · `postRender`)는 그 아래에서 쓰이는 층마다 한 번씩 돈다.
+- ⚠ 다른 모드가 바닐라 HUD 사이에 끼운 요소와의 위아래는 그 모드가 끼운 곳에 따른다.
+
+코드: `model/HudLevel.java` (새) · `model/FiguraModelPart.java`(`setHudLevel` · `getHudLevel`) · `model/rendering/AvatarRenderer.java`(`prepareHudLevels`) ·
+`model/rendering/ImmediateAvatarRenderer.java`(층 거르기) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (새) ·
+`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` (새) · `mixin/render/GameRendererMixin.java`
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -786,9 +825,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.8+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.9+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.8) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.9) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트

@@ -1,25 +1,15 @@
 package org.figuramc.figura.gui;
 
-import com.mojang.blaze3d.ProjectionType;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
+import org.figuramc.figura.model.HudLevel;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class FiguraGui {
-    private static final CachedOrthoProjectionMatrixBuffer guiProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", 1000.0F, 11000.0F, true);
-
     public static void onRender(GuiGraphics guiGraphics, float tickDelta, CallbackInfo ci) {
         if (AvatarManager.panic)
             return;
@@ -35,38 +25,18 @@ public class FiguraGui {
         Entity entity = Minecraft.getInstance().getCameraEntity();
         Avatar avatar = entity == null ? null : AvatarManager.getAvatar(entity);
 
-        Window window = Minecraft.getInstance().getWindow();
-        GpuBufferSlice previousProjectionMatrix = RenderSystem.getProjectionMatrixBuffer();
-        ProjectionType previousProjectionType = RenderSystem.getProjectionType();
+        // hud parent type — 층마다 그림 속 그림으로 넣는다(FiguraHudLayers) · 여기는 BOTTOM
+        FiguraHudLayers.begin(guiGraphics, tickDelta);
 
-        RenderSystem.setProjectionMatrix(
-                guiProjectionMatrixBuffer.getBuffer((float)window.getWidth() / window.getGuiScale(), (float)window.getHeight() / window.getGuiScale()),
-                ProjectionType.ORTHOGRAPHIC
-        );
-
-        Matrix4fStack matrix4fStack = RenderSystem.getModelViewStack();
-        matrix4fStack.pushMatrix();
-        matrix4fStack.translation(0.0F, 0.0F, -11000.0F);
-
-        if (avatar != null) {
-            // hud parent type
-            PoseStack stack = new PoseStack();
-            stack.pushPose();
-            stack.setIdentity();
-            stack.last().pose().mul(guiGraphics.pose());
-
-            avatar.hudRender(stack, Minecraft.getInstance().renderBuffers().bufferSource(), entity, tickDelta);
-            stack.popPose();
-            // hud hidden by script
-            if (avatar.luaRuntime != null && !avatar.luaRuntime.renderer.renderHUD) {
-                // render figura overlays
-                renderOverlays(guiGraphics);
-                // cancel this method
-                ci.cancel();
-            }
+        // hud hidden by script
+        if (avatar != null && avatar.luaRuntime != null && !avatar.luaRuntime.renderer.renderHUD) {
+            // 바닐라 HUD 를 건너뛰니 HUD 층은 여기서 다 넣는다(파츠는 지금처럼 보인다)
+            FiguraHudLayers.upTo(guiGraphics, HudLevel.LAST_HUD);
+            // render figura overlays
+            renderOverlays(guiGraphics);
+            // cancel this method
+            ci.cancel();
         }
-        matrix4fStack.popMatrix();
-        RenderSystem.setProjectionMatrix(previousProjectionMatrix, previousProjectionType);
 
         FiguraMod.popProfiler();
     }

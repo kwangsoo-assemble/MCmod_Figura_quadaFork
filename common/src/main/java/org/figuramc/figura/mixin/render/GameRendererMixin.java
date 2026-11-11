@@ -11,6 +11,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.render.GuiRenderer;
+import net.minecraft.client.gui.render.state.GuiRenderState;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelTargetBundle;
@@ -24,13 +25,17 @@ import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.ducks.GameRendererAccessor;
+import org.figuramc.figura.gui.FiguraHudLayers;
+import org.figuramc.figura.gui.FiguraHudRenderer;
 import org.figuramc.figura.gui.FiguraPortraitRenderer;
 import org.figuramc.figura.lua.api.ClientAPI;
 import org.figuramc.figura.math.matrix.FiguraMat4;
 import org.figuramc.figura.math.vector.FiguraVec3;
+import org.figuramc.figura.model.HudLevel;
 import org.figuramc.figura.utils.EntityUtils;
 import org.figuramc.figura.utils.RenderUtils;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix3x2f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Quaternionfc;
@@ -69,6 +74,7 @@ public abstract class GameRendererMixin implements GameRendererAccessor {
     @Shadow private float spinningEffectTime;
     @Shadow private float spinningEffectSpeed;
     @Shadow @Final private GuiRenderer guiRenderer;
+    @Shadow @Final private GuiRenderState guiRenderState;
     @Unique
     private boolean avatarPostShader = false;
     @Unique
@@ -220,7 +226,21 @@ public abstract class GameRendererMixin implements GameRendererAccessor {
     private List<PictureInPictureRenderer<?>> addPortraitRenderer(List<PictureInPictureRenderer<?>> list, @Local MultiBufferSource.BufferSource source) {
         List<PictureInPictureRenderer<?>> newList = new ArrayList<>(list);
         newList.add(new FiguraPortraitRenderer(source));
+        // HUD 부모 파츠 층 — FiguraHudLayers 가 FiguraHudRenderState 를 넣는다 · 여기 없으면 바닐라가 그 상태를 그리지 못한다
+        newList.add(new FiguraHudRenderer(source));
         return newList;
+    }
+
+    // HUD 부모 파츠 층 — 토스트 앞에서 화면 층(TOOLTIP 까지)을 메우고, GUI 를 실제로 그리기 직전에 TOP 을 넣고 프레임을 닫는다
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/toasts/ToastManager;render(Lnet/minecraft/client/gui/GuiGraphics;)V"))
+    private void figura$beforeToasts(DeltaTracker deltaTracker, boolean tick, CallbackInfo ci) {
+        var window = this.minecraft.getWindow();
+        FiguraHudLayers.upTo(this.guiRenderState, new Matrix3x2f(), window.getGuiScaledWidth(), window.getGuiScaledHeight(), HudLevel.LAST_SCREEN);
+    }
+
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"))
+    private void figura$beforeGuiDraw(DeltaTracker deltaTracker, boolean tick, CallbackInfo ci) {
+        FiguraHudLayers.finish(this.guiRenderState);
     }
 
     @WrapOperation(method = "renderLevel",

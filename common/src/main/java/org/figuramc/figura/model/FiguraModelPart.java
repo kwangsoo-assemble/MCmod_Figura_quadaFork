@@ -50,6 +50,8 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     public final PartCustomization customization;
     public PartCustomization savedCustomization;
     public ParentType parentType = ParentType.None;
+    // HUD 층 — null 이면 부모를 따른다(맨 위까지 없으면 BOTTOM) · HUD 부모 파츠 아래에서만 쓰인다
+    public HudLevel hudLevel = null;
     public PartCustomization playerCustomization;
 
     private final Map<String, FiguraModelPart> childCache = new HashMap<>();
@@ -1296,6 +1298,38 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     }
 
     @LuaWhitelist
+    @LuaMethodDoc(
+            overloads = @LuaMethodOverload(
+                    argumentTypes = String.class,
+                    argumentNames = "hudLevel"
+            ),
+            aliases = "hudLevel",
+            value = "model_part.set_hud_level")
+    public FiguraModelPart setHudLevel(String level) {
+        this.hudLevel = HudLevel.get(level);
+        return this;
+    }
+
+    @LuaWhitelist
+    public FiguraModelPart hudLevel(String level) {
+        return setHudLevel(level);
+    }
+
+    @LuaWhitelist
+    @LuaMethodDoc("model_part.get_hud_level")
+    public String getHudLevel() {
+        return this.hudLevel == null ? null : this.hudLevel.name();
+    }
+
+    /** 실제 층 — 자기 값 · 없으면 가장 가까운 조상 값 · 끝까지 없으면 BOTTOM */
+    public HudLevel getEffectiveHudLevel() {
+        for (FiguraModelPart p = this; p != null; p = p.parent)
+            if (p.hudLevel != null)
+                return p.hudLevel;
+        return HudLevel.BOTTOM;
+    }
+
+    @LuaWhitelist
     @LuaMethodDoc("model_part.get_type")
     public String getType() {
         return this.customization.partType.name();
@@ -1561,6 +1595,7 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
         result.facesByTexture = new ArrayList<>(facesByTexture);
         result.textures = new ArrayList<>(textures);
         result.parentType = parentType;
+        result.hudLevel = hudLevel;
         result.textureHeight = textureHeight;
         result.textureWidth = textureWidth;
 

@@ -18,6 +18,7 @@ import org.figuramc.figura.math.matrix.FiguraMat3;
 import org.figuramc.figura.math.matrix.FiguraMat4;
 import org.figuramc.figura.math.vector.FiguraVec3;
 import org.figuramc.figura.model.FiguraModelPart;
+import org.figuramc.figura.model.HudLevel;
 import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.VanillaModelData;
 import org.figuramc.figura.model.rendering.texture.FiguraTexture;
@@ -28,6 +29,7 @@ import org.joml.Quaternionf;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +65,40 @@ public abstract class AvatarRenderer {
     public VanillaModelData vanillaModelData = new VanillaModelData();
 
     public PartFilterScheme currentFilterScheme;
+
+    // -- HUD 층(HudLevel) -- //
+    // hudLevelFilter 가 null 이 아니면 그 층 파츠만 그린다 · 표는 프레임마다 prepareHudLevels 가 채운다
+    public HudLevel hudLevelFilter;
+    public final Map<FiguraModelPart, Integer> hudLevelMasks = new IdentityHashMap<>(); // 파츠 → 그 파츠 · 자손이 쓰는 층(비트)
+    public final Map<FiguraModelPart, HudLevel> hudLevelOf = new IdentityHashMap<>();   // 파츠 → 실제 층
+
+    /** HUD 부모 파츠마다 실제 층을 계산해 두고, 이번 프레임에 쓰이는 층(비트)을 돌려준다 — 보이는 파츠만 */
+    public int prepareHudLevels() {
+        hudLevelMasks.clear();
+        hudLevelOf.clear();
+        List<FiguraModelPart> parts = separatedParts.get(ParentType.Hud);
+        if (parts == null || root == null || !root.customization.visible)
+            return 0;
+        int all = 0;
+        for (FiguraModelPart part : parts) {
+            HudLevel inherited = part.parent == null ? HudLevel.BOTTOM : part.parent.getEffectiveHudLevel();
+            all |= collectHudLevels(part, inherited);
+        }
+        return all;
+    }
+
+    private int collectHudLevels(FiguraModelPart part, HudLevel inherited) {
+        if (!part.customization.visible)
+            return 0;
+        HudLevel level = part.hudLevel != null ? part.hudLevel : inherited;
+        hudLevelOf.put(part, level);
+        int mask = 1 << level.ordinal();
+        for (FiguraModelPart child : part.children)
+            mask |= collectHudLevels(child, level);
+        hudLevelMasks.put(part, mask);
+        return mask;
+    }
+
     /**
      * 피벗 파츠가 저장한 변환. 바닐라 갑옷·아이템 레이어가 이걸 빼서 그 자리에 그린다.
      *

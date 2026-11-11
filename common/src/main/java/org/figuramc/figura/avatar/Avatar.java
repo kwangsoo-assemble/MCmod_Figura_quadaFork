@@ -63,6 +63,7 @@ import org.figuramc.figura.math.matrix.FiguraMat4;
 import org.figuramc.figura.math.vector.FiguraVec3;
 import org.figuramc.figura.mixin.gui.GuiGraphicsAccessor;
 import org.figuramc.figura.model.FiguraModelPart;
+import org.figuramc.figura.model.HudLevel;
 import org.figuramc.figura.model.ParentType;
 import org.figuramc.figura.model.PartCustomization;
 import org.figuramc.figura.model.rendering.AvatarRenderer;
@@ -730,6 +731,18 @@ public class Avatar {
         renderer.allowMatrixUpdate = prevAllowMatrixUpdate;
 
         FiguraMod.popProfiler(3);
+    }
+
+    /** HUD 부모 파츠 중 그 층(HudLevel)만 그린다 — FiguraHudRenderer 가 층마다 부른다 */
+    public void hudRender(PoseStack stack, MultiBufferSource bufferSource, Entity entity, float tickDelta, HudLevel level) {
+        if (renderer == null || !loaded)
+            return;
+        renderer.hudLevelFilter = level;
+        try {
+            hudRender(stack, bufferSource, entity, tickDelta);
+        } finally {
+            renderer.hudLevelFilter = null;
+        }
     }
 
     public void hudRender(PoseStack stack, MultiBufferSource bufferSource, Entity entity, float tickDelta) {
