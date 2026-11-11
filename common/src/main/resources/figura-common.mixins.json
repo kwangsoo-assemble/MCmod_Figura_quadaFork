@@ -53,6 +53,7 @@
     "gui.GuiHudLevelMixin",
     "gui.ScreenHudLevelMixin",
     "gui.ContainerScreenHudLevelMixin",
+    "gui.ChatScreenHudLevelMixin",
     "gui.GuiMessageLineMixin",
     "gui.GuiMessageMixin",
     "gui.GuiRendererAccessor",

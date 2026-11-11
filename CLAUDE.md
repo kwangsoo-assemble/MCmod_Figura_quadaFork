@@ -330,7 +330,9 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 1.21.6+ 바닐라 GUI 는 «모으기(`Gui.render` · 화면) → `GuiRenderer.render` 에서 한꺼번에 그리기» 두 단계 · 숫자 z 가 없고 새 요소는 «겹치는 것의 맨 위 칸 + 1» 에 들어간다
       → 옛 HUD(곧장 그리기)는 z 와 상관없이 모든 GUI 밑이었다 · 이제 HUD 는 층마다 그림 속 그림(`gui/FiguraHudRenderer` · 화면 크기)으로 묶음 «끝 직후» 에 넣는다 — 하트 · 채팅 글 위가 보장된다
     - ⚠ 층마다 텍스처를 따로 둔다 — 바닐라 그림 속 그림은 렌더러 하나에 텍스처 하나라 한 프레임 두 층을 같은 텍스처에 그리면 앞 층을 덮어쓴다
-    - 자리: `mixin/gui/GuiHudLevelMixin`(Gui.render · renderHotbarAndDecorations 호출 뒤) · `ScreenHudLevelMixin`(renderWithTooltip) · `ContainerScreenHudLevelMixin`(든 아이템 앞) · `GameRendererMixin`(토스트 앞 · GuiRenderer.render 앞 = TOP)
+    - 자리: `mixin/gui/GuiHudLevelMixin`(Gui.render · renderHotbarAndDecorations 호출 뒤) · `ScreenHudLevelMixin`(renderWithTooltip) · `ContainerScreenHudLevelMixin`(든 아이템 앞) · `ChatScreenHudLevelMixin`(채팅 글 뒤) · `GameRendererMixin`(토스트 앞 · GuiRenderer.render 앞 = TOP)
+    - 채팅은 둘(🙋 인게임 — 열린 채팅이 `CHAT` 판 위로 나옴): 채팅 창이 열리면 `Gui.renderChat` 은 `isChatFocused` 로 건너뛰고 `ChatScreen.render` 가 채팅을 그린다
+      → `CHAT` = 닫힌 채팅 · `CHAT_FOCUSED`(`SCREEN_BACKGROUND` 와 `SCREEN` 사이) = `ChatScreenHudLevelMixin`(채팅 글 직후) · 채팅 창이 아닌 화면은 배경 뒤에 같이 넣는다 · 채팅 글 툴팁은 `setTooltipForNextFrame` 이라 `TOOLTIP`
     - ★ 자리마다 «아직 못 넣은 더 낮은 층» 까지 넣는다(`gui/FiguraHudLayers.upTo`) — F1 · 관전 · 화면 없음 · `setRenderHUD(false)` 에도 파츠가 남는다
     - 렌더러: `AvatarRenderer.prepareHudLevels`(프레임마다 파츠 → 층 · 자손 층 비트) · `ImmediateAvatarRenderer.renderPart` 가 그 층을 안 쓰는 묶음은 Lua 파츠 함수 전에 통째로 건너뛴다 · 조상은 변환만
     - z 창: 파츠 z −10000 ~ +10000(옛 계산 −10000 ~ 0 을 품음 · 26.3 은 ±1000 — 이식 때 맞춘다)

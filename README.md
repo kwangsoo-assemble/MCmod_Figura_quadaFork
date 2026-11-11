@@ -349,9 +349,12 @@ Code: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `ava
   `part:getHudLevel()` returns the value set on that part (`nil` when unset). `nil` follows the parent; with no ancestor set it is `BOTTOM`
   (where HUD parts always were — below every GUI element).
 - Levels (bottom to top) — `BOTTOM` · `CAMERA_OVERLAY` · `CROSSHAIR` · `HOTBAR` · `STATUS_BARS` (armor · hearts · food · air · mount health) · `EXPERIENCE` ·
-  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT` · `PLAYER_LIST` · `SUBTITLES` ·
-  `SCREEN_BACKGROUND` (screen blur · inventory panel) · `SCREEN` (screen contents) · `SCREEN_CARRIED` (item carried by the mouse) · `TOOLTIP` (tooltips of every screen) · `TOP` (above everything, toasts included).
+  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT` (closed chat) · `PLAYER_LIST` · `SUBTITLES` ·
+  `SCREEN_BACKGROUND` (screen blur · inventory panel) · `CHAT_FOCUSED` (chat messages in the open chat screen) · `SCREEN` (screen contents) · `SCREEN_CARRIED` (item carried by the mouse) · `TOOLTIP` (tooltips of every screen — chat hover text included) · `TOP` (above everything, toasts included).
   The `HudLevels` list in the docs has the same order.
+- Chat has two levels — while the chat screen is open, vanilla skips the HUD chat and draws the chat inside the chat screen.
+  Above the closed chat is `CHAT`; above the open chat (below the input box and command suggestions) is `CHAT_FOCUSED`.
+  In other screens `CHAT_FOCUSED` sits right above the background, and with no screen open above the whole HUD. Switch between them from Lua with `host:isChatOpen()`.
 - However many GUI layers a group stacks (hearts, armor and air bubbles add more), and even with chat text, the part stays **above it** — the vanilla 1.21.6+ GUI
   places an element "one layer above the highest overlapping one" instead of using a z number, so the part goes in as one screen-sized picture right after that group is submitted.
 - Each level is drawn into its own screen-sized texture (only the levels used that frame). The visible z range of the parts is −10000 to +10000 (GUI pixels).
@@ -361,7 +364,7 @@ Code: `model/ParentType.java` · `model/rendering/PartFilterScheme.java` · `ava
 
 Code: `model/HudLevel.java` (new) · `model/FiguraModelPart.java` (`setHudLevel` · `getHudLevel`) · `model/rendering/AvatarRenderer.java` (`prepareHudLevels`) ·
 `model/rendering/ImmediateAvatarRenderer.java` (level filter) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (new) ·
-`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` (new) · `mixin/render/GameRendererMixin.java`
+`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` · `ChatScreenHudLevelMixin.java` (new) · `mixin/render/GameRendererMixin.java`
 
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
@@ -763,9 +766,12 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 - HUD 부모 파츠에 `part:setHudLevel("CHAT")` 처럼 바닐라 GUI 묶음 이름을 주면, 그 파츠는 **그 묶음 바로 위 · 다음 묶음 밑**에 그려진다.
   `part:getHudLevel()` 은 그 파츠에 직접 준 값(없으면 `nil`). `nil` 이면 부모를 따르고, 맨 위 조상까지 없으면 `BOTTOM`(지금까지의 HUD 자리 — 모든 GUI 밑).
 - 대상(아래에서 위로) — `BOTTOM` · `CAMERA_OVERLAY` · `CROSSHAIR` · `HOTBAR` · `STATUS_BARS`(갑옷 · 하트 · 배고픔 · 공기 · 탈것 체력) · `EXPERIENCE` ·
-  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT` · `PLAYER_LIST` · `SUBTITLES` ·
-  `SCREEN_BACKGROUND`(화면 흐림 · 인벤토리 판) · `SCREEN`(화면 내용) · `SCREEN_CARRIED`(마우스로 든 아이템) · `TOOLTIP`(모든 화면의 툴팁) · `TOP`(토스트까지 모두 위).
+  `ITEM_NAME` · `EFFECTS` · `BOSS_BAR` · `SLEEP` · `DEBUG` · `SCOREBOARD` · `ACTIONBAR` · `TITLE` · `CHAT`(닫힌 채팅) · `PLAYER_LIST` · `SUBTITLES` ·
+  `SCREEN_BACKGROUND`(화면 흐림 · 인벤토리 판) · `CHAT_FOCUSED`(열린 채팅 창의 채팅 글) · `SCREEN`(화면 내용) · `SCREEN_CARRIED`(마우스로 든 아이템) · `TOOLTIP`(모든 화면의 툴팁 — 채팅 글 툴팁 포함) · `TOP`(토스트까지 모두 위).
   목록 문서 `HudLevels` 에 같은 차례로 있다.
+- 채팅은 둘이다 — 채팅 창을 열면 바닐라는 HUD 채팅을 건너뛰고 채팅 창(화면) 안에서 그린다.
+  닫힌 채팅 위는 `CHAT`, 열린 채팅 위(입력칸 · 명령 제안 밑)는 `CHAT_FOCUSED` 다.
+  `CHAT_FOCUSED` 는 채팅 창이 아닌 화면에선 배경 바로 위, 화면이 없으면 HUD 맨 위에 그려진다. 둘을 오가려면 Lua 에서 `host:isChatOpen()` 으로 바꾼다.
 - 묶음 안에서 하트 · 갑옷 · 공기 방울 개수에 따라 GUI 칸이 몇 단 쌓이든, 채팅 글이든 파츠가 **그 위**다 — 바닐라 1.21.6+ GUI 는 숫자 z 대신
   «겹치는 것의 맨 위 칸 + 1» 로 자리를 정하므로, 묶음을 넣는 호출이 끝난 직후에 화면 크기 그림 하나로 넣는다.
 - 층마다 화면 크기 텍스처를 따로 그린다(그 프레임에 쓰인 층만). 파츠의 보이는 z 는 −10000 ~ +10000(GUI 픽셀)이다.
@@ -775,7 +781,7 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 코드: `model/HudLevel.java` (새) · `model/FiguraModelPart.java`(`setHudLevel` · `getHudLevel`) · `model/rendering/AvatarRenderer.java`(`prepareHudLevels`) ·
 `model/rendering/ImmediateAvatarRenderer.java`(층 거르기) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (새) ·
-`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` (새) · `mixin/render/GameRendererMixin.java`
+`mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` · `ChatScreenHudLevelMixin.java` (새) · `mixin/render/GameRendererMixin.java`
 
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.

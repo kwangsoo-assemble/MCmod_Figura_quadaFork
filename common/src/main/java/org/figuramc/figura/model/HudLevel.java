@@ -23,10 +23,11 @@ public enum HudLevel {
     SCOREBOARD,
     ACTIONBAR,
     TITLE,
-    CHAT,
+    CHAT,               // 포커스 안 된 채팅(HUD) — 채팅 창을 열면 바닐라가 HUD 채팅을 건너뛰고 화면에서 그린다
     PLAYER_LIST,
     SUBTITLES,
     SCREEN_BACKGROUND,  // 화면 흐림 · 어둡게 · 인벤토리 판
+    CHAT_FOCUSED,       // 채팅 창 안 채팅 글 · 배경(입력칸 · 명령 제안 밑) · 다른 화면에선 배경 바로 위 · 화면 없으면 HUD 맨 위
     SCREEN,             // 화면 내용(상자 화면은 든 아이템 밑)
     SCREEN_CARRIED,     // 상자 화면에서 마우스로 든 아이템
     TOOLTIP,
