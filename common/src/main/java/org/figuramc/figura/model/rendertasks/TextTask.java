@@ -306,6 +306,20 @@ public class TextTask extends RenderTask {
         return setWidth(width);
     }
 
+    // 그린 글의 폭 · 높이(GUI px · 태스크 배율 전) — getWidth() 는 줄바꿈 폭 «설정값» 이라 상자 너비를 못 잰다(하네스 figura_dialogue K1)
+    // ⚠ updateText() 는 글이 nil 이면 캐시를 안 지운다 → text == null 이면 0
+    @LuaWhitelist
+    @LuaMethodDoc("text_task.get_text_width")
+    public int getTextWidth() {
+        return text == null ? 0 : cacheWidth;
+    }
+
+    @LuaWhitelist
+    @LuaMethodDoc("text_task.get_text_height")
+    public int getTextHeight() {
+        return text == null ? 0 : cacheHeight;
+    }
+
     @LuaWhitelist
     @LuaMethodDoc("text_task.has_wrap")
     public boolean hasWrap() {

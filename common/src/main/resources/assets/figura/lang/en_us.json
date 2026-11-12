@@ -1469,6 +1469,8 @@
     "figura.docs.text_task.set_outline_color": "Sets the outline color this Text should render\nOnly compatible with \"Outline\" mode",
     "figura.docs.text_task.get_width": "Gets this text's max width\nDefaults to 0",
     "figura.docs.text_task.set_width": "Sets this text's max width, wrapping the text into multiple lines\nA width of 0 or less does not wrap the text\nDefaults to 0",
+    "figura.docs.text_task.get_text_width": "Gets the width of the text as drawn, in GUI pixels before the task scale\nWraps by the max width first\nReturns 0 when there is no text",
+    "figura.docs.text_task.get_text_height": "Gets the height of the text as drawn, in GUI pixels before the task scale\nLines are 9 pixels with 1 pixel between them\nReturns 0 when there is no text",
     "figura.docs.text_task.has_wrap": "Check if this text should wrap lines",
     "figura.docs.text_task.set_wrap": "Sets if this text should wrap lines",
     "figura.docs.text_task.is_see_through": "Check if this text can be seen behind walls\nDefaults to false",

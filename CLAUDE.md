@@ -338,6 +338,10 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - z 창: 파츠 z −10000 ~ +10000(옛 계산 −10000 ~ 0 을 품음 · 26.3 은 ±1000 — 이식 때 맞춘다)
     - ⚠ 26.3 가지는 아직 옛 꼴(HUD 그림 하나를 맨 앞에) — 바닐라 이름이 바뀌어(`Hud.extractRenderState` · `extract…`) 자리를 다시 찾는다
 
+29. **글 태스크 그린 폭 · 높이 `TextTask:getTextWidth()` · `getTextHeight()`** (2026-11-12, 하네스 `projects/figura_dialogue` K1 · 설계 `design/대사_시스템_이전/plan.md` §3-11 · 0.1.6.9 에 묶음 · 🎬 전):
+    - `updateText()` 가 이미 재던 `cacheWidth` · `cacheHeight`(글 배경 상자가 쓰던 값)를 Lua 로 낸다 · `getWidth()` 는 줄바꿈 폭 설정값이라 대사 선택지 상자 너비를 못 쟀다
+    - ⚠ `updateText()` 는 글이 nil 이면 캐시를 안 지운다 → `text == null` 이면 0 · 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다(애드온이 이 API 를 쓸 때만)
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴
