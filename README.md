@@ -366,6 +366,15 @@ Code: `model/HudLevel.java` (new) · `model/FiguraModelPart.java` (`setHudLevel`
 `model/rendering/ImmediateAvatarRenderer.java` (level filter) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (new) ·
 `mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` · `ChatScreenHudLevelMixin.java` (new) · `mixin/render/GameRendererMixin.java`
 
+### 20. Drawn size of a text task — `TextTask:getTextWidth()` · `getTextHeight()` (0.1.6.9)
+
+- Returns the width and height of the text a text task **is drawing now**, in GUI pixels (before the task scale) — after wrapping by the max width (`setWidth`) and after badges and emojis are put in.
+- `getWidth()` is the wrap width **setting**, so it cannot size a box to the text — use these to fit a box or background to the text.
+- Height = lines × 9 + (lines − 1) × 1. Both are 0 when there is no text.
+- Same calculation as `client.getTextDimensions(text, maxWidth, wrap)`, without parsing the text again (it is the cache the renderer uses).
+
+Code: `model/rendertasks/TextTask.java` (`getTextWidth` · `getTextHeight`)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -782,6 +791,15 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 코드: `model/HudLevel.java` (새) · `model/FiguraModelPart.java`(`setHudLevel` · `getHudLevel`) · `model/rendering/AvatarRenderer.java`(`prepareHudLevels`) ·
 `model/rendering/ImmediateAvatarRenderer.java`(층 거르기) · `gui/FiguraHudLayers.java` · `gui/FiguraHudRenderer.java` · `gui/FiguraHudRenderState.java` (새) ·
 `mixin/gui/GuiHudLevelMixin.java` · `ScreenHudLevelMixin.java` · `ContainerScreenHudLevelMixin.java` · `ChatScreenHudLevelMixin.java` (새) · `mixin/render/GameRendererMixin.java`
+
+### 20. 글 태스크의 그린 폭 · 높이 — `TextTask:getTextWidth()` · `getTextHeight()` (0.1.6.9)
+
+- 글 태스크가 **지금 그리는 글**의 폭 · 높이를 GUI 픽셀로 돌려준다(태스크 배율 전) — 줄바꿈 폭(`setWidth`)으로 접은 뒤의 값이고, 배지 · 이모지를 바꿔 넣은 뒤의 값이다.
+- `getWidth()` 는 줄바꿈 폭 **설정값**이라 글에 맞춘 상자 너비를 못 잰다 — 상자 · 배경을 글에 맞출 때 이것을 쓴다.
+- 높이 = 줄 수 × 9 + (줄 수 − 1) × 1. 글이 없으면 둘 다 0.
+- `client.getTextDimensions(text, maxWidth, wrap)` 와 같은 계산이지만 다시 해석하지 않는다(그리기가 쓰는 캐시 그대로).
+
+코드: `model/rendertasks/TextTask.java`(`getTextWidth` · `getTextHeight`)
 
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
