@@ -8,7 +8,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 - **반드시 JDK 21**: `JAVA_HOME="C:\Program Files\Java\jdk-21"` 지정 후 `./gradlew :fabric:build`
   (시스템 기본 JDK 25는 Gradle 8.11과 비호환 — "Unsupported class file major version 69" 에러)
 - Fabric 전용 (forge/neoforge는 settings.gradle에서 주석 처리됨)
-- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-10-28 지금 `0.1.6.8` · 26.3 가지 `0.1.6.11+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
+- 산출물: `fabric/build/libs/figura-<mod_version>+1.21.8-fabric-mc.jar` — 버전은 `gradle.properties` (2026-11-14 지금 `0.1.6.10` · 26.3 가지 `0.1.6.11+26.3`) · 옛 이름 `figura-0.1.6+1.21.8-fabric-mc.jar` 는 낡은 산출물
 - 짝꿍 서버 플러그인: `../figura_fsbplugin_internal` (플러그인과 **반드시 같이 배포** — 프로토콜 변경 시 특히)
 
 ## ★ GitHub 저장소 — 이 작업본을 그대로 올린다 (2026-10-10 — 🙋 규칙 변경)
@@ -341,6 +341,16 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
 29. **글 태스크 그린 폭 · 높이 `TextTask:getTextWidth()` · `getTextHeight()`** (2026-11-12, 하네스 `projects/figura_dialogue` K1 · 설계 `design/대사_시스템_이전/plan.md` §3-11 · 0.1.6.9 에 묶음 · 🎬 전):
     - `updateText()` 가 이미 재던 `cacheWidth` · `cacheHeight`(글 배경 상자가 쓰던 값)를 Lua 로 낸다 · `getWidth()` 는 줄바꿈 폭 설정값이라 대사 선택지 상자 너비를 못 쟀다
     - ⚠ `updateText()` 는 글이 nil 이면 캐시를 안 지운다 → `text == null` 이면 0 · 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다(애드온이 이 API 를 쓸 때만)
+
+30. **가벼운 디버그 라이브러리 `FiguraDebugLib` — 모든 아바타 Lua 약 −36 ~ −39%** (2026-11-14, 하네스 `projects/mc_repositories` M61 · 근거 `projects/별의별난연구소_3화/design/문어_역관절/notes/fork_perf_proposal.md` §3-1 · §6 1순위 · 0.1.6.10 · 🎬 전):
+    - LuaJ `DebugLib` 은 실려 있기만 해도 명령마다 `globals.running.state` → `callstack()` → `synchronized` `CallStack.onInstruction` → 프레임에 `pc · v · top` 을 적는다 — Lua 시간의 절반쯤(훅 유무 차 0 ~ 3%)
+    - 새 `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java` 가 스레드 · 상태 · 지금 프레임을 `onCall` · `onReturn` 때(`super` 뒤) 잡아 두고 명령마다 `pc` 하나만 적는다 · `FiguraLuaRuntime` 생성자에서 `new DebugLib()` → `FiguraDebugLib.USABLE ? new FiguraDebugLib() : new DebugLib()`
+    - 오프라인(같은 jar LuaJ 3.0.8-figura · JDK 21): 몹 한 프레임 29,081 명령 0.385 → 0.246ms · 빈 고리 32.6 → 16.0µs · 재고판 대조 VerifyProp 10가지 + ExtraCheck 14줄 diff 0
+    - ⚠ 명령 수 판정은 `(b >= c || b <= 0) && b % c == 0` — 재고판 `++b % c == 0` 과 **모든 int 에서** 같다. 제안서 시제품의 `b >= c &&` 는 카운터가 int 를 넘어 음수가 되면 주기 훅을 거의 안 불렀다(ExtraCheck B — 재고 3 · 4,287 · 30,007번 대 시제품 0 · 1 · 5번)
+    - ⚠ 패키지 전용 멤버(`CallStack.frame · calls` · `CallFrame.pc` · `globals` · `callHook`)를 쓰려고 LuaJ 패키지에 둔다 — 모드 jar 와 jar 안 LuaJ 가 한 Knot 로더라 된다. 막히면 `USABLE` 탐침이 false → 재고판(성능만 잃는다) · LuaJ 판을 올리면 필드 이름을 다시 맞춘다
+    - 스위치 JVM 인자 `-Dfigura.stockDebugLib=true` = 재고판(되돌리기 · 인게임 A/B) · `latest.log` 에 `Lua debug library: …` 한 줄
+    - ⚠ `run` 메서드 · 그 안의 `setInstructionLimit` 호출은 그대로다(SillyPlugin · FiguraSVC 믹스인) · 공개 API 변경 없음 → 애드온 `.libs` 안 바꿈 · 26.3 가지는 같은 파일이 그대로 든다(옮길지는 26.x 원칙대로)
+    - 하지 말 것: 디버그 라이브러리 떼기(끝없는 루프가 안 끊긴다) · 한도 판정 `>=` · luajc — 제안서 §7
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

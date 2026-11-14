@@ -43,6 +43,11 @@ import java.util.function.Function;
  */
 public class FiguraLuaRuntime {
 
+    // 어느 디버그 라이브러리가 실렸는지 latest.log 에 한 번 남긴다(M61 — 게임에서 가벼운 판이 실렸나 확인용)
+    static {
+        FiguraMod.LOGGER.info("Lua debug library: {}", FiguraDebugLib.USABLE ? "FiguraDebugLib (light per-instruction path)" : "stock DebugLib");
+    }
+
     // Global API instances
     //---------------------------------
     public EntityAPI<?> entityAPI;
@@ -83,7 +88,8 @@ public class FiguraLuaRuntime {
 
         LuaC.install(userGlobals);
 
-        userGlobals.load(new DebugLib());
+        // 명령마다 가벼운 디버그 라이브러리(M61 · Lua 약 −39%) — 스위치 -Dfigura.stockDebugLib=true 나 접근이 막힌 환경이면 재고판
+        userGlobals.load(FiguraDebugLib.USABLE ? new FiguraDebugLib() : new DebugLib());
         LuaTable debugLib = userGlobals.get("debug").checktable();
         setHookFunction = debugLib.get("sethook").checkfunction();
         getInfoFunction = debugLib.get("getinfo").checkfunction();

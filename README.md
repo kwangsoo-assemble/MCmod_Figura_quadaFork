@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.9` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.10` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -182,8 +182,8 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.9`
-(jar: `figura-0.1.6.9+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.10`
+(jar: `figura-0.1.6.10+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
@@ -375,6 +375,16 @@ Code: `model/HudLevel.java` (new) · `model/FiguraModelPart.java` (`setHudLevel`
 
 Code: `model/rendertasks/TextTask.java` (`getTextWidth` · `getTextHeight`)
 
+### 21. Cheaper Lua execution — a lighter debug library (0.1.6.10)
+
+- Just by being loaded, the LuaJ debug library records the call state (with a synchronized lock) on every Lua instruction. The instruction limit, error line numbers and stack tracebacks read that record. Even with no hook set, this was about half of the Lua time.
+- The subclass `FiguraDebugLib` keeps the current frame from the call and return events, and on each instruction only writes the instruction position (`pc`) into that frame. Lua runs about 36 – 39% faster for every avatar (measured offline — one frame of a mob avatar 0.385 → 0.246 ms).
+- Error file:line, stack tracebacks, `error(msg, 2)`, the instruction limit, blocking a `pcall` escape after the limit, periodic hooks (SillyPlugin's execution time limit), line / call / return hooks and coroutines give the same output as upstream (24 comparisons — no difference).
+- To turn it off: the JVM argument `-Dfigura.stockDebugLib=true` uses the upstream `DebugLib` (no rebuild needed). `latest.log` gets one line saying which one is loaded (`Lua debug library: …`).
+- The debug library is not removed altogether — without it an endless loop is never stopped.
+
+Code: `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java` (new — it lives in the LuaJ package to use LuaJ's package-private fields) · `lua/FiguraLuaRuntime.java`
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -423,9 +433,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.9+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.10+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.9) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.10) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -478,7 +488,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.9` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.10` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -618,8 +628,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.9`
-(jar 는 `figura-0.1.6.9+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.10`
+(jar 는 `figura-0.1.6.10+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
@@ -801,6 +811,16 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 코드: `model/rendertasks/TextTask.java`(`getTextWidth` · `getTextHeight`)
 
+### 21. Lua 실행 비용 줄임 — 가벼운 디버그 라이브러리 (0.1.6.10)
+
+- LuaJ 디버그 라이브러리는 실려 있기만 해도 Lua 명령 하나마다 호출 기록(동기화 잠금 포함)을 적는다. 명령 수 한도 · 오류 줄 번호 · 스택 추적이 이 기록을 쓴다. 훅을 안 걸어도 이 값이 Lua 시간의 절반쯤이었다.
+- 하위 클래스 `FiguraDebugLib` 이 지금 프레임을 호출 · 반환 때 잡아 두고, 명령마다는 그 프레임의 명령 위치(`pc`) 하나만 적는다. 모든 아바타의 Lua 실행이 약 36 ~ 39% 빨라진다(오프라인 실측 — 몹 아바타 한 프레임 0.385 → 0.246ms).
+- 오류 파일:줄 · 스택 추적 · `error(msg, 2)` · 명령 수 한도 · 한도 뒤 `pcall` 로 빠져나가기 막기 · 주기 훅(SillyPlugin 실행 시간 한도) · 줄 · 호출 · 반환 훅 · 코루틴은 원본과 출력이 같다(대조 24가지 — 차 0).
+- 되돌리기: JVM 인자 `-Dfigura.stockDebugLib=true` 면 원본 `DebugLib` 을 쓴다(다시 빌드하지 않아도 된다). 어느 쪽이 실렸는지 `latest.log` 에 한 줄 남는다(`Lua debug library: …`).
+- 디버그 라이브러리를 아예 떼지는 않는다. 떼면 끝없는 루프가 끊기지 않는다.
+
+코드: `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java`(새 — LuaJ 의 패키지 전용 필드를 쓰려고 LuaJ 와 같은 패키지에 둔다) · `lua/FiguraLuaRuntime.java`
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -849,9 +869,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.9+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.10+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.9) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.10) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
