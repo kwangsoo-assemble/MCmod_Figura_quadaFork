@@ -463,6 +463,15 @@ public class HostAPI {
         return this.minecraft.screen.getClass().getName();
     }
 
+    // 열린 화면 제목 — 상자 · 덫상자의 이름(CustomName)은 클라 블록 엔티티 NBT 로 안 오고 «화면 열기» 제목으로만 온다
+    @LuaWhitelist
+    @LuaMethodDoc("host.get_screen_title")
+    public String getScreenTitle() {
+        if (!isHost() || this.minecraft.screen == null)
+            return null;
+        return this.minecraft.screen.getTitle().getString();
+    }
+
     @LuaWhitelist
     @LuaMethodDoc("host.get_screen_slot_count")
     public Integer getScreenSlotCount() {

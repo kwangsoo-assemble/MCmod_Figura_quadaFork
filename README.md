@@ -385,6 +385,13 @@ Code: `model/rendertasks/TextTask.java` (`getTextWidth` · `getTextHeight`)
 
 Code: `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java` (new — it lives in the LuaJ package to use LuaJ's package-private fields) · `lua/FiguraLuaRuntime.java`
 
+### 22. Title of the open screen — `host:getScreenTitle()` (0.1.6.11)
+
+- Returns the title of the screen that is open now, as **plain text** (`Component.getString()`). For a chest it is that chest's name (a `CustomName` set with an anvil or a command). `nil` when not the host or when no screen is open.
+- The name of a chest, trapped chest or barrel does not reach the client in the block entity NBT (its update tag is empty). The only place the client gets the name is the title of the "open screen" packet, so together with `getScreen()` (class name) and `getScreenSlotCount()` this tells which chest was opened.
+
+Code: `lua/api/HostAPI.java` (`getScreenTitle`)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -820,6 +827,13 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 - 디버그 라이브러리를 아예 떼지는 않는다. 떼면 끝없는 루프가 끊기지 않는다.
 
 코드: `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java`(새 — LuaJ 의 패키지 전용 필드를 쓰려고 LuaJ 와 같은 패키지에 둔다) · `lua/FiguraLuaRuntime.java`
+
+### 22. 열린 화면 제목 — `host:getScreenTitle()` (0.1.6.11)
+
+- 지금 열린 화면의 제목을 **꾸밈을 뺀 글**(`Component.getString()`)로 돌려준다. 상자면 그 상자의 이름(모루 · 명령으로 붙인 `CustomName`)이다. 호스트가 아니거나 화면이 없으면 `nil`.
+- 상자 · 덫상자 · 통의 이름은 클라이언트 블록 엔티티 NBT 로 오지 않는다(갱신 태그가 비어 있다). 클라이언트에 이름이 오는 곳은 «화면 열기» 패킷의 제목뿐이라, `getScreen()`(클래스 이름) · `getScreenSlotCount()` 와 함께 «어느 상자를 열었나» 를 안다.
+
+코드: `lua/api/HostAPI.java`(`getScreenTitle`)
 
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
