@@ -1154,6 +1154,7 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     // ── 파츠별 바닐라 발광 ────────────────────────────────────────────────
     // ⚠ 파라미터는 반드시 박싱 Boolean 이어야 한다. 원시 boolean 으로 두면 LuaTypeManager 가
     //   nil 을 false 로 떨궈 "nil = 상속" 이 죽는다.
+    // ★ false(물려받은 값 포함)는 엔티티 발광(발광 포션) 윤곽선에서도 뺀다(0.1.6.12 — ImmediateAvatarRenderer.VertexBuffer).
 
     @LuaWhitelist
     public FiguraModelPart setGlow(Boolean glow) {

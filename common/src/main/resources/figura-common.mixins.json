@@ -83,6 +83,7 @@
     "render.LevelRendererMixin",
     "render.MissingTextureAtlasSpriteAccessor",
     "render.ModelManagerAccessor",
+    "render.OutlineBufferSourceAccessor",
     "render.PlayerCapeModelMixin",
     "render.PoseStackAccessor",
     "render.TextureAtlasAccessor",

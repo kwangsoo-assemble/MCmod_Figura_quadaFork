@@ -667,7 +667,8 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
         if (vertexData.outline)
             VERTEX_BUFFER.getOutlineBufferFor(vertexData.renderType, writer);
         else
-            VERTEX_BUFFER.getBufferFor(vertexData.renderType, vertexData.primary, writer);
+            // ★ setGlow(false)(물려받은 값 포함)면 엔티티 발광 윤곽선에서 뺀다 — 비울 때 OutlineBufferSource 의 안쪽 버퍼로 간다
+            VERTEX_BUFFER.getBufferFor(vertexData.renderType, vertexData.primary, Boolean.FALSE.equals(customization.glow), writer);
     }
 
     private static class VertexData {
@@ -684,9 +685,14 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> primaryBuffers = new LinkedHashMap<>();
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> secondaryBuffers = new LinkedHashMap<>();
         private final HashMap<RenderType, List<Consumer<VertexConsumer>>> outlineBuffers = new LinkedHashMap<>();
+        // setGlow(false) 파츠 — 엔티티 발광 윤곽선을 안 받는다
+        private final HashMap<RenderType, List<Consumer<VertexConsumer>>> primaryNoGlowBuffers = new LinkedHashMap<>();
+        private final HashMap<RenderType, List<Consumer<VertexConsumer>>> secondaryNoGlowBuffers = new LinkedHashMap<>();
 
-        public void getBufferFor(RenderType renderType, boolean primary, Consumer<VertexConsumer> consumer) {
-            HashMap<RenderType, List<Consumer<VertexConsumer>>> buffer = primary ? primaryBuffers : secondaryBuffers;
+        public void getBufferFor(RenderType renderType, boolean primary, boolean noGlow, Consumer<VertexConsumer> consumer) {
+            HashMap<RenderType, List<Consumer<VertexConsumer>>> buffer = noGlow
+                    ? (primary ? primaryNoGlowBuffers : secondaryNoGlowBuffers)
+                    : (primary ? primaryBuffers : secondaryBuffers);
             List<Consumer<VertexConsumer>> list = buffer.computeIfAbsent(renderType, renderType1 -> new ArrayList<>());
             list.add(consumer);
         }
@@ -701,6 +707,10 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
 
         public void consume(boolean primary, MultiBufferSource bufferSource) {
             drain(primary ? primaryBuffers : secondaryBuffers, bufferSource);
+            // 발광 포션이 감싼 버퍼면 안쪽(윤곽선 없는) 버퍼로 — 같은 BufferSource 라 렌더 타입 묶음 · 순서는 그대로다
+            MultiBufferSource plain = bufferSource instanceof org.figuramc.figura.mixin.render.OutlineBufferSourceAccessor outline
+                    ? outline.figura$getBufferSource() : bufferSource;
+            drain(primary ? primaryNoGlowBuffers : secondaryNoGlowBuffers, plain);
         }
 
         private static void drain(HashMap<RenderType, List<Consumer<VertexConsumer>>> map, MultiBufferSource bufferSource) {

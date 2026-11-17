@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.10` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.12` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -123,6 +123,7 @@ Code: `avatar/AvatarSource.java` (new) · `avatar/UserData.java` · `avatar/loca
 
 - Model part Lua methods `setGlow(bool)` and `setGlowColor(r, g, b)`, with getters `getGlow()` and `getGlowColor()` —
   `nil` follows the parent, a value overrides it (values are not multiplied together).
+- `setGlow(false)` also keeps that part out of the entity glow outline (Glowing effect, team glow) (0.1.6.12 — see 23).
 - Vanilla armor and items attached to a glowing part glow with it.
 - The held item is drawn at the avatar's item pivot — not only on third-person body parts but also on first-person world-parent parts,
   `FirstPerson` parts (18) and HUD parts (0.1.6.8). When drawn at a first-person pivot, the vanilla first-person held item is not drawn.
@@ -182,8 +183,8 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.10`
-(jar: `figura-0.1.6.10+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.12`
+(jar: `figura-0.1.6.12+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
@@ -392,6 +393,16 @@ Code: `common/src/main/java/org/luaj/vm2/lib/FiguraDebugLib.java` (new — it li
 
 Code: `lua/api/HostAPI.java` (`getScreenTitle`)
 
+### 23. Leaving parts out of entity glow — `setGlow(false)` (0.1.6.12)
+
+- For an entity with the Glowing effect or team glow, vanilla wraps the buffer that draws the entity in an outline buffer. The fork draws world-parent (`WORLD`) parts with the same buffer while drawing that entity, so objects placed in the world got the outline too.
+- Now a part with `setGlow(false)` (including a `false` inherited from a parent) is drawn into the inner buffer, before the wrapping, so it gets no outline.
+- `true` and `nil` are unchanged. World parts still follow entity glow by default, and `setGlow(true)` can turn it on per part.
+- Each part is judged by the one value it inherits. A part given `setGlow(true)` under a `false` parent glows again, along with the parts below it.
+- The target buffer and render type batching are the same (the inner buffer is vanilla's real buffer). On older versions `false` only means "do not add" (no errors).
+
+Code: `mixin/render/OutlineBufferSourceAccessor.java` (new) · `model/rendering/ImmediateAvatarRenderer.java` (the "no outline" slots of `VertexBuffer`)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -440,9 +451,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.10+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.12+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.10) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.12) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -495,7 +506,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.10` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.12` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -580,6 +591,7 @@ ex)
 
 - 모델 파츠 Lua 메서드 `setGlow(bool)` · `setGlowColor(r, g, b)` 와 게터 `getGlow()` · `getGlowColor()` —
   `nil` 이면 부모를 따르고, 값을 주면 덮어쓴다(곱해서 누적하지 않는다).
+- `setGlow(false)` 는 엔티티 발광(발광 포션 · 팀 발광)의 윤곽선에서도 그 파츠를 뺀다(0.1.6.12 — 아래 23).
 - 발광을 켠 파츠에 붙은 바닐라 갑옷 · 아이템도 같이 빛난다.
 - 손에 든 아이템을 아바타의 아이템 피벗 자리에 그린다 — 3인칭 몸 파츠뿐 아니라 1인칭의 월드 부모 파츠 · `FirstPerson` 파츠(18) ·
   HUD 파츠 안 피벗에서도 (0.1.6.8). 1인칭 피벗에 그리면 바닐라 1인칭 손 아이템은 그리지 않는다.
@@ -635,8 +647,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.10`
-(jar 는 `figura-0.1.6.10+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.12`
+(jar 는 `figura-0.1.6.12+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
@@ -835,6 +847,16 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 코드: `lua/api/HostAPI.java`(`getScreenTitle`)
 
+### 23. 엔티티 발광에서 파츠 빼기 — `setGlow(false)` (0.1.6.12)
+
+- 발광 포션 · 팀 발광을 받은 엔티티는 바닐라가 그 엔티티를 그리는 버퍼를 윤곽선 버퍼로 감싼다. 포크는 월드 부모(`WORLD`) 파츠도 그 엔티티를 그릴 때 같은 버퍼로 그려서, 월드에 놓인 오브젝트까지 윤곽선이 생겼다.
+- 이제 `setGlow(false)` 인 파츠(부모에게 물려받은 `false` 포함)는 감싸기 전 안쪽 버퍼로 그린다 → 윤곽선에 안 들어간다.
+- `true` · `nil` 은 그대로다. 월드 파츠도 기본은 엔티티 발광을 따르고, `setGlow(true)` 로 따로 켤 수 있다.
+- 판정은 파츠마다 물려받은 값 하나다. `false` 아래에서 `setGlow(true)` 를 준 파츠와 그 아래는 다시 빛난다.
+- 그리는 버퍼 · 렌더 타입 묶음은 같다(안쪽 버퍼가 바닐라의 진짜 버퍼다). 옛 판에서는 `false` 가 «안 더한다» 로만 남는다(오류는 없다).
+
+코드: `mixin/render/OutlineBufferSourceAccessor.java` (새) · `model/rendering/ImmediateAvatarRenderer.java`(`VertexBuffer` 의 «윤곽선 없음» 칸)
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -883,9 +905,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.10+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.12+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.10) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.12) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
