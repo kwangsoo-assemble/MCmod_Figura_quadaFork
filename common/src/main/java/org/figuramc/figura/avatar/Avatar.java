@@ -718,6 +718,13 @@ public class Avatar {
         renderer.allowMatrixUpdate = false;
         renderer.entity = entity;
 
+        // ★ 이 패스의 시각 · 투영을 남긴다 — 파츠의 손 패스 행렬(savedFirstPersonMat)을 화면 위치로 바꿀 때 쓴다(getFirstPersonScreenPos)
+        Minecraft mc = Minecraft.getInstance();
+        Camera fpCamera = mc.gameRenderer.getMainCamera();
+        float fpFov = (float) ((org.figuramc.figura.ducks.GameRendererAccessor) mc.gameRenderer).figura$getFov(fpCamera, tickDelta, false);
+        fpProjection.set(mc.gameRenderer.getProjectionMatrix(fpFov));
+        fpRenderStamp = System.nanoTime();
+
         stack.pushPose();
         stack.scale(-1, -1, 1);
         renderer.setupRenderer(
@@ -1013,6 +1020,13 @@ public class Avatar {
      * 1인칭은 월드 패스와 손 렌더가 서로 다른 시점이라 플래그로 건넨다.
      */
     public boolean fpPivotItemLeft, fpPivotItemRight;
+
+    /**
+     * 마지막 FirstPerson 패스 시각(System.nanoTime · 0 = 아직 없음)과 그 패스의 투영 — 바닐라 손 패스와 같은 getProjectionMatrix(getFov(…, false)).
+     * 파츠는 그 패스에서 그려질 때 같은 시각을 savedFirstPersonStamp 에 남긴다 → ModelPart:getFirstPersonScreenPos().
+     */
+    public long fpRenderStamp;
+    public final org.joml.Matrix4f fpProjection = new org.joml.Matrix4f();
 
     /** 손 아이템을 그 손 피벗 자리에 그린다(3인칭 ItemInHandLayerMixin 과 같은 자세 · 16 배 · X −90°) — 그렸으면 참 */
     public boolean renderPivotHandItem(ParentType pivot, ItemStack stack, ItemDisplayContext context, LivingEntity owner, MultiBufferSource bufferSource, int light) {

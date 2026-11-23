@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.12` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.13` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -183,8 +183,8 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.12`
-(jar: `figura-0.1.6.12+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.13`
+(jar: `figura-0.1.6.13+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
@@ -403,6 +403,15 @@ Code: `lua/api/HostAPI.java` (`getScreenTitle`)
 
 Code: `mixin/render/OutlineBufferSourceAccessor.java` (new) · `model/rendering/ImmediateAvatarRenderer.java` (the "no outline" slots of `VertexBuffer`)
 
+### 24. Screen position of a part in the first-person hand pass — `ModelPart:getFirstPersonScreenPos()` (0.1.6.13)
+
+- `FirstPerson` parent parts are drawn in vanilla's first-person hand pass — with that pass's hurt tilt, walking bob and view sway, so they sway like the vanilla hand. That pass is not in world space, so `partToWorldMatrix()` does not change there.
+- This returns where the part's pivot was drawn in that pass, in **GUI pixels** from the screen center (+x right, +y down) — the same units as `renderer:setCrosshairOffset`. It uses the same projection as the hand pass (`getFov(…, false)`).
+- `nil` when the part was not drawn in the last first-person hand pass (third person, hidden, another parent type), that pass is over 0.1 s old, or the point is behind the camera.
+- `post_render` (context `FIRST_PERSON`) runs where the hand pass ends — read it there and the same frame's GUI (the crosshair, say) can use it.
+
+Code: `model/FiguraModelPart.java` (`savedFirstPersonMat` · `getFirstPersonScreenPos`) · `model/rendering/ImmediateAvatarRenderer.java` (records in the FIRST_PERSON pass) · `avatar/Avatar.java` (`fpRenderStamp` · `fpProjection`)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -425,7 +434,7 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
 - **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
   Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
   the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17) ·
-  what `main` added in 0.1.6.9 – 0.1.6.12 (19 – 23 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow).
+  what `main` added in 0.1.6.9 – 0.1.6.13 (19 – 24 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow · screen position of a part in the first-person hand pass).
 - **Fixed on 26.3** — HUD parts not being drawn · text task backgrounds and outlines now drawn with vanilla's text feature ·
   the game crashing on render types such as `CUTOUT` when Improved Transparency (OIT) is on · a crash with the `LINES` render type ·
   `GLINT2` and `SOLID` now look the way they do on 1.21.8 · `SOLID` under Iris shader packs · a crash when quitting the game ·
@@ -452,9 +461,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.12+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.13+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.12) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.13) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -507,7 +516,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.12` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.13` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -648,8 +657,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.12`
-(jar 는 `figura-0.1.6.12+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.13`
+(jar 는 `figura-0.1.6.13+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
@@ -858,6 +867,15 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 코드: `mixin/render/OutlineBufferSourceAccessor.java` (새) · `model/rendering/ImmediateAvatarRenderer.java`(`VertexBuffer` 의 «윤곽선 없음» 칸)
 
+### 24. 1인칭 손 패스의 파츠 화면 위치 — `ModelPart:getFirstPersonScreenPos()` (0.1.6.13)
+
+- `FirstPerson` 부모 파츠는 바닐라 1인칭 손 패스에서 그려진다 — 피격 기울기 · 걸음 흔들림 · 시선 지연이 곱해진 포즈라 바닐라 손처럼 흔들린다. 이 패스는 월드 좌표가 아니라 `partToWorldMatrix()` 는 여기서 바뀌지 않는다.
+- 이제 그 패스에서 그린 파츠 피벗의 화면 자리를 돌려준다 — 화면 가운데 기준 **GUI 픽셀**(+x 오른쪽 · +y 아래) · `renderer:setCrosshairOffset` 과 같은 단위다. 손 패스와 같은 투영(`getFov(…, false)`)으로 바꾼다.
+- 마지막 1인칭 손 패스에서 그 파츠가 안 그려졌거나(3인칭 · 숨김 · 다른 부모) 그 패스가 0.1초 넘게 지났거나 카메라 뒤면 `nil`.
+- 손 패스가 끝나는 자리에서 `post_render`(컨텍스트 `FIRST_PERSON`)가 불린다 — 거기서 읽으면 같은 프레임의 GUI(십자선 등)에 쓸 수 있다.
+
+코드: `model/FiguraModelPart.java`(`savedFirstPersonMat` · `getFirstPersonScreenPos`) · `model/rendering/ImmediateAvatarRenderer.java`(FIRST_PERSON 패스 기록) · `avatar/Avatar.java`(`fpRenderStamp` · `fpProjection`)
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -880,7 +898,7 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 - **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
   파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
   남 세팅용 옷장 화면(17) ·
-  main 0.1.6.9 ~ 0.1.6.12 에서 더한 것(19 ~ 23 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기).
+  main 0.1.6.9 ~ 0.1.6.13 에서 더한 것(19 ~ 24 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기 · 1인칭 손 패스의 파츠 화면 위치).
 - **26.3 에서 고친 것** — HUD 파츠가 안 그려지던 것 · 글 태스크 배경 · 바깥선을 바닐라 글 기능으로 그리기 ·
   Improved Transparency(OIT)를 켜면 `CUTOUT` 같은 렌더 타입에서 게임이 멈추던 것 · `LINES` 렌더 타입 크래시 ·
   `GLINT2` · `SOLID` 를 1.21.8 모습으로 · Iris 셰이더팩에서 `SOLID` · 게임을 끌 때 나던 크래시 ·
@@ -907,9 +925,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.12+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.13+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.12) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.13) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트

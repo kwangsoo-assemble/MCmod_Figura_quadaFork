@@ -352,6 +352,14 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - ⚠ `run` 메서드 · 그 안의 `setInstructionLimit` 호출은 그대로다(SillyPlugin · FiguraSVC 믹스인) · 공개 API 변경 없음 → 애드온 `.libs` 안 바꿈 · 26.3 가지는 같은 파일이 그대로 든다(옮길지는 26.x 원칙대로)
     - 하지 말 것: 디버그 라이브러리 떼기(끝없는 루프가 안 끊긴다) · 한도 판정 `>=` · luajc — 제안서 §7
 
+31. **1인칭 손 패스의 파츠 화면 위치 `ModelPart:getFirstPersonScreenPos()`** (2026-11-23, 하네스 `projects/별의별난연구소_3화` F34 · 설계 `design/조준_십자선/brief.md` ✅ · 0.1.6.13 · 🎬 전):
+    - `FirstPerson` 패스는 `allowMatrixUpdate = false` 라 `savedPartToWorldMat` 이 안 바뀐다(22) → `ImmediateAvatarRenderer` 의 같은 자리에서 FIRST_PERSON 이면 `customizationStack.peek().positionMatrix × 피벗` 을 `savedFirstPersonMat`(손 카메라 공간 · 블록)에 남기고 `Avatar.fpRenderStamp` 를 함께 적는다
+    - `Avatar.firstPersonPartsRender` 가 그 패스의 시각(`System.nanoTime`)과 투영(`gameRenderer.getProjectionMatrix(figura$getFov(cam, delta, false))` — 바닐라 손 패스와 같은 수)을 남긴다
+    - Lua 는 투영 → NDC → 화면 가운데 기준 GUI 픽셀(+x 오른쪽 · +y 아래 · `setCrosshairOffset` 단위) · 이번 패스에 안 그려졌거나 0.1초 넘게 묵었거나 카메라 뒤면 nil · 숨은 파츠는 패스에서 건너뛰어 늘 nil
+    - `post_render`(FIRST_PERSON)는 `renderHandsWithItems` RETURN(손 패스 끝 · GUI 앞) — 거기서 읽으면 같은 프레임 십자선에 쓸 수 있다
+    - 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다(애드온이 이 API 를 쓸 때만) · 26.3 가지는 안 옮김(README «빠진 것» 24)
+    - 확인: `:fabric:build` 성공(JDK 21 · 믹스인 경고는 기존 2개뿐) · 두 프로필 배포 md5 `b68626cc`
+
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 
 - NBT: 1.21.5+에서 getter가 Optional 반환 → `getXxxOr(key, default)` / `.get()` 패턴

@@ -286,6 +286,14 @@ public class ImmediateAvatarRenderer extends AvatarRenderer {
             if (allowMatrixUpdate) {
                 FiguraMat4 mat = partToWorldMatrices(custom);
                 part.savedPartToWorldMat.set(mat);
+            } else if (currentFilterScheme == PartFilterScheme.FIRST_PERSON) {
+                // ★ 손 패스 피벗 행렬 — 월드 변환 없이(포즈가 손 카메라 공간) · getFirstPersonScreenPos 가 Avatar.fpProjection 으로 화면에 옮긴다
+                FiguraMat4 fp = customizationStack.peek().positionMatrix.copy();
+                FiguraMat4 pivot = FiguraMat4.of();
+                pivot.translate(custom.getPivot());
+                fp.rightMultiply(pivot);
+                part.savedFirstPersonMat.set(fp);
+                part.savedFirstPersonStamp = avatar.fpRenderStamp;
             }
 
             // recalculate light

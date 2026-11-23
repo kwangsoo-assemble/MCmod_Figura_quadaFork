@@ -70,6 +70,10 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     public int lastAnimationPriority = Integer.MIN_VALUE;
 
     public final FiguraMat4 savedPartToWorldMat = FiguraMat4.of().scale(1 / 16d, 1 / 16d, 1 / 16d);
+    // ★ FirstPerson 패스(바닐라 손 패스)에서 그려질 때의 피벗 행렬 — 손 카메라 공간(블록 · 피격 · 걸음 흔들림 · 시선 지연이 든 포즈).
+    //   그 패스는 월드 좌표가 아니라 savedPartToWorldMat 을 안 바꾼다 → 따로 둔다. 시각은 Avatar.fpRenderStamp 와 맞대 «이번 패스에서 그려졌나» 를 가린다.
+    public final FiguraMat4 savedFirstPersonMat = FiguraMat4.of();
+    public long savedFirstPersonStamp;
 
     public final Map<Integer, List<Vertex>> vertices;
 
@@ -914,6 +918,24 @@ public class FiguraModelPart implements Comparable<FiguraModelPart> {
     @LuaMethodDoc("model_part.part_to_world_matrix")
     public FiguraMat4 partToWorldMatrix() {
         return this.savedPartToWorldMat.copy();
+    }
+
+    // ★ FirstPerson 파츠 피벗의 화면 위치 — 화면 가운데 기준 GUI 픽셀(+x 오른쪽 · +y 아래 · renderer:setCrosshairOffset 와 같은 단위)
+    //   마지막 FirstPerson 패스에서 이 파츠가 안 그려졌거나(3인칭 · 숨김 · 다른 부모) 그 패스가 0.1초 넘게 멈췄거나 카메라 뒤면 nil
+    @LuaWhitelist
+    @LuaMethodDoc("model_part.get_first_person_screen_pos")
+    public FiguraVec2 getFirstPersonScreenPos() {
+        if (owner == null || owner.fpRenderStamp == 0 || savedFirstPersonStamp != owner.fpRenderStamp)
+            return null;
+        if (System.nanoTime() - owner.fpRenderStamp > 100_000_000L)
+            return null;
+        FiguraVec3 view = savedFirstPersonMat.apply(0d, 0d, 0d);
+        org.joml.Vector4f clip = new org.joml.Vector4f((float) view.x, (float) view.y, (float) view.z, 1f);
+        owner.fpProjection.transform(clip);
+        if (clip.w() <= 1e-6f)
+            return null;
+        com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
+        return FiguraVec2.of(clip.x() / clip.w() * window.getGuiScaledWidth() / 2d, -clip.y() / clip.w() * window.getGuiScaledHeight() / 2d);
     }
 
     @LuaWhitelist
