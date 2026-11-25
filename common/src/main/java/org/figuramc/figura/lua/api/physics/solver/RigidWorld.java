@@ -54,7 +54,7 @@ public final class RigidWorld {
     private boolean asleep, healthy = true, anchorValid;
     private int ticksAwake, calm, probe;
     private double[] anchor = new double[0], snap = new double[0];
-    private final double[] f6 = new double[FACES], m9 = new double[9], t9 = new double[9];
+    private final double[] f6 = new double[FACES], m9 = new double[9], t9 = new double[9], lw = new double[14];
 
     public RigidWorld(Settings s, double originX, double originY, double originZ) {
         if (s == null) throw new IllegalArgumentException("settings 가 없다");
@@ -226,6 +226,90 @@ public final class RigidWorld {
         c.px = p.px + r[0] * lpx + r[1] * lpy + r[2] * lpz - (q[0] * lcx + q[1] * lcy + q[2] * lcz);
         c.py = p.py + r[3] * lpx + r[4] * lpy + r[5] * lpz - (q[3] * lcx + q[4] * lcy + q[5] * lcz);
         c.pz = p.pz + r[6] * lpx + r[7] * lpy + r[8] * lpz - (q[6] * lcx + q[7] * lcy + q[8] * lcz);
+    }
+
+    /**
+     * 관절 나무를 뿌리(몸 0)에서 내려가며 범위 밖 상대 회전을 범위 경계로 접는다 — swing 은 같은 기울기 방향으로 타원 원뿔 경계까지 ·
+     * twist 는 [min, max] 로(풀기와 같은 식 measureLimit). 접은 몸 아래 몸도 같이 돌아 상대 회전을 지키고 그 몸들 위치는 관절 앵커로 다시 세운다.
+     * 속도는 그대로 · 접은 것이 있으면 깨운다 · 돌려주는 값 = 접은 관절 수(0 이면 아무것도 안 바꾼다).
+     */
+    public int clampToLimits() {
+        if (nb == 0 || nj == 0) return 0;
+        int[] order = new int[nj], parent = new int[nb];
+        Arrays.fill(parent, -2);
+        parent[0] = -1;
+        int n = 0;
+        for (int pass = 0; pass < nj; pass++) {
+            boolean any = false;
+            for (int k = 0; k < nj; k++) {
+                Joint j = joints[k];
+                if (parent[j.a] != -2 && parent[j.b] == -2) parent[j.b] = j.a;
+                else if (parent[j.b] != -2 && parent[j.a] == -2) parent[j.a] = j.b;
+                else continue;
+                order[n++] = k;
+                any = true;
+            }
+            if (!any) break;
+        }
+        for (int i = 0; i < nb; i++) bodies[i].update();
+        boolean[] moved = new boolean[nb];
+        int folded = 0;
+        double[] m = lw;
+        for (int o = 0; o < n; o++) {
+            Joint j = joints[order[o]];
+            if (!j.limited) continue;
+            Body A = bodies[j.a], B = bodies[j.b];
+            int child = parent[j.b] == j.a ? j.b : j.a;
+            double sg = child == j.b ? 1 : -1;  // A 쪽이 자식이면 A 를 반대로 돌려도 상대 회전은 같다
+            boolean f = false;
+            measureLimit(j, A, B);
+            if (m[13] > 1e-9 && m[0] > m[1]) {
+                rotateSubtree(child, parent, m[3], m[4], m[5], sg * (m[1] - m[0]), moved);  // 기우는 축 둘레로 θ → 반각
+                f = true;
+                measureLimit(j, A, B);
+            }
+            if (m[12] > 1e-6) {
+                double phi = m[2], t = phi > j.twMax ? j.twMax - phi : phi < j.twMin ? j.twMin - phi : 0;
+                if (t != 0) {
+                    rotateSubtree(child, parent, m[6], m[7], m[8], sg * t, moved);  // 뼈 축 둘레로 — swing 은 그대로
+                    f = true;
+                }
+            }
+            if (f) folded++;
+        }
+        if (folded == 0) return 0;
+        for (int o = 0; o < n; o++) {
+            Joint j = joints[order[o]];
+            if (parent[j.b] == j.a) {
+                if (moved[j.b]) place(bodies[j.a], j.lax, j.lay, j.laz, bodies[j.b], j.lbx, j.lby, j.lbz);
+            } else if (moved[j.a]) place(bodies[j.b], j.lbx, j.lby, j.lbz, bodies[j.a], j.lax, j.lay, j.laz);
+        }
+        for (int k = 0; k < nj; k++) joints[k].clearImpulses();
+        sub += 2;
+        wake();
+        return folded;
+    }
+
+    // 몸 c 와 그 아래(관절 나무) 몸 전부를 world 축 둘레로 돌린다 — q ← R(축, 각) ⊗ q
+    private void rotateSubtree(int c, int[] parent, double ax, double ay, double az, double angle, boolean[] moved) {
+        double s = Math.sin(angle * 0.5), rx = ax * s, ry = ay * s, rz = az * s, rw = Math.cos(angle * 0.5);
+        for (int i = 0; i < nb; i++) {
+            int p = i;
+            while (p >= 0 && p != c) p = parent[p];
+            if (p != c) continue;
+            Body b = bodies[i];
+            double x = rw * b.qx + rx * b.qw + ry * b.qz - rz * b.qy;
+            double y = rw * b.qy - rx * b.qz + ry * b.qw + rz * b.qx;
+            double z = rw * b.qz + rx * b.qy - ry * b.qx + rz * b.qw;
+            double w = rw * b.qw - rx * b.qx - ry * b.qy - rz * b.qz;
+            double l = Math.sqrt(x * x + y * y + z * z + w * w);
+            b.qx = x / l;
+            b.qy = y / l;
+            b.qz = z / l;
+            b.qw = w / l;
+            b.update();
+            moved[i] = true;
+        }
     }
 
     /** 지금 관절마다 A 에서 본 B 의 회전을 근육 목표로. */
@@ -824,9 +908,46 @@ public final class RigidWorld {
         return k > 1e-30 ? 1 / k : 0;
     }
 
-    // swing — 뼈 축이 원뿔 축에서 기운 각 θ 와 그 방향의 타원 반각 · twist — xA → dB 최단 회전으로 refA 를 옮겨 refB 와 잰 각
     private void prepareLimit(Joint j, Body A, Body B) {
-        double[] ra = A.r, rb = B.r;
+        measureLimit(j, A, B);
+        double[] m = lw;
+        j.swOn = false;
+        if (m[13] > 1e-9) {
+            double C = m[1] - m[0];
+            if (C < LIMIT_WINDOW) {
+                j.swOn = true;
+                j.swJx = -m[3];
+                j.swJy = -m[4];
+                j.swJz = -m[5];
+                j.swC = C;
+                j.swMass = angMass(A, B, -m[3], -m[4], -m[5]);
+            }
+        }
+        if (!j.swOn) j.swAcc = 0;
+
+        j.loOn = j.hiOn = false;
+        double opc = m[12];
+        if (opc > 1e-6) {
+            double phi = m[2];
+            j.loC = phi - j.twMin;
+            j.hiC = j.twMax - phi;
+            j.loOn = j.loC < LIMIT_WINDOW;
+            j.hiOn = j.hiC < LIMIT_WINDOW;
+            if (j.loOn || j.hiOn) {
+                j.twJx = m[9] / opc;  // dφ/dt = (xA + dB)/(1 + xA·dB) · (wB − wA)
+                j.twJy = m[10] / opc;
+                j.twJz = m[11] / opc;
+                j.twMass = angMass(A, B, j.twJx, j.twJy, j.twJz);
+            }
+        }
+        if (!j.loOn) j.loAcc = 0;
+        if (!j.hiOn) j.hiAcc = 0;
+    }
+
+    // 범위 재기(풀기 · clampToLimits 가 같이 쓴다) — swing: 뼈 축이 원뿔 축에서 기운 각 θ 와 그 방향의 타원 반각 · twist: xA → dB 최단 회전으로 refA 를 옮겨 refB 와 잰 각
+    // lw — 0 θ · 1 타원 반각(sn ≤ 1e-9 면 NaN) · 2 φ(1 + cos ≤ 1e-6 면 NaN) · 3..5 기우는 회전축(정규) · 6..8 뼈 축 dB · 9..11 xA + dB · 12 1 + cos · 13 sn
+    private void measureLimit(Joint j, Body A, Body B) {
+        double[] ra = A.r, rb = B.r, m = lw;
         double xx = ra[0] * j.axAx + ra[1] * j.axAy + ra[2] * j.axAz;
         double xy = ra[3] * j.axAx + ra[4] * j.axAy + ra[5] * j.axAz;
         double xz = ra[6] * j.axAx + ra[7] * j.axAy + ra[8] * j.axAz;
@@ -844,48 +965,38 @@ public final class RigidWorld {
         double bz = rb[6] * j.rfBx + rb[7] * j.rfBy + rb[8] * j.rfBz;
         double cos = Math.max(-1, Math.min(1, xx * dx + xy * dy + xz * dz));
 
-        j.swOn = false;
         double ax = xy * dz - xz * dy, ay = xz * dx - xx * dz, az = xx * dy - xy * dx;
         double sn = Math.sqrt(ax * ax + ay * ay + az * az);
+        m[13] = sn;
+        m[0] = Math.atan2(sn, cos);
         if (sn > 1e-9) {
             ax /= sn;
             ay /= sn;
             az /= sn;
             double cy = ax * yx + ay * yy + az * yz, cz = ax * zx + ay * zy + az * zz;  // 기울이는 회전축의 refA · zA 성분
-            double lim = 1 / Math.sqrt((cz / j.sw1) * (cz / j.sw1) + (cy / j.sw2) * (cy / j.sw2));
-            double C = lim - Math.atan2(sn, cos);
-            if (C < LIMIT_WINDOW) {
-                j.swOn = true;
-                j.swJx = -ax;
-                j.swJy = -ay;
-                j.swJz = -az;
-                j.swC = C;
-                j.swMass = angMass(A, B, -ax, -ay, -az);
-            }
+            m[1] = 1 / Math.sqrt((cz / j.sw1) * (cz / j.sw1) + (cy / j.sw2) * (cy / j.sw2));
+            m[3] = ax;
+            m[4] = ay;
+            m[5] = az;
+        } else {
+            m[1] = Double.NaN;
+            m[3] = m[4] = m[5] = 0;
         }
-        if (!j.swOn) j.swAcc = 0;
-
-        j.loOn = j.hiOn = false;
-        double opc = 1 + cos;
+        m[6] = dx;
+        m[7] = dy;
+        m[8] = dz;
+        double opc = 1 + cos, ux = xx + dx, uy = xy + dy, uz = xz + dz;
+        m[9] = ux;
+        m[10] = uy;
+        m[11] = uz;
+        m[12] = opc;
+        m[2] = Double.NaN;
         if (opc > 1e-6) {
-            double ux = xx + dx, uy = xy + dy, uz = xz + dz;
             double kk = (yx * dx + yy * dy + yz * dz) / opc;
             double tx = yx - kk * ux, ty = yy - kk * uy, tz = yz - kk * uz;  // 옮긴 refA
             double crx = ty * bz - tz * by, cry = tz * bx - tx * bz, crz = tx * by - ty * bx;
-            double phi = Math.atan2(dx * crx + dy * cry + dz * crz, tx * bx + ty * by + tz * bz);
-            j.loC = phi - j.twMin;
-            j.hiC = j.twMax - phi;
-            j.loOn = j.loC < LIMIT_WINDOW;
-            j.hiOn = j.hiC < LIMIT_WINDOW;
-            if (j.loOn || j.hiOn) {
-                j.twJx = ux / opc;  // dφ/dt = (xA + dB)/(1 + xA·dB) · (wB − wA)
-                j.twJy = uy / opc;
-                j.twJz = uz / opc;
-                j.twMass = angMass(A, B, j.twJx, j.twJy, j.twJz);
-            }
+            m[2] = Math.atan2(dx * crx + dy * cry + dz * crz, tx * bx + ty * by + tz * bz);
         }
-        if (!j.loOn) j.loAcc = 0;
-        if (!j.hiOn) j.hiAcc = 0;
     }
 
     // 오차 e = qB ⊗ (qA ⊗ 목표)⁻¹ 의 회전 벡터 — 근육은 이것을 0 쪽으로 끈다

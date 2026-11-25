@@ -127,6 +127,13 @@ public class PhysicsWorldAPI {
     }
 
     @LuaWhitelist
+    @LuaMethodDoc(overloads = {}, value = "physics_world.clamp_to_limits")
+    public int clampToLimits() {
+        alive();
+        return world.clampToLimits();
+    }
+
+    @LuaWhitelist
     @LuaMethodDoc(overloads = {}, value = "physics_world.capture_muscle_targets")
     public void captureMuscleTargets() {
         alive();

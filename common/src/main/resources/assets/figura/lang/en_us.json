@@ -1441,6 +1441,7 @@
     "figura.docs.physics_world.get_body_rot": "Returns the rotation quaternion (x, y, z, w) of a body",
     "figura.docs.physics_world.get_state": "Fills the table with the root position (3 numbers) followed by every body rotation (4 numbers each)\nReturns true when asleep",
     "figura.docs.physics_world.set_state": "Sets the pose from a table in the getState layout, rebuilding body positions through the joints\nVelocities become zero",
+    "figura.docs.physics_world.clamp_to_limits": "Folds every joint into its swing and twist range (from the root down) and rebuilds body positions\nReturns how many joints were folded",
     "figura.docs.physics_world.capture_muscle_targets": "Stores the current relative joint rotations as muscle targets",
     "figura.docs.physics_world.set_muscle": "Sets the muscle strength (0 to 1), frequency (Hz), damping ratio and maximum torque",
     "figura.docs.physics_world.set_grab": "Pulls a local point of a body toward a world anchor with a spring (stiffness, damping, maximum force)",
