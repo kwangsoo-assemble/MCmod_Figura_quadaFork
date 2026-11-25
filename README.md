@@ -33,7 +33,7 @@ It's meant for people who can analyze and understand the code — please use it 
 | Minecraft | 1.21.8 |
 | Loader | Fabric only (the Forge and NeoForge modules are excluded from the build) |
 | Java | 21 |
-| Mod version | `0.1.6.13` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
+| Mod version | `0.1.6.14` — the fourth number after upstream 0.1.6 is this fork's own release number (see 11) |
 | Based on | A 1.21.8 port of Figura 0.1.5, plus the Figura 0.1.6 (MC 1.21.4) features ported over |
 | Companion server plugin | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **not wire-compatible with the official FSB** |
 | Companion state & signal plugin | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — server-owned states and signals (see 15) |
@@ -183,8 +183,8 @@ Code: `gui/widgets/StatusWidget.java`
 
 ### 11. Version number
 
-To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.13`
-(jar: `figura-0.1.6.13+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
+To avoid confusion with the official 0.1.6, the version adds a **fourth number** after the upstream version — `0.1.6.14`
+(jar: `figura-0.1.6.14+1.21.8-fabric-mc.jar`). The fourth number is this fork's own release number. Up to the third release it was a
 SemVer pre-release tag (`0.1.6-but-ai-edited.3`).
 
 - The wardrobe, F3 and `client:getFiguraVersion()` show all four numbers.
@@ -412,6 +412,16 @@ Code: `mixin/render/OutlineBufferSourceAccessor.java` (new) · `model/rendering/
 
 Code: `model/FiguraModelPart.java` (`savedFirstPersonMat` · `getFirstPersonScreenPos`) · `model/rendering/ImmediateAvatarRenderer.java` (records in the FIRST_PERSON pass) · `avatar/Avatar.java` (`fpRenderStamp` · `fpProjection`)
 
+### 25. Small rigid body groups (ragdolls) in Java — the `physics` global (0.1.6.14)
+
+- Computes a few bodies joined by joints, such as a ragdoll, in Java — much lighter than physics written in avatar Lua, and block collision is read directly without creating Lua objects.
+- `physics:newWorld(table)` returns a world handle — bodies (half size · mass · position · rotation), joints (a point joint plus a cone and twist range) and pairs that never collide are given as tables. `physics.VERSION` tells the feature version.
+- Handle: `step()` (one tick) · `setVelocity` · `getVelocity` (blocks per tick) · `getBodyPos` · `getBodyRot` · `getState` · `setState` (root position + a quaternion per body — the shape to send to other screens and rebuild there) · muscles (`captureMuscleTargets` · `setMuscle` — hold briefly, then go limp) · a grab spring (`setGrab` · `clearGrab`) · sleeping (`isAsleep` · `wake`) · `isHealthy` (false after the world rolled back a bad step).
+- The solver is sequential impulses with substeps and soft constraints (stiffness as Hz · damping ratio) — stable even for limbs with small inertia. A step with non-finite values or excessive speed is rolled back (no exception is thrown to Lua).
+- It charges avatar instructions for «bodies × substeps» (the same way as `Avatar.punish`).
+
+Code: `lua/api/physics/` (`PhysicsAPI` · `PhysicsWorldAPI` · `LevelBoxSource`) · `lua/api/physics/solver/` (a solver with no Minecraft dependency — offline tests live in the harness, `projects/template_promotions/tests/ragdoll_physics/`)
+
 Registration of the new mixins, commands and Lua APIs, and their doc strings, live in `figura-common.mixins.json`,
 `commands/FiguraCommands.java`, `lua/FiguraAPIManager.java`, `lua/docs/` and `assets/figura/lang/en_us.json`.
 
@@ -434,7 +444,7 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
 - **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
   Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
   the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17) ·
-  what `main` added in 0.1.6.9 – 0.1.6.13 (19 – 24 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow · screen position of a part in the first-person hand pass).
+  what `main` added in 0.1.6.9 – 0.1.6.14 (19 – 25 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow · screen position of a part in the first-person hand pass · small rigid body groups `physics`).
 - **Fixed on 26.3** — HUD parts not being drawn · text task backgrounds and outlines now drawn with vanilla's text feature ·
   the game crashing on render types such as `CUTOUT` when Improved Transparency (OIT) is on · a crash with the `LINES` render type ·
   `GLINT2` and `SOLID` now look the way they do on 1.21.8 · `SOLID` under Iris shader packs · a crash when quitting the game ·
@@ -461,9 +471,9 @@ JDK 21 is required (newer JDKs do not work with this Gradle version).
 ./gradlew :fabric:build
 ```
 
-Output: `fabric/build/libs/figura-0.1.6.13+1.21.8-fabric-mc.jar`
+Output: `fabric/build/libs/figura-0.1.6.14+1.21.8-fabric-mc.jar`
 
-Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.13) · `build.gradle` ·
+Build setup changes: `settings.gradle` (Fabric and `server-common` only) · `gradle.properties` (version 0.1.6.14) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## Related projects
@@ -516,7 +526,7 @@ ex)
 | 게임 버전 | Minecraft 1.21.8 |
 | 로더 | Fabric 전용 (Forge · NeoForge 모듈은 빌드에서 빠져 있다) |
 | Java | 21 |
-| 모드 버전 | `0.1.6.13` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
+| 모드 버전 | `0.1.6.14` — 업스트림 0.1.6 뒤 넷째 자리가 이 포크의 판 번호 (아래 11) |
 | 바탕 | Figura 0.1.5 의 1.21.8 이식본 + Figura 0.1.6 (MC 1.21.4) 기능 이식 |
 | 짝 서버 플러그인 | [MCplugin_FiguraFSB_quadaFork](https://github.com/kwangsoo-assemble/MCplugin_FiguraFSB_quadaFork) — **공식 FSB 와 통신 호환되지 않는다** |
 | 짝 상태 · 신호 플러그인 | [MCplugin_FiguraController](https://github.com/kwangsoo-assemble/MCplugin_FiguraController) — 서버가 주인인 상태 · 신호 (아래 15) |
@@ -657,8 +667,8 @@ ex)
 
 ### 11. 버전 표기
 
-공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.13`
-(jar 는 `figura-0.1.6.13+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
+공식 0.1.6 과 헷갈리지 않도록 업스트림 버전 뒤에 **넷째 자리**를 붙인다 — `0.1.6.14`
+(jar 는 `figura-0.1.6.14+1.21.8-fabric-mc.jar`). 넷째 자리가 이 포크의 판 번호다. 셋째 판까지는 SemVer 프리릴리스 꼬리(`0.1.6-but-ai-edited.3`)였다.
 
 - 옷장 · F3 · `client:getFiguraVersion()` 에는 넷째 자리까지 보인다.
 - 업스트림 · 백엔드 · 아바타 버전과 **비교**할 때는 넷째 자리를 뗀 0.1.6 으로 비교한다 — 그대로 두면 `0.1.6.8` 가 `0.1.6` 보다 높아
@@ -876,6 +886,16 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 코드: `model/FiguraModelPart.java`(`savedFirstPersonMat` · `getFirstPersonScreenPos`) · `model/rendering/ImmediateAvatarRenderer.java`(FIRST_PERSON 패스 기록) · `avatar/Avatar.java`(`fpRenderStamp` · `fpProjection`)
 
+### 25. 작은 강체 묶음(래그돌)을 자바로 — 전역 `physics` (0.1.6.14)
+
+- 래그돌처럼 몸 몇 개를 관절로 이은 묶음을 자바에서 계산한다 — 아바타 Lua 로 짠 물리보다 훨씬 가볍고, 블록 충돌을 Lua 객체 없이 바로 읽는다.
+- `physics:newWorld(표)` 가 월드 핸들을 돌려준다 — 몸(반치수 · 질량 · 자리 · 회전) · 관절(점 관절 + 원뿔 · 비틀림 범위) · 서로 안 부딪힐 쌍을 표로 준다. `physics.VERSION` 으로 기능 판을 가른다.
+- 핸들: `step()`(한 틱) · `setVelocity` · `getVelocity`(블록/틱) · `getBodyPos` · `getBodyRot` · `getState` · `setState`(몸 0 자리 + 몸마다 사원수 — 다른 화면에 보내고 다시 세우는 꼴) · 근육(`captureMuscleTargets` · `setMuscle` — 쓰러질 때 잠깐 버티다 풀리게) · 잡기 스프링(`setGrab` · `clearGrab`) · 잠들기(`isAsleep` · `wake`) · `isHealthy`(계산이 틀어지면 직전 자세로 되돌리고 false).
+- 계산은 순차 임펄스 + 서브스텝 + 부드러운 제약(강성을 Hz · 감쇠비로) — 관성이 작은 팔다리에도 안정하다. 값이 유한하지 않거나 너무 빠르면 그 틱을 되돌린다(Lua 로 예외를 던지지 않는다).
+- 아바타 명령 수로 «몸 × 서브스텝» 만큼 매긴다(`Avatar.punish` 와 같은 꼴).
+
+코드: `lua/api/physics/`(`PhysicsAPI` · `PhysicsWorldAPI` · `LevelBoxSource`) · `lua/api/physics/solver/`(마인크래프트와 무관한 솔버 — 오프라인 시험은 하네스 `projects/template_promotions/tests/ragdoll_physics/`)
+
 새 믹스인 · 명령 · Lua API 의 등록과 문서 문자열은 `figura-common.mixins.json` · `commands/FiguraCommands.java` ·
 `lua/FiguraAPIManager.java` · `lua/docs/` · `assets/figura/lang/en_us.json` 에 모여 있다.
 
@@ -898,7 +918,7 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 - **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
   파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
   남 세팅용 옷장 화면(17) ·
-  main 0.1.6.9 ~ 0.1.6.13 에서 더한 것(19 ~ 24 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기 · 1인칭 손 패스의 파츠 화면 위치).
+  main 0.1.6.9 ~ 0.1.6.14 에서 더한 것(19 ~ 25 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기 · 1인칭 손 패스의 파츠 화면 위치 · 작은 강체 묶음 `physics`).
 - **26.3 에서 고친 것** — HUD 파츠가 안 그려지던 것 · 글 태스크 배경 · 바깥선을 바닐라 글 기능으로 그리기 ·
   Improved Transparency(OIT)를 켜면 `CUTOUT` 같은 렌더 타입에서 게임이 멈추던 것 · `LINES` 렌더 타입 크래시 ·
   `GLINT2` · `SOLID` 를 1.21.8 모습으로 · Iris 셰이더팩에서 `SOLID` · 게임을 끌 때 나던 크래시 ·
@@ -925,9 +945,9 @@ JDK 21 이 필요하다 (그보다 높은 JDK 는 이 Gradle 버전과 맞지 �
 ./gradlew :fabric:build
 ```
 
-산출물: `fabric/build/libs/figura-0.1.6.13+1.21.8-fabric-mc.jar`
+산출물: `fabric/build/libs/figura-0.1.6.14+1.21.8-fabric-mc.jar`
 
-빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.13) · `build.gradle` ·
+빌드 설정 변경: `settings.gradle` (Fabric · `server-common` 만 포함) · `gradle.properties` (버전 0.1.6.14) · `build.gradle` ·
 `common/build.gradle` · `fabric/build.gradle` · `fabric.mod.json`
 
 ## 관련 프로젝트
