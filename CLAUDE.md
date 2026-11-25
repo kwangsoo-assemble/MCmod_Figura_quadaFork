@@ -359,6 +359,12 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - `post_render`(FIRST_PERSON)는 `renderHandsWithItems` RETURN(손 패스 끝 · GUI 앞) — 거기서 읽으면 같은 프레임 십자선에 쓸 수 있다
     - 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다(애드온이 이 API 를 쓸 때만) · 26.3 가지는 안 옮김(README «빠진 것» 24)
     - 확인: `:fabric:build` 성공(JDK 21 · 믹스인 경고는 기존 2개뿐) · 두 프로필 배포 md5 `b68626cc`
+32. **작은 강체 묶음 `physics` — 래그돌을 자바로** (2026-11-25, 하네스 `projects/template_promotions` RG1 · 설계 `design/래그돌_개편/plan.md` ✅ · 0.1.6.14 · 🎬 전):
+    - 새 패키지 `lua/api/physics/` — `PhysicsAPI`(전역 · `newWorld(표)` · `__index` 로 `VERSION`) · `PhysicsWorldAPI`(이름으로 몸 · 블록/틱 ↔ 초) · `LevelBoxSource`(`Level.getBlockCollisions` → `VoxelShape.forAllBoxes` — 칸마다 `BlockStateAPI` 를 만들지 않는다)
+    - `lua/api/physics/solver/` 는 마인크래프트 · JOML · LuaJ 를 import 하지 않는다 — 하네스가 javac 하나로 오프라인 시험한다(`projects/template_promotions/tests/ragdoll_physics/run_checks.py`) · 고칠 때 import 를 더하지 마라
+    - 명령 수는 `owner.punish(몸 × 서브스텝 × 40)` — 한도 검사는 다음 훅(`run` · 그 안 `setInstructionLimit` 은 SillyPlugin · FiguraSVC 믹스인 자리라 안 건드린다)
+    - `step` 은 예외를 밖으로 던지지 않는다 — NaN · 무한 · `maxSpeed`(기본 600 블록/초 — 넉백 상한 240 보다 크게) 초과면 직전 상태로 되돌리고 `isHealthy()` false
+    - 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다 · 26.3 가지는 안 옮김(README «빠진 것» 25 · 하네스 RG7)
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

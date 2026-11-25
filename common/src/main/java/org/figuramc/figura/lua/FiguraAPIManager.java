@@ -1,5 +1,7 @@
 package org.figuramc.figura.lua;
 
+import org.figuramc.figura.lua.api.physics.PhysicsAPI;
+import org.figuramc.figura.lua.api.physics.PhysicsWorldAPI;
 import org.figuramc.figura.animation.Animation;
 import org.figuramc.figura.entries.FiguraAPI;
 import org.figuramc.figura.lua.api.*;
@@ -169,6 +171,9 @@ public class FiguraAPIManager {
         add(FiguraFuture.class);
 
         add(RaycastAPI.class);
+
+        add(PhysicsAPI.class);
+        add(PhysicsWorldAPI.class);
     }};
 
     public static final Map<String, Function<FiguraLuaRuntime, Object>> API_GETTERS = new LinkedHashMap<>() {{
@@ -198,6 +203,7 @@ public class FiguraAPIManager {
         put("resources", r -> new ResourcesAPI(r.owner));
         put("net", r -> new NetworkingAPI(r.owner));
         put("raycast", r -> new RaycastAPI(r.owner));
+        put("physics", r -> new PhysicsAPI(r.owner));
     }};
 
     private static final Set<FiguraAPI> ENTRYPOINTS = new HashSet<>();

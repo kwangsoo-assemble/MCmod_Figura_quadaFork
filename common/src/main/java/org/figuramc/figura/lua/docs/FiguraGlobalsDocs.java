@@ -98,6 +98,8 @@ public abstract class FiguraGlobalsDocs {
     public NetworkingAPI net;
     @LuaFieldDoc("globals.raycast")
     public RaycastAPI raycast;
+    @LuaFieldDoc("globals.physics")
+    public org.figuramc.figura.lua.api.physics.PhysicsAPI physics;
 
     @LuaFieldDoc("globals.type")
     public LuaFunction type;
