@@ -365,6 +365,7 @@ Figura 0.1.5-1.21.8 포팅본을 베이스로 0.1.6 기능 + FSB(서버 클라�
     - 명령 수는 `owner.punish(몸 × 서브스텝 × 40)` — 한도 검사는 다음 훅(`run` · 그 안 `setInstructionLimit` 은 SillyPlugin · FiguraSVC 믹스인 자리라 안 건드린다)
     - `step` 은 예외를 밖으로 던지지 않는다 — NaN · 무한 · `maxSpeed`(기본 600 블록/초 — 넉백 상한 240 보다 크게) 초과면 직전 상태로 되돌리고 `isHealthy()` false
     - 공개 API 가 늘었다 → 애드온 `.libs` 는 안 바꾼다 · 26.3 가지는 안 옮김(README «빠진 것» 25 · 하네스 RG7)
+    - 진입 자세 다듬기(같은 날 · 판 그대로): `clampToLimits`(관절 범위 안으로 접기 · 하네스 3화 BM385) · `ignoreStartOverlaps`(0.01블록 넘게 파고든 쌍만 떨어질 때까지 충돌 끔 · 3화 BM388) — 시험 ⑧ ⑨
 
 ## 1.21.8 API 어댑트 포인트 (이식/수정 시 주의)
 

@@ -18,6 +18,7 @@ public final class RigidWorld {
     private static final int SOLVE_ITERS = 2, RELAX_ITERS = 2;  // 서브스텝마다 풀기 · 이완 반복 — 1 · 1 이면 끼임 · 충돌에서 침투 · 범위 넘김이 커진다(오프라인 시험 실측)
     private static final double EPS = 1e-4;           // 면 너머 · 꼭짓점 이웃을 볼 거리(블록)
     private static final double FACE_WINDOW = 0.25;   // 가장 얕은 면보다 이만큼 더 깊은 면으로는 밀지 않는다(블록)
+    private static final double START_DEPTH = 0.01;   // ignoreStartOverlaps — 이만큼 넘게 파고든 쌍만 끈다(블록 · 맞닿기만 한 쌍은 그대로)
 
     private final Settings s;
     private final double ox, oy, oz;
@@ -27,7 +28,8 @@ public final class RigidWorld {
     private Joint[] joints = new Joint[8];
     private int nj;
     private boolean[] noCol = new boolean[64];
-    private int noColCap = 8;
+    private boolean[] tmpCol = new boolean[64];       // ignoreStartOverlaps 가 잠시 끈 쌍 — 떨어지면 다시 켠다
+    private int noColCap = 8, tmpCount;
 
     private double[] boxes = new double[6 * 64];      // 국소 좌표 x0 y0 z0 x1 y1 z1
     private int boxCount;
@@ -107,6 +109,76 @@ public final class RigidWorld {
         body(b);
         noCol[a * noColCap + b] = true;
         noCol[b * noColCap + a] = true;
+    }
+
+    /**
+     * 지금 자세에서 0.01블록 넘게 파고든 몸 쌍(한쪽 표본점이 다른 쪽 상자 안에 든 깊이)을 떨어질 때까지 충돌 끔 — 맞닿기만 한 쌍은 그대로.
+     * step 마다 margin 넘게 떨어진 쌍은 다시 켠다 · 블록 충돌 · 관절 · setNoCollide 쌍은 그대로 · 돌려주는 값 = 새로 끈 쌍 수.
+     */
+    public int ignoreStartOverlaps() {
+        if (nb < 2) return 0;
+        double m = Math.max(0, s.margin);
+        for (int i = 0; i < nb; i++) {
+            bodies[i].update();
+            bodies[i].samples(m);
+        }
+        int n = 0;
+        for (int i = 0; i < nb; i++) {
+            for (int j = i + 1; j < nb; j++) {
+                int k = i * noColCap + j;
+                if (noCol[k] || tmpCol[k]) continue;
+                Body a = bodies[i], b = bodies[j];
+                if (a.x1 < b.x0 || a.x0 > b.x1 || a.y1 < b.y0 || a.y0 > b.y1 || a.z1 < b.z0 || a.z0 > b.z1) continue;
+                if (Math.max(pointsDepth(a, b), pointsDepth(b, a)) <= START_DEPTH) continue;
+                tmpCol[k] = tmpCol[j * noColCap + i] = true;
+                n++;
+            }
+        }
+        tmpCount += n;
+        return n;
+    }
+
+    // a 의 표본점이 b 상자 안에 든 깊이(가장 가까운 면까지) 최대 — 음수면 그만큼 떨어짐
+    private static double pointsDepth(Body a, Body b) {
+        double[] r = b.r;
+        double worst = Double.NEGATIVE_INFINITY;
+        for (int p = 0; p < Body.SAMPLES; p++) {
+            double dx = a.sp[3 * p] - b.px, dy = a.sp[3 * p + 1] - b.py, dz = a.sp[3 * p + 2] - b.pz;
+            double ux = r[0] * dx + r[3] * dy + r[6] * dz, uy = r[1] * dx + r[4] * dy + r[7] * dz, uz = r[2] * dx + r[5] * dy + r[8] * dz;
+            worst = Math.max(worst, Math.min(b.hx - Math.abs(ux), Math.min(b.hy - Math.abs(uy), b.hz - Math.abs(uz))));
+        }
+        return worst;
+    }
+
+    // 잠시 끈 쌍 중 margin 넘게 떨어진 쌍을 다시 켠다 — step 머리에서
+    private void releaseOverlaps() {
+        double m = Math.max(0, s.margin);
+        for (int i = 0; i < nb; i++) bodies[i].samples(m);
+        for (int i = 0; i < nb; i++) {
+            for (int j = i + 1; j < nb; j++) {
+                int k = i * noColCap + j;
+                if (!tmpCol[k] || pairOverlap(i, j, m)) continue;
+                tmpCol[k] = tmpCol[j * noColCap + i] = false;
+                tmpCount--;
+            }
+        }
+    }
+
+    // 몸 둘이 겹친다 — 한쪽 표본점이 다른 쪽 상자 + m 안(pairContacts 와 같은 판정 · 두 몸 다 samples(m) 뒤)
+    private boolean pairOverlap(int i, int j, double m) {
+        Body a = bodies[i], b = bodies[j];
+        if (a.x1 < b.x0 || a.x0 > b.x1 || a.y1 < b.y0 || a.y0 > b.y1 || a.z1 < b.z0 || a.z0 > b.z1) return false;
+        return pointsIn(a, b, m) || pointsIn(b, a, m);
+    }
+
+    private static boolean pointsIn(Body a, Body b, double e) {
+        double[] r = b.r;
+        for (int p = 0; p < Body.SAMPLES; p++) {
+            double dx = a.sp[3 * p] - b.px, dy = a.sp[3 * p + 1] - b.py, dz = a.sp[3 * p + 2] - b.pz;
+            double ux = r[0] * dx + r[3] * dy + r[6] * dz, uy = r[1] * dx + r[4] * dy + r[7] * dz, uz = r[2] * dx + r[5] * dy + r[8] * dz;
+            if (Math.abs(ux) <= b.hx + e && Math.abs(uy) <= b.hy + e && Math.abs(uz) <= b.hz + e) return true;
+        }
+        return false;
     }
 
     // ════════════════════════════════════════ 넣기 · 읽기
@@ -421,6 +493,7 @@ public final class RigidWorld {
         pushMax = s.contactPushMax > 0 ? s.contactPushMax : 0;
         ensureSlots();
         for (int i = 0; i < nb; i++) bodies[i].update();
+        if (tmpCount > 0) releaseOverlaps();
         collect(src, dt, Math.max(0, s.margin));
         markEdges();
         for (int k = 0; k < n; k++) substep(h, invH, muscle);
@@ -649,7 +722,7 @@ public final class RigidWorld {
         for (int i = 0; i < nb; i++) {
             Body a = bodies[i];
             for (int j = i + 1; j < nb; j++) {
-                if (noCol[i * noColCap + j]) continue;
+                if (noCol[i * noColCap + j] || tmpCol[i * noColCap + j]) continue;
                 Body b = bodies[j];
                 if (a.x1 < b.x0 || a.x0 > b.x1 || a.y1 < b.y0 || a.y0 > b.y1 || a.z1 < b.z0 || a.z0 > b.z1) continue;
                 pairContacts(i, j, m);
@@ -1385,9 +1458,13 @@ public final class RigidWorld {
     private void growNoCol(int n) {
         if (n <= noColCap) return;
         int cap = Math.max(n, noColCap * 2);
-        boolean[] m = new boolean[cap * cap];
-        for (int i = 0; i < noColCap; i++) System.arraycopy(noCol, i * noColCap, m, i * cap, noColCap);
+        boolean[] m = new boolean[cap * cap], t = new boolean[cap * cap];
+        for (int i = 0; i < noColCap; i++) {
+            System.arraycopy(noCol, i * noColCap, m, i * cap, noColCap);
+            System.arraycopy(tmpCol, i * noColCap, t, i * cap, noColCap);
+        }
         noCol = m;
+        tmpCol = t;
         noColCap = cap;
     }
 

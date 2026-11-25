@@ -134,6 +134,13 @@ public class PhysicsWorldAPI {
     }
 
     @LuaWhitelist
+    @LuaMethodDoc(overloads = {}, value = "physics_world.ignore_start_overlaps")
+    public int ignoreStartOverlaps() {
+        alive();
+        return world.ignoreStartOverlaps();
+    }
+
+    @LuaWhitelist
     @LuaMethodDoc(overloads = {}, value = "physics_world.capture_muscle_targets")
     public void captureMuscleTargets() {
         alive();
