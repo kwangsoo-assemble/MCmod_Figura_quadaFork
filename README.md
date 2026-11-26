@@ -208,6 +208,12 @@ Figura puts `assets/figura/cem/<ns>/<type>.nbt` from a resource pack on **every 
   - `<folder>` is relative to the local avatar folder, like `/figura load`. If it has a `cem.json`, that folder is built;
     otherwise every direct subfolder that has one.
   - `cem.json` is `{"entity": "minecraft:husk"}` — one mob type or a list. If two folders name the same type, nothing is built.
+  - **Name condition** (0.1.6.15) — with `"name": "kraken"` in `cem.json`, the avatar is applied **only to mobs with that custom name**.
+    Mobs of the same type with no name or another name render as vanilla, without the avatar. This keeps it apart when someone else
+    uses the same type (interaction, display, …) for something else. The name is stored as `cemName` at the top of the compiled NBT
+    and compared character for character with the custom name (`getCustomName` — the type name and translated name are not used).
+    A name added later takes effect on the next render. ⚠ Once applied, the avatar stays even if the name is removed or changed
+    (it is dropped when the mob is removed or leaves tracking range).
   - Output goes to `figura/cem_out/<ns>/<type>.nbt` — copy it as-is under a resource pack's `assets/figura/cem/` (it never writes to a resource pack itself).
   - The written file is read back and **applied right away** — mob avatars of that type are recreated on the next render. A resource reload (F3+T) goes back to the resource pack version.
 - **`/figura cem status`** — how many mob avatars are running right now, per type. Mob avatars load when first rendered and do not show up in F3, so this is how to see how many mobs actually have one.
@@ -443,7 +449,7 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
   the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12) · the `FirstPerson` parent type (18).
 - **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
   Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
-  the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17) ·
+  the render tweaks and the name condition for mob (CEM) avatars (12 — the commands are there · `"name"` in `cem.json` is ignored) · the Wardrobe screen for other players (17) ·
   what `main` added in 0.1.6.9 – 0.1.6.14 (19 – 25 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow · screen position of a part in the first-person hand pass · small rigid body groups `physics`).
 - **Fixed on 26.3** — HUD parts not being drawn · text task backgrounds and outlines now drawn with vanilla's text feature ·
   the game crashing on render types such as `CUTOUT` when Improved Transparency (OIT) is on · a crash with the `LINES` render type ·
@@ -691,6 +697,10 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
   - `<폴더>` 는 `/figura load` 처럼 로컬 아바타 폴더 기준이다. 거기에 `cem.json` 이 있으면 그 폴더 하나를,
     없으면 바로 아래 하위 폴더 중 `cem.json` 이 있는 것을 전부 빌드한다.
   - `cem.json` 은 `{"entity": "minecraft:husk"}` — 몹 종류 하나 또는 목록이다. 두 폴더가 같은 종류를 가리키면 빌드하지 않는다.
+  - **이름 조건**(0.1.6.15) — `cem.json` 에 `"name": "kraken"` 을 주면 **그 커스텀 이름을 단 몹에만** 입힌다. 이름이 없거나 다른 같은 종류 몹은
+    아바타 없이 바닐라대로 그려진다. 다른 사람이 같은 종류(인터랙션 · 디스플레이 등)를 다른 용도로 쓸 때 섞이지 않게 한다.
+    이름은 컴파일된 NBT 맨 위 `cemName` 에 담기고, 커스텀 이름(`getCustomName`)과 글자 그대로 비교한다(종류 이름 · 번역 이름은 안 본다).
+    이름을 나중에 달면 다음 렌더에 붙는다. ⚠ 한 번 붙은 아바타는 이름을 지우거나 바꿔도 남는다(몹이 사라지거나 추적 범위 밖으로 나갈 때 내린다).
   - 결과는 `figura/cem_out/<ns>/<type>.nbt` 에 쓴다 — 리소스팩의 `assets/figura/cem/` 아래로 그대로 옮기면 된다(리소스팩에 직접 쓰지는 않는다).
   - 쓴 파일을 다시 읽어 **바로 적용**한다 — 그 종류의 몹 아바타가 다음 렌더에 새로 만들어진다. 리소스 리로드(F3+T)를 하면 리소스팩 판으로 돌아간다.
 - **`/figura cem status`** — 종류별로 지금 돌고 있는 몹 아바타 수. 몹 아바타는 처음 화면에 그려질 때 로드되고 F3 에는 나오지 않아서, 몇 마리에 실제로 붙었는지는 이것으로 본다.
@@ -916,7 +926,7 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 - **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
   버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12) · `FirstPerson` 부모 타입(18).
 - **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
-  파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
+  파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질 · 이름 조건(12 — 명령은 있다 · `cem.json` 의 `"name"` 은 안 본다) ·
   남 세팅용 옷장 화면(17) ·
   main 0.1.6.9 ~ 0.1.6.14 에서 더한 것(19 ~ 25 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기 · 1인칭 손 패스의 파츠 화면 위치 · 작은 강체 묶음 `physics`).
 - **26.3 에서 고친 것** — HUD 파츠가 안 그려지던 것 · 글 태스크 배경 · 바깥선을 바닐라 글 기능으로 그리기 ·
