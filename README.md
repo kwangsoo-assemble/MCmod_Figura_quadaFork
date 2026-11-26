@@ -416,7 +416,7 @@ Code: `model/FiguraModelPart.java` (`savedFirstPersonMat` · `getFirstPersonScre
 
 - Computes a few bodies joined by joints, such as a ragdoll, in Java — much lighter than physics written in avatar Lua, and block collision is read directly without creating Lua objects.
 - `physics:newWorld(table)` returns a world handle — bodies (half size · mass · position · rotation), joints (a point joint plus a cone and twist range) and pairs that never collide are given as tables. `physics.VERSION` tells the feature version.
-- Handle: `step()` (one tick) · `setVelocity` · `getVelocity` (blocks per tick) · `getBodyPos` · `getBodyRot` · `getState` · `setState` (root position + a quaternion per body — the shape to send to other screens and rebuild there) · muscles (`captureMuscleTargets` · `setMuscle` — hold briefly, then go limp) · a grab spring (`setGrab` · `clearGrab`) · sleeping (`isAsleep` · `wake`) · `isHealthy` (false after the world rolled back a bad step).
+- Handle: `step()` (one tick) · `setVelocity` · `getVelocity` (blocks per tick) · `getBodyPos` · `getBodyRot` · `getState` · `setState` (root position + a quaternion per body — the shape to send to other screens and rebuild there) · muscles (`captureMuscleTargets` · `setMuscle` — hold briefly, then go limp) · a grab spring (`setGrab` · `clearGrab`) · sleeping (`isAsleep` · `wake`) · `isHealthy` (false after the world rolled back a bad step) · start-pose tidying right after `newWorld` (`clampToLimits` — folds every joint into its range · `ignoreStartOverlaps` — turns off collision between body pairs that start inside each other until they separate).
 - The solver is sequential impulses with substeps and soft constraints (stiffness as Hz · damping ratio) — stable even for limbs with small inertia. A step with non-finite values or excessive speed is rolled back (no exception is thrown to Lua).
 - It charges avatar instructions for «bodies × substeps» (the same way as `Avatar.punish`).
 
@@ -890,7 +890,7 @@ Figura 는 리소스팩의 `assets/figura/cem/<ns>/<type>.nbt` 를 **그 종류�
 
 - 래그돌처럼 몸 몇 개를 관절로 이은 묶음을 자바에서 계산한다 — 아바타 Lua 로 짠 물리보다 훨씬 가볍고, 블록 충돌을 Lua 객체 없이 바로 읽는다.
 - `physics:newWorld(표)` 가 월드 핸들을 돌려준다 — 몸(반치수 · 질량 · 자리 · 회전) · 관절(점 관절 + 원뿔 · 비틀림 범위) · 서로 안 부딪힐 쌍을 표로 준다. `physics.VERSION` 으로 기능 판을 가른다.
-- 핸들: `step()`(한 틱) · `setVelocity` · `getVelocity`(블록/틱) · `getBodyPos` · `getBodyRot` · `getState` · `setState`(몸 0 자리 + 몸마다 사원수 — 다른 화면에 보내고 다시 세우는 꼴) · 근육(`captureMuscleTargets` · `setMuscle` — 쓰러질 때 잠깐 버티다 풀리게) · 잡기 스프링(`setGrab` · `clearGrab`) · 잠들기(`isAsleep` · `wake`) · `isHealthy`(계산이 틀어지면 직전 자세로 되돌리고 false).
+- 핸들: `step()`(한 틱) · `setVelocity` · `getVelocity`(블록/틱) · `getBodyPos` · `getBodyRot` · `getState` · `setState`(몸 0 자리 + 몸마다 사원수 — 다른 화면에 보내고 다시 세우는 꼴) · 근육(`captureMuscleTargets` · `setMuscle` — 쓰러질 때 잠깐 버티다 풀리게) · 잡기 스프링(`setGrab` · `clearGrab`) · 잠들기(`isAsleep` · `wake`) · `isHealthy`(계산이 틀어지면 직전 자세로 되돌리고 false) · 진입 자세 다듬기 — `newWorld` 바로 뒤에 (`clampToLimits` — 관절마다 범위 안으로 접기 · `ignoreStartOverlaps` — 처음부터 서로 파고든 몸 쌍은 떨어질 때까지 충돌을 끈다).
 - 계산은 순차 임펄스 + 서브스텝 + 부드러운 제약(강성을 Hz · 감쇠비로) — 관성이 작은 팔다리에도 안정하다. 값이 유한하지 않거나 너무 빠르면 그 틱을 되돌린다(Lua 로 예외를 던지지 않는다).
 - 아바타 명령 수로 «몸 × 서브스텝» 만큼 매긴다(`Avatar.punish` 와 같은 꼴).
 
