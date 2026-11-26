@@ -1,6 +1,7 @@
 package org.figuramc.figura.commands;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -38,6 +39,7 @@ import java.util.*;
  *
  * <p>{@code <폴더>} 에 {@code cem.json} 이 있으면 그 폴더 하나를, 없으면 바로 아래 하위 폴더 중 {@code cem.json} 이 있는 것을
  * 하나씩 빌드한다. {@code cem.json} 은 {@code {"entity": "minecraft:husk"}} — 몹 종류 하나 또는 목록이다.
+ * {@code "name": "kraken"} 을 더하면 그 커스텀 이름이 붙은 엔티티에만 입힌다(빌드한 NBT 의 {@link LocalAvatarLoader#CEM_NAME_KEY}).
  *
  * <p>하나마다: 컴파일({@link LocalAvatarLoader#compileAvatarFolder}) → {@code figura/cem_out/<ns>/<type>.nbt} 에 gzip NBT 로 쓴다
  * (리소스팩의 {@code assets/figura/cem/<ns>/<type>.nbt} 와 같은 꼴) → 쓴 파일을 <b>다시 읽어</b> {@code CEM_AVATARS} 에 올리고
@@ -53,7 +55,8 @@ class CemCommand {
 
     private static final String CEM_FILE = "cem.json";
 
-    private record Job(Path folder, String name, List<ResourceLocation> types) {}
+    // entityName — cem.json 의 "name"(이름 조건) · 없으면 null
+    private record Job(Path folder, String name, List<ResourceLocation> types, String entityName) {}
 
     private record Line(Component text, boolean error) {}
 
@@ -137,6 +140,8 @@ class CemCommand {
             for (Job job : jobs) {
                 try {
                     CompoundTag compiled = LocalAvatarLoader.compileAvatarFolder(job.folder(), Util.NIL_UUID, false);
+                    if (job.entityName() != null)
+                        compiled.putString(LocalAvatarLoader.CEM_NAME_KEY, job.entityName());
 
                     // 리소스팩이 읽을 것과 같게 — 쓴 파일을 다시 읽어 그걸 올린다(읽히지 않는 파일이면 여기서 실패한다)
                     Map<ResourceLocation, CompoundTag> mine = new LinkedHashMap<>();
@@ -202,13 +207,21 @@ class CemCommand {
         String where = name + "/" + CEM_FILE;
 
         List<String> ids = new ArrayList<>();
+        String entityName = null;
         try {
-            JsonElement entity = JsonParser.parseString(IOUtils.readFile(folder.resolve(CEM_FILE))).getAsJsonObject().get("entity");
+            JsonObject json = JsonParser.parseString(IOUtils.readFile(folder.resolve(CEM_FILE))).getAsJsonObject();
+            JsonElement entity = json.get("entity");
             if (entity != null && entity.isJsonArray()) {
                 for (JsonElement id : entity.getAsJsonArray())
                     ids.add(id.getAsString());
             } else if (entity != null) {
                 ids.add(entity.getAsString());
+            }
+            JsonElement nameEl = json.get("name");
+            if (nameEl != null && !nameEl.isJsonNull()) {
+                if (!nameEl.isJsonPrimitive() || nameEl.getAsString().isEmpty())
+                    throw new IOException(where + ": \"name\" needs a non-empty custom name");
+                entityName = nameEl.getAsString();
             }
         } catch (RuntimeException e) {
             throw new IOException(where + ": " + e.getMessage(), e);
@@ -227,7 +240,7 @@ class CemCommand {
             if (!types.contains(type))
                 types.add(type);
         }
-        return new Job(folder, name, types);
+        return new Job(folder, name, types, entityName);
     }
 
     private static Path write(ResourceLocation type, CompoundTag nbt) throws IOException {

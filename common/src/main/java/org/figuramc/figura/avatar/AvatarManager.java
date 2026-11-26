@@ -200,7 +200,18 @@ public class AvatarManager {
         // new avatar
         ResourceLocation type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         CompoundTag nbt = LocalAvatarLoader.CEM_AVATARS.get(type);
-        return nbt == null ? null : loadEntityAvatar(entity, nbt);
+        if (nbt == null || !cemNameMatches(entity, nbt))
+            return null;
+        return loadEntityAvatar(entity, nbt);
+    }
+
+    // 이름 조건(cem.json "name") — 키가 없으면 종류만으로 · 있으면 커스텀 이름이 같을 때만(이름 없는 엔티티는 안 실린다)
+    // ⚠ getName() 이 아니라 getCustomName() — getName() 은 이름이 없으면 종류 이름이라 "interaction" 같은 조건에 잘못 맞는다
+    private static boolean cemNameMatches(Entity entity, CompoundTag nbt) {
+        if (!nbt.contains(LocalAvatarLoader.CEM_NAME_KEY))
+            return true;
+        Component custom = entity.getCustomName();
+        return custom != null && custom.getString().equals(nbt.getStringOr(LocalAvatarLoader.CEM_NAME_KEY, ""));
     }
 
     public static Avatar getAvatar(EntityRenderState state) {

@@ -42,6 +42,8 @@ public class LocalAvatarLoader {
     private static WatchService watcher;
 
     public static final HashMap<ResourceLocation, CompoundTag> CEM_AVATARS = new HashMap<>();
+    // 이름 조건 — cem.json 의 "name" 을 /figura cem build 가 컴파일한 NBT 맨 위에 이 키로 담는다(AvatarManager.getAvatarForEntity 가 본다)
+    public static final String CEM_NAME_KEY = "cemName";
     public static final FiguraResourceListener AVATAR_LISTENER = FiguraResourceListener.createResourceListener("cem", manager -> {
         CEM_AVATARS.clear();
         AvatarManager.clearCEMAvatars();
