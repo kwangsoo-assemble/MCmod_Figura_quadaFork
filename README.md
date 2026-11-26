@@ -449,7 +449,7 @@ There is a separate test branch, [`26.3`](https://github.com/kwangsoo-assemble/M
   the fourth version number · the two upload choices in the Wardrobe · data pins · the folder compile cache · receiving Flashback packets · the new commands (8, 9, 12) · the `FirstPerson` parent type (18).
 - **Not included yet** (only on `main` — to be ported in a later release) — rendering follows NoFigura.
   Per-part glow (6 — the `setGlow` family of Lua calls only stores the values and does not draw) · the first-person rendering fixes (7) ·
-  the render tweaks for mob (CEM) avatars (12 — the commands are there) · the Wardrobe screen for other players (17) ·
+  the render tweaks and the name condition for mob (CEM) avatars (12 — the commands are there · `"name"` in `cem.json` is ignored) · the Wardrobe screen for other players (17) ·
   what `main` added in 0.1.6.9 – 0.1.6.14 (19 – 25 — HUD part levels · drawn size of a text task · the lighter debug library · title of the open screen · leaving parts out of entity glow · screen position of a part in the first-person hand pass · small rigid body groups `physics`).
 - **Fixed on 26.3** — HUD parts not being drawn · text task backgrounds and outlines now drawn with vanilla's text feature ·
   the game crashing on render types such as `CUTOUT` when Improved Transparency (OIT) is on · a crash with the `LINES` render type ·
@@ -926,7 +926,7 @@ main(1.21.8)은 그대로이고, 이 README 는 두 가지에 같은 글로 둔�
 - **들어간 것** — FSB 클라이언트(연결 · 업로드 · 다운로드 · 핑) · 다른 플레이어 아바타의 서버 패킷 · `server_data` · 싱글 로컬 모드 ·
   버전 넷째 자리 · 옷장 업로드 두 갈래 · 데이터 고정 · 폴더 컴파일 캐시 · Flashback 패킷 받기 · 새 명령(8 · 9 · 12) · `FirstPerson` 부모 타입(18).
 - **빠진 것** (main 에만 있다 · 다음 판에서 옮긴다) — 렌더는 NoFigura 판을 따른다.
-  파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질(12 — 명령은 있다) ·
+  파츠별 발광(6 — `setGlow` 계열 Lua 는 값만 저장하고 그리지 않는다) · 1인칭 렌더 수정(7) · 몹(CEM) 아바타의 렌더 손질 · 이름 조건(12 — 명령은 있다 · `cem.json` 의 `"name"` 은 안 본다) ·
   남 세팅용 옷장 화면(17) ·
   main 0.1.6.9 ~ 0.1.6.14 에서 더한 것(19 ~ 25 — HUD 파츠 층 · 글 태스크 그린 폭 · 높이 · 가벼운 디버그 라이브러리 · 열린 화면 제목 · 엔티티 발광에서 파츠 빼기 · 1인칭 손 패스의 파츠 화면 위치 · 작은 강체 묶음 `physics`).
 - **26.3 에서 고친 것** — HUD 파츠가 안 그려지던 것 · 글 태스크 배경 · 바깥선을 바닐라 글 기능으로 그리기 ·
